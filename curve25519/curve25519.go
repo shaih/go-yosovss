@@ -13,8 +13,6 @@ import (
 	"unsafe"
 )
 
-const masterDerivationKeyLenBytes = 32
-
 func init() {
 	if C.sodium_init() < 0 {
 		log.Fatal("failed to initialize libsodium")
