@@ -13,24 +13,26 @@ func TestPedersenCommitment(t *testing.T) {
 	n := Message(curve25519.RandomScalar())
 	s := Decommitment(curve25519.RandomScalar())
 
-	c, r, err := GenerateCommitment(m)
+	params := GenerateParams()
+
+	c, r, err := GenerateCommitment(params, m)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	isValid, err := VerifyCommitment(c, m, r)
+	isValid, err := VerifyCommitment(params, c, m, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	assert.True(t, isValid, "Commitment is consistent")
 
-	isValid, err = VerifyCommitment(c, n, r)
+	isValid, err = VerifyCommitment(params, c, n, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	assert.False(t, isValid, "Verification fails for wrong message")
 
-	isValid, err = VerifyCommitment(c, m, &s)
+	isValid, err = VerifyCommitment(params, c, m, &s)
 	if err != nil {
 		log.Fatal(err)
 	}

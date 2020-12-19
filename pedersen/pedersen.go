@@ -6,22 +6,25 @@ import (
 	"github.com/shaih/go-yosovss/curve25519"
 )
 
+// Params consists of two group elements g and h such that the
+// commitment is of the form g^m * h^r
+type Params struct {
+	G curve25519.Point
+	H curve25519.Point
+}
+
 // Message is the value the commiter is committing to
 type Message curve25519.Scalar
+
+// Commitment consists of elliptic curve point that serves as a
+// commitment to a message
+type Commitment curve25519.Point
 
 // Decommitment is the random value r used
 type Decommitment curve25519.Scalar
 
-// Commitment consists of two group elements g and h such that the
-// commitment is of the form g^m * h^r
-type Commitment struct {
-	G          curve25519.Point
-	H          curve25519.Point
-	Commitment curve25519.Point
-}
-
-// GenerateCommitment creates a commitment for some value m
-func GenerateCommitment(m Message) (*Commitment, *Decommitment, error) {
+// GenerateParams picks two random group elements for generating commitments
+func GenerateParams() *Params {
 	g := curve25519.RandomPoint()
 	h := curve25519.RandomPoint()
 
@@ -29,14 +32,23 @@ func GenerateCommitment(m Message) (*Commitment, *Decommitment, error) {
 		h = curve25519.RandomPoint()
 	}
 
+	return &Params{
+		G: g,
+		H: h,
+	}
+}
+
+// GenerateCommitment creates a commitment for some value m
+func GenerateCommitment(params *Params, m Message) (*Commitment, *Decommitment, error) {
+
 	r := curve25519.RandomScalar()
 
-	gm, err := curve25519.MultPointScalar(g, curve25519.Scalar(m)) // Compute g^m
+	gm, err := curve25519.MultPointScalar(params.G, curve25519.Scalar(m)) // Compute g^m
 	if err != nil {
 		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
 
-	hr, err := curve25519.MultPointScalar(h, r) // Compute h^r
+	hr, err := curve25519.MultPointScalar(params.H, r) // Compute h^r
 	if err != nil {
 		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
@@ -46,23 +58,21 @@ func GenerateCommitment(m Message) (*Commitment, *Decommitment, error) {
 		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
 
+	commitment := Commitment(c)
 	decommitment := Decommitment(r)
-	return &Commitment{
-		G:          g,
-		H:          h,
-		Commitment: c,
-	}, &decommitment, nil
+
+	return &commitment, &decommitment, nil
 }
 
 // VerifyCommitment checks if a commitment was for some message m under the
 // decommitment r
-func VerifyCommitment(commitment *Commitment, m Message, r *Decommitment) (bool, error) {
-	gm, err := curve25519.MultPointScalar(commitment.G, curve25519.Scalar(m)) // Compute g^m
+func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Decommitment) (bool, error) {
+	gm, err := curve25519.MultPointScalar(params.G, curve25519.Scalar(m)) // Compute g^m
 	if err != nil {
 		return false, fmt.Errorf("verification failed: %v", err)
 	}
 
-	hr, err := curve25519.MultPointScalar(commitment.H, curve25519.Scalar(*r)) // Compute h^r
+	hr, err := curve25519.MultPointScalar(params.H, curve25519.Scalar(*r)) // Compute h^r
 	if err != nil {
 		return false, fmt.Errorf("verification failed: %v", err)
 	}
@@ -72,5 +82,5 @@ func VerifyCommitment(commitment *Commitment, m Message, r *Decommitment) (bool,
 		return false, fmt.Errorf("verification failed: %v", err)
 	}
 
-	return curve25519.IsEqualPoint(curve25519.Point(commitment.Commitment), c), nil
+	return curve25519.IsEqualPoint(curve25519.Point(*commitment), c), nil
 }
