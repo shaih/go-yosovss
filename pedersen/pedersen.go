@@ -178,15 +178,13 @@ func VSSVerify(params *Params, share Share, verifications []Commitment) (bool, e
 	}
 
 	// Compute \prod_{j=0}^{t-1}E_j^{i^j} where E_j is the jth entry in the verification vector
-	iMult := share.IndexScalar
-	verificationResult := curve25519.Point(verifications[0])
-	for j := 1; j < t; j++ {
-		ejij, err := curve25519.MultPointScalar(curve25519.Point(verifications[j]), iMult)
+	verificationResult := curve25519.Point(verifications[t-1])
+	for j := t - 2; j >= 0; j-- {
+		verificationResult, err = curve25519.MultPointScalar(verificationResult, share.IndexScalar)
 		if err != nil {
 			return false, fmt.Errorf("error in evaluating verification")
 		}
-		iMult = curve25519.MultScalar(iMult, share.IndexScalar)
-		verificationResult, err = curve25519.AddPoint(verificationResult, ejij)
+		verificationResult, err = curve25519.AddPoint(verificationResult, curve25519.Point(verifications[j]))
 		if err != nil {
 			return false, fmt.Errorf("error in evaluating verification")
 		}
