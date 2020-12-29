@@ -19,3 +19,5 @@ sudo make install
 For other systems, refer to https://doc.libsodium.org/installation
 
 After building libsodium, ensure that in the `curve25519.go` file that the `#cgo` directives point to the correct location of the libsodium static library file.
+
+Run `go test` in the `pedersen` and `curve25519` folders to test.
