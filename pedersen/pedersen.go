@@ -107,44 +107,41 @@ func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment,
 	// correctness of shares
 	var verifications []Commitment
 
-	// Construct shares to be distributed to participants individually
-	var coeffF = make([]curve25519.Scalar, t)
-	var coeffG = make([]curve25519.Scalar, t)
+	f := curve25519.Polynomial{
+		Coefficients: make([]curve25519.Scalar, t),
+	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_t * x^t where a_0 = m and a_1,...,a_t are random
+	g := curve25519.Polynomial{
+		Coefficients: make([]curve25519.Scalar, t),
+	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_t * x^t where b_0,...,b_t are random
 
 	// Get commitment to the secret
 	commitment, decommitment, err := GenerateCommitment(params, m)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error generating message commitment")
 	}
-	coeffF[0] = curve25519.Scalar(m)
-	coeffG[0] = curve25519.Scalar(*decommitment)
+	f.Coefficients[0] = curve25519.Scalar(m)
+	g.Coefficients[0] = curve25519.Scalar(*decommitment)
 
 	verifications = append(verifications, *commitment)
 
 	// Generate random values for remaining coefficients
 	for i := 1; i < t; i++ {
-		coeffF[i] = curve25519.RandomScalar()
+		f.Coefficients[i] = curve25519.RandomScalar()
 		// Get commitment the random polynomial coefficients
-		commitment, decommitment, err = GenerateCommitment(params, Message(coeffF[i]))
+		commitment, decommitment, err = GenerateCommitment(params, Message(f.Coefficients[i]))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating commitment")
 		}
-		coeffG[i] = curve25519.Scalar(*decommitment)
+		g.Coefficients[i] = curve25519.Scalar(*decommitment)
 
 		// verification of ith coefficient is g^a_i * h^b_i
 		verifications = append(verifications, *commitment)
 	}
 
-	f := curve25519.Polynomial{
-		Coefficients: coeffF,
-	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_t * x^t where a_0 = m and a_1,...,a_t are random
-	g := curve25519.Polynomial{
-		Coefficients: coeffG,
-	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_t * x^t where b_0,...,b_t are random
-
 	// Perform Shamir secret sharing on the generated polynomials to construct shares
 	evalPoint := curve25519.ScalarZero
 	for i := 1; i <= n; i++ {
+		// NOTE: Expensive step, consider changing in the future
 		evalPoint = curve25519.AddScalar(evalPoint, curve25519.ScalarOne)
 
 		shares = append(shares, Share{
