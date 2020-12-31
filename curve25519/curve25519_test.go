@@ -65,19 +65,24 @@ func TestScalarOperations(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	var zero [32]byte
-	one := [32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	assert.Equal(t, Scalar(zero), AddScalar(x, negX), "Negation is correct")
-	assert.Equal(t, Scalar(one), MultScalar(x, invX), "Inverse is correct")
+	assert.Equal(t, ScalarZero, AddScalar(x, negX), "Negation is correct")
+	assert.Equal(t, ScalarOne, MultScalar(x, invX), "Inverse is correct")
 }
 
 func TestMultPointScalar(t *testing.T) {
 	p := RandomPoint()
 	n := RandomScalar()
-	r, err := MultPointScalar(p, n)
+	r1, err := MultPointScalar(p, n)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	assert.True(t, IsValidPoint(r), "Point scalar multiplication is valid")
+	r2, err := MultPointScalar(p, ScalarOne)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	assert.True(t, IsValidPoint(r1), "Point scalar multiplication is valid")
+	assert.Equal(t, p, r2, "Point scalar multiplication with scalar 1")
+
 }

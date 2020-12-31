@@ -29,6 +29,12 @@ type Point [32]byte
 // Scalar is a non-negative integer
 type Scalar [32]byte
 
+// ScalarZero is the scalar element 0
+var ScalarZero Scalar = Scalar([32]byte{})
+
+// ScalarOne is the scalar element 1
+var ScalarOne Scalar = Scalar([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+
 // IsValidPoint returns true if a point is on the ed25519 curve, non-zero,
 // on the main subgroup, and of small order
 func IsValidPoint(p Point) bool {
@@ -134,7 +140,7 @@ func MultScalar(x, y Scalar) Scalar {
 func MultPointScalar(p Point, n Scalar) (Point, error) {
 	var r Point
 
-	result := C.crypto_scalarmult_ed25519((*C.uchar)(&r[0]), (*C.uchar)(&n[0]), (*C.uchar)(&p[0]))
+	result := C.crypto_scalarmult_ed25519_noclamp((*C.uchar)(&r[0]), (*C.uchar)(&n[0]), (*C.uchar)(&p[0]))
 	if result != 0 {
 		return r, fmt.Errorf("failed to perform scalar multiplication: %d", result)
 	}
