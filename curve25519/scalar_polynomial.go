@@ -6,10 +6,8 @@ type Polynomial struct {
 }
 
 // Degree gets the degree of the polynomial
+// The degree of the zero polynomial is -1
 func (p *Polynomial) Degree() int {
-	if len(p.Coefficients) == 0 {
-		return 0
-	}
 	i := len(p.Coefficients) - 1
 	for ; i > 0 && IsEqualScalar(p.Coefficients[i], ScalarZero); i-- {
 	}

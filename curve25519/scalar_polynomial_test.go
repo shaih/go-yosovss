@@ -8,7 +8,7 @@ import (
 
 func TestDegree(t *testing.T) {
 	var p Polynomial
-	assert.Equal(t, 0, p.Degree())
+	assert.Equal(t, -1, p.Degree())
 	p.Coefficients = []Scalar{ScalarZero}
 	assert.Equal(t, 0, p.Degree())
 	p.Coefficients = []Scalar{ScalarOne}
