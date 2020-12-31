@@ -1,0 +1,24 @@
+# We cannot use the securego/gosec@master action because we need to install libsodium
+# This action is the same as
+# https://github.com/securego/gosec/blob/9fe0b2e21afb166f331098c282aa5de6c96d3253/action.yml
+# except that we use our own Dockerfile that installs libsodium-dev
+
+name: 'Gosec Security Checker'
+description: 'Runs the gosec security checker'
+author: '@ccojocar'
+
+inputs:
+  args:
+    description: 'Arguments for gosec'
+    required: true
+    default: '-h'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.args }}
+
+branding:
+  icon: 'shield'
+  color: 'blue'

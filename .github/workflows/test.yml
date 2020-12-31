@@ -13,6 +13,9 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Install libsodium # see https://stackoverflow.com/a/57948488/2945326
+        # Note that we copy-paste this script in both lint.yml and test.yml
+        # because "act" does not support composite actions
+        # https://github.com/nektos/act/issues/339
         run:   |
           if [ "$RUNNER_OS" == "Linux" ]; then
                sudo apt-get install -y libsodium-dev
@@ -26,4 +29,4 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Test
-        run: go test ./...
+        run: make test

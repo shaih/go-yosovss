@@ -1,0 +1,49 @@
+on: [push, pull_request]
+name: Lint
+jobs:
+  golangci:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install libsodium # see https://stackoverflow.com/a/57948488/2945326
+        # Note that we copy-paste this script in both lint.yml and test.yml
+        # because "act" does not support composite actions
+        # https://github.com/nektos/act/issues/339
+        run:   |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+               sudo apt-get install -y libsodium-dev
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+               brew install libsodium
+          else
+               echo "$RUNNER_OS not supported"
+               exit 1
+          fi
+        shell: bash
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
+          version: v1.34
+
+          # Optional: working directory, useful for monorepos
+          # working-directory: somedir
+
+          # Optional: golangci-lint command line arguments.
+          # args: --issues-exit-code=0
+          args: --timeout 2m0s
+
+          # Optional: show only new issues if it's a pull request. The default value is `false`.
+          # only-new-issues: true
+
+          # Optional: if set to true then the action will use pre-installed Go
+          # skip-go-installation: true
+  gosec:
+    name: gosec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Gosec Security Scanner
+        uses: ./.github/actions/gosec
+        with:
+          args: ./...

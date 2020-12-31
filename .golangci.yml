@@ -1,0 +1,10 @@
+linters:
+  disable:
+    - structcheck
+    - unused
+  enable:
+    - lll
+    - golint
+    - gofmt
+    - gci
+    #- gosec
