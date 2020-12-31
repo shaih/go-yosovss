@@ -1,4 +1,8 @@
 # go-yosovss
+
+[![Build and Test Status](https://github.com/fabrice102/go-yosovss/workflows/Build%20and%20Test/badge.svg)](https://github.com/fabrice102/go-yosovss/actions?query=workflow%3A%22Build+and+Test%22)
+[![Lint Status](https://github.com/fabrice102/go-yosovss/workflows/Lint/badge.svg)](https://github.com/fabrice102/go-yosovss/actions?query=workflow%3ALint)
+
 Go implementation of YOSO-style verifiable secret sharing
 
 ## Getting Started
