@@ -1,9 +1,20 @@
+# github.com/algorand/msgp v1.1.45
+## explicit
 # github.com/davecgh/go-spew v1.1.0
 github.com/davecgh/go-spew/spew
+# github.com/philhofer/fwd v1.1.1
+github.com/philhofer/fwd
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/stretchr/testify v1.6.1
 ## explicit
 github.com/stretchr/testify/assert
+# github.com/tinylib/msgp v1.1.5
+## explicit
+github.com/tinylib/msgp/msgp
+# golang.org/x/mod v0.4.0
+## explicit
+# golang.org/x/tools v0.0.0-20210102185154-773b96fafca2
+## explicit
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
