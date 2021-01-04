@@ -21,13 +21,6 @@ type RoundMessages struct {
 	Round    int                `msg:"round"`
 }
 
-// BroadcastChannel represents a means of communication
-// between two parties
-type BroadcastChannel interface {
-	Send(msg []byte)
-	ReceiveRound() []BroadcastMessage
-}
-
 // PartyBroadcastChannel is the channel a party participating in the
 // protocol uses to communicate with the orchestrator
 type PartyBroadcastChannel struct {

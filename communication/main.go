@@ -1,5 +1,7 @@
 package main
 
+import "log"
+
 func main() {
 
 	// Hardcoded number of rounds of the protocol
@@ -23,8 +25,14 @@ func main() {
 	// Simulate the protocol for a fixed number of rounds
 	// Naively switches rounds whenever every party has sent a message
 	for o.Round < numRounds {
-		o.ReceiveMessages()
-		o.Broadcast()
+		err := o.ReceiveMessages()
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = o.Broadcast()
+		if err != nil {
+			log.Fatal(err)
+		}
 		o.Round++
 	}
 }
