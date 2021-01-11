@@ -84,5 +84,23 @@ func TestMultPointScalar(t *testing.T) {
 
 	assert.True(t, IsValidPoint(r1), "Point scalar multiplication is valid")
 	assert.Equal(t, p, r2, "Point scalar multiplication with scalar 1")
+}
 
+func TestEncryption(t *testing.T) {
+	pk, sk := GenerateKeys()
+	m := Message([]byte{1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 2, 1, 2, 3, 1, 1, 3})
+
+	c, err := Encrypt(pk, m)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dec, err := Decrypt(pk, sk, c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	assert.Equal(t, m, dec, "Encryption is consistent")
 }
