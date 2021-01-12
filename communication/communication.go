@@ -151,7 +151,8 @@ func (pbc PartyBroadcastChannel) StartTestProtocol(rounds int, wg *sync.WaitGrou
 	}
 }
 
-// StartProtocolSharer intiates the actions of a honest sharer participating in a t-of-n Pedersen VSS protocol to share a message m
+// StartProtocolSharer intiates the actions of a honest sharer participating in a
+// t-of-n Pedersen VSS protocol to share a message m
 func (pbc PartyBroadcastChannel) StartProtocolSharer(
 	m pedersen.Message,
 	publicKeys []curve25519.PublicKey,
@@ -201,7 +202,10 @@ func (pbc PartyBroadcastChannel) StartProtocolSharer(
 	}
 
 	// Broadcast verifications and shares
-	pbc.Send(sharerMsgEncoding)
+	err = pbc.Send(sharerMsgEncoding)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	_, _, err = pbc.ReceiveRound()
 	if err != nil {
@@ -209,10 +213,16 @@ func (pbc PartyBroadcastChannel) StartProtocolSharer(
 	}
 
 	// Does not send for complaint round
-	pbc.Send([]byte{})
+	err = pbc.Send([]byte{})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Receive potential complaints from parties
 	_, roundMsgs, err := pbc.ReceiveRound()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Collect shares of those who complained
 	var complaintShares []pedersen.Share
@@ -231,7 +241,10 @@ func (pbc PartyBroadcastChannel) StartProtocolSharer(
 		log.Fatalf("complaint response encoding failed: %v\n", err)
 	}
 	// Publish the shares of those who complained
-	pbc.Send(complaintResponseMsgEncoding)
+	err = pbc.Send(complaintResponseMsgEncoding)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	_, _, err = pbc.ReceiveRound()
 	if err != nil {
@@ -239,7 +252,8 @@ func (pbc PartyBroadcastChannel) StartProtocolSharer(
 	}
 }
 
-// StartProtocolSharerMalicious intiates the actions of a dishonest sharer participating in a t-of-n Pedersen VSS protocol to share a message m
+// StartProtocolSharerMalicious intiates the actions of a dishonest sharer
+// participating in a t-of-n Pedersen VSS protocol to share a message m
 func (pbc PartyBroadcastChannel) StartProtocolSharerMalicious(
 	m pedersen.Message,
 	publicKeys []curve25519.PublicKey,
@@ -294,7 +308,10 @@ func (pbc PartyBroadcastChannel) StartProtocolSharerMalicious(
 	}
 
 	// Broadcast verifications and shares
-	pbc.Send(sharerMsgEncoding)
+	err = pbc.Send(sharerMsgEncoding)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	_, _, err = pbc.ReceiveRound()
 	if err != nil {
@@ -302,10 +319,16 @@ func (pbc PartyBroadcastChannel) StartProtocolSharerMalicious(
 	}
 
 	// Does not send for complaint round
-	pbc.Send([]byte{})
+	err = pbc.Send([]byte{})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Receive potential complaints from parties
 	_, roundMsgs, err := pbc.ReceiveRound()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Collect shares of those who complained
 	var complaintShares []pedersen.Share
@@ -325,7 +348,10 @@ func (pbc PartyBroadcastChannel) StartProtocolSharerMalicious(
 	}
 
 	// Publish the shares of those who complained
-	pbc.Send(complaintResponseMsgEncoding)
+	err = pbc.Send(complaintResponseMsgEncoding)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	_, _, err = pbc.ReceiveRound()
 	if err != nil {
@@ -347,10 +373,17 @@ func (pbc PartyBroadcastChannel) StartProtocolParty(
 	rejectDealer := false
 
 	// Doesn't send anything first round
-	pbc.Send([]byte{})
+	err := pbc.Send([]byte{})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Receive verifications and shares
 	_, roundMsgs, err := pbc.ReceiveRound()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var sharerMsg SharerMessage
 	sharerMsg, err = UnmarshalSharerMessage(roundMsgs[0].Payload)
 	if err != nil {
@@ -374,15 +407,28 @@ func (pbc PartyBroadcastChannel) StartProtocolParty(
 
 	// Check the share and broadcast a complaint if it did not verify
 	isValidShare, err := pedersen.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if isValidShare {
-		pbc.Send([]byte{})
+		err = pbc.Send([]byte{})
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		log.Printf("Party %d broadcasted a share complaint\n", i)
-		pbc.Send([]byte{1}) // Non-zero length complaint message
+		err = pbc.Send([]byte{1}) // Non-zero length complaint message
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Get all the complaint messages broadcasted
 	_, roundMsgs, err = pbc.ReceiveRound()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	complaints := make(map[int]*pedersen.Share)
 
@@ -393,8 +439,15 @@ func (pbc PartyBroadcastChannel) StartProtocolParty(
 	}
 
 	// Get the sharer's response to the broadcasted complaints
-	pbc.Send([]byte{})
+	err = pbc.Send([]byte{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	_, roundMsgs, err = pbc.ReceiveRound()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	var complaintResponseMsg ComplaintResponseMessage
 	complaintResponseMsg, err = UnmarshalComplaintResponseMessage(roundMsgs[0].Payload)

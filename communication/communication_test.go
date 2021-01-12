@@ -145,7 +145,8 @@ func TestVSSProtocolRejectDealer(t *testing.T) {
 	var wg sync.WaitGroup
 
 	wg.Add(5)
-	go sharer.StartProtocolSharerMalicious(m, pubKeys, privKeys[0], 2, 4, &wg) // A dealer who gives party 2 and party 3 invalid shares
+	// A dealer who gives party 2 and party 3 invalid shares
+	go sharer.StartProtocolSharerMalicious(m, pubKeys, privKeys[0], 2, 4, &wg)
 	go party1.StartProtocolParty(pubKeys, privKeys[1], 1, 2, 4, &wg)
 	go party2.StartProtocolParty(pubKeys, privKeys[2], 2, 2, 4, &wg)
 	go party3.StartProtocolParty(pubKeys, privKeys[3], 3, 2, 4, &wg)
