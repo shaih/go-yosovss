@@ -24,6 +24,8 @@ func init() {
 	_ = [C.crypto_box_SECRETKEYBYTES]byte(PrivateKey{})
 }
 
+//go:generate msgp
+
 // Point is a group element on the ed25519 elliptic curve
 type Point [32]byte
 
