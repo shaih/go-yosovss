@@ -6,11 +6,21 @@ import (
 	"github.com/shaih/go-yosovss/curve25519"
 )
 
+//go:generate msgp
+
 // Params consists of two group elements g and h such that the
 // commitment is of the form g^m * h^r
 type Params struct {
 	G curve25519.Point
 	H curve25519.Point
+}
+
+// Share is composed of values used in Pedersen VSS to reconstruct a secret
+type Share struct {
+	Index       int               `msg:"index"`
+	IndexScalar curve25519.Scalar `msg:"index_scalar"`
+	S           curve25519.Scalar `msg:"s"`
+	R           curve25519.Scalar `msg:"r"`
 }
 
 // Message is the value the commiter is committing to
@@ -22,14 +32,6 @@ type Commitment curve25519.Point
 
 // Decommitment is the random value r used
 type Decommitment curve25519.Scalar
-
-// Share is composed of values used in Pedersen VSS to reconstruct a secret
-type Share struct {
-	Index       int
-	IndexScalar curve25519.Scalar
-	S           curve25519.Scalar
-	R           curve25519.Scalar
-}
 
 // GenerateParams picks two random group elements for generating commitments
 func GenerateParams() *Params {
