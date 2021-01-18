@@ -20,8 +20,6 @@ func init() {
 	// Check sizes of structs
 	_ = [C.crypto_core_ed25519_BYTES]byte(Point{})
 	_ = [C.crypto_core_ed25519_SCALARBYTES]byte(Scalar{})
-	_ = [C.crypto_box_PUBLICKEYBYTES]byte(PublicKey{})
-	_ = [C.crypto_box_SECRETKEYBYTES]byte(PrivateKey{})
 }
 
 //go:generate msgp
@@ -31,12 +29,6 @@ type Point [32]byte
 
 // Scalar is a non-negative integer
 type Scalar [32]byte
-
-// PublicKey is a public key used to decrypt or verify
-type PublicKey [32]byte
-
-// PrivateKey is a secret key used to encrypt or sign
-type PrivateKey [32]byte
 
 // ScalarZero is the scalar element 0
 var ScalarZero Scalar = Scalar([32]byte{})

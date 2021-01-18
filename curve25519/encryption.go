@@ -17,11 +17,15 @@ func init() {
 	}
 
 	// Check sizes of structs
-	_ = [C.crypto_core_ed25519_BYTES]byte(Point{})
-	_ = [C.crypto_core_ed25519_SCALARBYTES]byte(Scalar{})
 	_ = [C.crypto_box_PUBLICKEYBYTES]byte(PublicKey{})
 	_ = [C.crypto_box_SECRETKEYBYTES]byte(PrivateKey{})
 }
+
+// PublicKey is a public key used to decrypt or verify
+type PublicKey [32]byte
+
+// PrivateKey is a secret key used to encrypt or sign
+type PrivateKey [32]byte
 
 // Message is the message to be signed or encrypted
 type Message []byte
