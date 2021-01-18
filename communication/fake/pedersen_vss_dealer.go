@@ -35,29 +35,6 @@ func (p PedersenVSSDealer) GetBroadcastChannel() communication.BroadcastChannel 
 	return p.Channel
 }
 
-// SharerMessageWrapper is the raw type of SharerMessage used for msgp
-type SharerMessageWrapper struct {
-	Params struct {
-		G [32]byte `msg:"g"`
-		H [32]byte `msg:"h"`
-	}
-	Verifications   [][32]byte `msg:"verifications"`
-	EncryptedShares [][]byte   `msg:"encrypted_shares"`
-}
-
-// SharerMessage is the first message broadcasted by the sharer
-type SharerMessage struct {
-	Params          pedersen.Params
-	Verifications   []pedersen.Commitment
-	EncryptedShares []curve25519.Ciphertext
-}
-
-// ComplaintResponseMessage is the message sent by the sharer exposing the shares
-// of those who broadcasted a complaint in their original share
-type ComplaintResponseMessage struct {
-	ComplaintShares []pedersen.Share `msg:"complaint_shares"`
-}
-
 // StartProtocol intiates the actions of a honest sharer participating in a
 // t-of-n Pedersen VSS protocol to share a message m
 func (p PedersenVSSDealer) StartProtocol(
