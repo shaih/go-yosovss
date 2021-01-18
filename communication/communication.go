@@ -30,9 +30,9 @@ type ProtocolParty interface {
 // ComplaintResponseMessageWrapper is raw type of ComplaintResponseMessage used for msgp
 type ComplaintResponseMessageWrapper struct {
 	ComplaintShares []struct {
-		Index       int      `msg:"index"`
-		IndexScalar [32]byte `msg:"index_scalar"`
-		S           [32]byte `msg:"s"`
-		R           [32]byte `msg:"r"`
-	} `msg:"complaint_shares"`
+		Index       int
+		IndexScalar [32]byte
+		S           [32]byte
+		R           [32]byte
+	}
 }

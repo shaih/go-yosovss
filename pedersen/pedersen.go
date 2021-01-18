@@ -6,8 +6,6 @@ import (
 	"github.com/shaih/go-yosovss/curve25519"
 )
 
-//go:generate msgp
-
 // Params consists of two group elements g and h such that the
 // commitment is of the form g^m * h^r
 type Params struct {
@@ -17,10 +15,10 @@ type Params struct {
 
 // Share is composed of values used in Pedersen VSS to reconstruct a secret
 type Share struct {
-	Index       int               `msg:"index"`
-	IndexScalar curve25519.Scalar `msg:"index_scalar"`
-	S           curve25519.Scalar `msg:"s"`
-	R           curve25519.Scalar `msg:"r"`
+	Index       int
+	IndexScalar curve25519.Scalar
+	S           curve25519.Scalar
+	R           curve25519.Scalar
 }
 
 // Message is the value the commiter is committing to
