@@ -17,7 +17,6 @@
 package encoding
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -107,10 +106,6 @@ func TestEncodeOrder(t *testing.T) {
 
 	require.Equal(t, EncodeReflect(&c), EncodeReflect(&d))
 	require.Equal(t, EncodeReflect(&c), EncodeReflect(&e))
-
-	fmt.Println("asdf-------------")
-	cenc := EncodeReflect(c)
-	fmt.Println(cenc)
 }
 
 type InlineChild struct {
