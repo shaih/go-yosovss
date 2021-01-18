@@ -108,7 +108,7 @@ func (p PedersenVSSParty) StartProtocol(
 	}
 
 	// Check and each share broadcasted by the sharer
-	for _, share := range complaintResponseMsg.ComplaintShares {
+	for j, share := range complaintResponseMsg.ComplaintShares {
 		if _, ok := complaints[share.Index]; ok {
 			isValidShare, err = pedersen.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
 			if err != nil {
@@ -122,7 +122,7 @@ func (p PedersenVSSParty) StartProtocol(
 				break
 			}
 
-			complaints[share.Index] = &share
+			complaints[share.Index] = &complaintResponseMsg.ComplaintShares[j]
 		}
 	}
 
