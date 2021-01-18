@@ -11,19 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// setupKeys creates pub-priv keypairs for everyone participating in the protocol
-func setupKeys(n int) ([]curve25519.PublicKey, []curve25519.PrivateKey) {
-	var pubKeys []curve25519.PublicKey
-	var privKeys []curve25519.PrivateKey
-	for i := 0; i < n; i++ {
-		pk, sk := curve25519.GenerateKeys()
-		pubKeys = append(pubKeys, pk)
-		privKeys = append(privKeys, sk)
-	}
-
-	return pubKeys, privKeys
-}
-
 func TestCommuncationProtocol(t *testing.T) {
 	fmt.Println("----------Start Communication Protocol Test----------")
 	// Hardcoded number of rounds of the protocol
@@ -77,7 +64,7 @@ func TestCommuncationProtocol(t *testing.T) {
 
 func TestVSSProtocol(t *testing.T) {
 	fmt.Println("----------Start VSS Protocol Test----------")
-	pubKeys, privKeys := setupKeys(4)
+	pubKeys, privKeys := SetupKeys(4)
 
 	// Hardcoded number of rounds of the protocol
 	numRounds := 3
@@ -147,7 +134,7 @@ func TestVSSProtocol(t *testing.T) {
 
 func TestVSSProtocolRejectDealer(t *testing.T) {
 	fmt.Println("----------Start VSS Protocol Reject Dealer Test----------")
-	pubKeys, privKeys := setupKeys(5)
+	pubKeys, privKeys := SetupKeys(5)
 
 	// Hardcoded number of rounds of the protocol
 	numRounds := 3

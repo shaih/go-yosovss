@@ -5,7 +5,21 @@ import (
 	"sync"
 
 	"github.com/shaih/go-yosovss/communication"
+	"github.com/shaih/go-yosovss/curve25519"
 )
+
+// SetupKeys creates pub-priv keypairs for everyone participating in the protocol
+func SetupKeys(n int) ([]curve25519.PublicKey, []curve25519.PrivateKey) {
+	var pubKeys []curve25519.PublicKey
+	var privKeys []curve25519.PrivateKey
+	for i := 0; i < n; i++ {
+		pk, sk := curve25519.GenerateKeys()
+		pubKeys = append(pubKeys, pk)
+		privKeys = append(privKeys, sk)
+	}
+
+	return pubKeys, privKeys
+}
 
 // Orchestrator simulates a secure broadcast channel
 // used for communication between parties
