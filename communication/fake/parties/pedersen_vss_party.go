@@ -1,17 +1,18 @@
-package fake
+package parties
 
 import (
 	"fmt"
 	"log"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/curve25519"
 	"github.com/shaih/go-yosovss/pedersen"
 )
 
 // StartPedersenVSSParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
 func StartPedersenVSSParty(
-	pbc PartyBroadcastChannel,
+	pbc fake.PartyBroadcastChannel,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
 	i int,
@@ -26,7 +27,7 @@ func StartPedersenVSSParty(
 	// Receive verifications and shares
 	_, roundMsgs := pbc.ReceiveRound()
 
-	var sharerMsg SharerMessage
+	var sharerMsg fake.SharerMessage
 	err := msgpack.Decode(roundMsgs[0].Payload, &sharerMsg)
 	if err != nil {
 		return fmt.Errorf("sharer message decoding failed for party %d: %v", i, err)
@@ -76,7 +77,7 @@ func StartPedersenVSSParty(
 
 	_, roundMsgs = pbc.ReceiveRound()
 
-	var complaintResponseMsg ComplaintResponseMessage
+	var complaintResponseMsg fake.ComplaintResponseMessage
 	err = msgpack.Decode(roundMsgs[0].Payload, &complaintResponseMsg)
 	if err != nil {
 		return fmt.Errorf("complaint responses decoding failed for party %d: %v", i, err)

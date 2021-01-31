@@ -1,11 +1,11 @@
-package fake
+package parties
 
 import (
 	"log"
 	"sync"
 	"testing"
 
-	"github.com/shaih/go-yosovss/communication/fake/parties"
+	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/curve25519"
 	"github.com/shaih/go-yosovss/pedersen"
 	"github.com/stretchr/testify/assert"
@@ -18,13 +18,13 @@ func TestVSSProtocol(t *testing.T) {
 	numRounds := 3
 
 	// Create the orchestrator
-	o := NewOrchestrator()
+	o := fake.NewOrchestrator()
 
 	// Initialize 1 sharer and 3 parties
-	dealer := NewPartyBroadcastChannel(0)
-	party1 := NewPartyBroadcastChannel(1)
-	party2 := NewPartyBroadcastChannel(2)
-	party3 := NewPartyBroadcastChannel(3)
+	dealer := fake.NewPartyBroadcastChannel(0)
+	party1 := fake.NewPartyBroadcastChannel(1)
+	party2 := fake.NewPartyBroadcastChannel(2)
+	party3 := fake.NewPartyBroadcastChannel(3)
 
 	// Connect the two parties with the orchestrator
 	o.AddChannel(dealer)
@@ -40,25 +40,25 @@ func TestVSSProtocol(t *testing.T) {
 	wg.Add(4)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := parties.StartPedersenVSSDealer(dealer, m, pubKeys, privKeys[0], 2, 3)
+		err := StartPedersenVSSDealer(dealer, m, pubKeys, privKeys[0], 2, 3)
 		assert.Equal(t, nil, err)
 	}(&wg)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := parties.StartPedersenVSSParty(party1, pubKeys, privKeys[1], 1, 2, 3)
+		err := StartPedersenVSSParty(party1, pubKeys, privKeys[1], 1, 2, 3)
 		assert.Equal(t, nil, err)
 	}(&wg)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := parties.StartPedersenVSSParty(party2, pubKeys, privKeys[2], 2, 2, 3)
+		err := StartPedersenVSSParty(party2, pubKeys, privKeys[2], 2, 2, 3)
 		assert.Equal(t, nil, err)
 	}(&wg)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := parties.StartPedersenVSSParty(party3, pubKeys, privKeys[3], 3, 2, 3)
+		err := StartPedersenVSSParty(party3, pubKeys, privKeys[3], 3, 2, 3)
 		assert.Equal(t, nil, err)
 	}(&wg)
 
@@ -86,14 +86,14 @@ func TestVSSProtocolRejectDealer(t *testing.T) {
 	numRounds := 3
 
 	// Create the orchestrator
-	o := NewOrchestrator()
+	o := fake.NewOrchestrator()
 
 	// Initialize 1 sharer and 4 parties
-	dealer := NewPartyBroadcastChannel(0)
-	party1 := NewPartyBroadcastChannel(1)
-	party2 := NewPartyBroadcastChannel(2)
-	party3 := NewPartyBroadcastChannel(3)
-	party4 := NewPartyBroadcastChannel(4)
+	dealer := fake.NewPartyBroadcastChannel(0)
+	party1 := fake.NewPartyBroadcastChannel(1)
+	party2 := fake.NewPartyBroadcastChannel(2)
+	party3 := fake.NewPartyBroadcastChannel(3)
+	party4 := fake.NewPartyBroadcastChannel(4)
 
 	// Connect the two parties with the orchestrator
 	o.AddChannel(dealer)

@@ -2,10 +2,7 @@
 ## explicit
 github.com/algorand/go-algorand-sdk/encoding/msgpack
 # github.com/algorand/go-codec/codec v1.1.7
-## explicit
 github.com/algorand/go-codec/codec
-# github.com/algorand/msgp v1.1.45
-## explicit
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/pmezard/go-difflib v1.0.0

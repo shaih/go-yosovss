@@ -1,10 +1,11 @@
-package fake
+package parties
 
 import (
 	"log"
 	"sync"
 	"testing"
 
+	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,11 +14,11 @@ func TestCommuncationProtocol(t *testing.T) {
 	numRounds := 5
 
 	// Create the orchestrator
-	o := NewOrchestrator()
+	o := fake.NewOrchestrator()
 
 	// Initialize two parties and create the two broadcast channels for the 2 parties
-	p1 := NewPartyBroadcastChannel(1)
-	p2 := NewPartyBroadcastChannel(2)
+	p1 := fake.NewPartyBroadcastChannel(1)
+	p2 := fake.NewPartyBroadcastChannel(2)
 
 	// Connect the two parties with the orchestrator
 	o.AddChannel(p1)
@@ -30,13 +31,13 @@ func TestCommuncationProtocol(t *testing.T) {
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := parties.StartTestParty(p1, numRounds)
+		err := StartTestParty(p1, numRounds)
 		assert.Equal(t, nil, err)
 	}(&wg)
 
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := parties.StartTestParty(p2, numRounds)
+		err := StartTestParty(p2, numRounds)
 		assert.Equal(t, nil, err)
 	}(&wg)
 

@@ -1,10 +1,11 @@
-package fake
+package parties
 
 import (
 	"fmt"
 	"log"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/curve25519"
 	"github.com/shaih/go-yosovss/pedersen"
 )
@@ -12,7 +13,7 @@ import (
 // StartPedersenVSSDealer intiates the actions of a honest dealer participating in a
 // t-of-n Pedersen VSS protocol to share a message m
 func StartPedersenVSSDealer(
-	pbc PartyBroadcastChannel,
+	pbc fake.PartyBroadcastChannel,
 	m pedersen.Message,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
@@ -44,7 +45,7 @@ func StartPedersenVSSDealer(
 		encryptedShares = append(encryptedShares, c)
 	}
 
-	sharerMsg := SharerMessage{
+	sharerMsg := fake.SharerMessage{
 		Params:          *params,
 		Verifications:   *verifications,
 		EncryptedShares: encryptedShares,
@@ -68,7 +69,7 @@ func StartPedersenVSSDealer(
 		}
 	}
 
-	complaintResponseMsg := ComplaintResponseMessage{
+	complaintResponseMsg := fake.ComplaintResponseMessage{
 		ComplaintShares: complaintShares,
 	}
 
