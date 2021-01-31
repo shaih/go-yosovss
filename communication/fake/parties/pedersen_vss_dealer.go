@@ -4,40 +4,15 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/shaih/go-yosovss/communication"
+	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/curve25519"
-	"github.com/shaih/go-yosovss/encoding"
 	"github.com/shaih/go-yosovss/pedersen"
 )
 
-// PedersenVSSDealer is a party that shares a secret in the Pedersen
-// VSS protocol
-type PedersenVSSDealer struct {
-	ID      int
-	Channel PartyBroadcastChannel
-}
-
-// NewPedersenVSSDealer returns a new PedersenVSSDealer
-func NewPedersenVSSDealer(i int) PedersenVSSDealer {
-	return PedersenVSSDealer{
-		ID:      i,
-		Channel: NewPartyBroadcastChannel(i),
-	}
-}
-
-// GetID returns the ID of the party
-func (p PedersenVSSDealer) GetID() int {
-	return p.ID
-}
-
-// GetBroadcastChannel returns the channel associated with the party
-func (p PedersenVSSDealer) GetBroadcastChannel() communication.BroadcastChannel {
-	return p.Channel
-}
-
-// StartProtocol intiates the actions of a honest sharer participating in a
+// StartPedersenVSSDealer intiates the actions of a honest dealer participating in a
 // t-of-n Pedersen VSS protocol to share a message m
-func (p PedersenVSSDealer) StartProtocol(
+func StartPedersenVSSDealer(
+	pbc PartyBroadcastChannel,
 	m pedersen.Message,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
@@ -58,7 +33,8 @@ func (p PedersenVSSDealer) StartProtocol(
 	var encryptedShares []curve25519.Ciphertext
 	for i, share := range *shares {
 		// Encode each share as a byte array for encryption
-		shareEncoding := encoding.EncodeReflect(share)
+
+		shareEncoding := msgpack.Encode(share)
 
 		// Encrypt share i with party i's public key
 		c, err := curve25519.Encrypt(publicKeys[i+1], curve25519.Message(shareEncoding))
@@ -75,14 +51,14 @@ func (p PedersenVSSDealer) StartProtocol(
 	}
 
 	// Broadcast verifications and shares
-	p.Channel.Send(encoding.EncodeReflect(sharerMsg))
-	p.Channel.ReceiveRound()
+	pbc.Send(msgpack.Encode(sharerMsg))
+	pbc.ReceiveRound()
 
 	// Does not send for complaint round
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 
 	// Receive potential complaints from parties
-	_, roundMsgs := p.Channel.ReceiveRound()
+	_, roundMsgs := pbc.ReceiveRound()
 
 	// Collect shares of those who complained
 	var complaintShares []pedersen.Share
@@ -97,8 +73,8 @@ func (p PedersenVSSDealer) StartProtocol(
 	}
 
 	// Publish the shares of those who complained
-	p.Channel.Send(encoding.EncodeReflect(complaintResponseMsg))
-	p.Channel.ReceiveRound()
+	pbc.Send(msgpack.Encode(complaintResponseMsg))
+	pbc.ReceiveRound()
 
 	return nil
 }

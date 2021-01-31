@@ -1,8 +1,5 @@
 package curve25519
 
-// #cgo CFLAGS: -Wall -std=c99
-// #cgo LDFLAGS: -lsodium
-// #include <stdint.h>
 // #include "sodium.h"
 import "C"
 
@@ -62,4 +59,17 @@ func Decrypt(pk PublicKey, sk PrivateKey, c Ciphertext) (Message, error) {
 		return Message(m), fmt.Errorf("failed to perform decryption: %d", result)
 	}
 	return Message(m), nil
+}
+
+// SetupKeys creates n public-private keypairs
+func SetupKeys(n int) ([]PublicKey, []PrivateKey) {
+	var pubKeys []PublicKey
+	var privKeys []PrivateKey
+	for i := 0; i < n; i++ {
+		pk, sk := GenerateKeys()
+		pubKeys = append(pubKeys, pk)
+		privKeys = append(privKeys, sk)
+	}
+
+	return pubKeys, privKeys
 }

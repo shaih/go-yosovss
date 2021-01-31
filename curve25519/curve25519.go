@@ -22,8 +22,6 @@ func init() {
 	_ = [C.crypto_core_ed25519_SCALARBYTES]byte(Scalar{})
 }
 
-//go:generate msgp
-
 // Point is a group element on the ed25519 elliptic curve
 type Point [32]byte
 
