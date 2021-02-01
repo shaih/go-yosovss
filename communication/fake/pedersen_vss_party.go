@@ -67,7 +67,7 @@ func (p PedersenVSSParty) StartProtocol(
 	var share pedersen.Share
 	err = encoding.DecodeReflect(shareEncoding, &share)
 	if err != nil {
-		return fmt.Errorf("share decoding failed for party %d: %v", i, err)
+		return fmt.Errorf("decoding share failed for party %d: %v", i, err)
 	}
 
 	log.Printf("Party %d decrypted share: %v\n", i, share)

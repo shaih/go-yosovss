@@ -109,10 +109,10 @@ func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment,
 
 	f := curve25519.Polynomial{
 		Coefficients: make([]curve25519.Scalar, t),
-	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_t * x^t where a_0 = m and a_1,...,a_t are random
+	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_{t-1} * x^{t-1} where a_0 = m and a_1,...,a_{t-1} are random
 	g := curve25519.Polynomial{
 		Coefficients: make([]curve25519.Scalar, t),
-	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_t * x^t where b_0,...,b_t are random
+	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_{t-1]} * x^{t-1} where b_0,...,b_{t-1} are random
 
 	// Get commitment to the secret
 	commitment, decommitment, err := GenerateCommitment(params, m)
