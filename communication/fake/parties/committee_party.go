@@ -30,9 +30,15 @@ func StartCommitteeParty(
 		verIndex := intIndexOf(verCommittee, index)
 
 		if holdIndex >= 0 {
-			HoldingCommitteeShareProtocol(pbc, params, *share, holdCommittee, verCommittee, holdIndex, t, n)
+			err := HoldingCommitteeShareProtocol(pbc, params, *share, holdCommittee, verCommittee, holdIndex, t, n)
+			if err != nil {
+				return fmt.Errorf("Error in holding committee protocol: %v", err)
+			}
 		} else if verIndex >= 0 {
-			VerificationCommitteeProtocol(pbc, params, holdCommittee, verIndex, t, n)
+			err := VerificationCommitteeProtocol(pbc, params, holdCommittee, verIndex, t, n)
+			if err != nil {
+				return fmt.Errorf("Error in verification committee protocol: %v", err)
+			}
 		} else {
 			// Do nothing if not in a committee
 			for i := 0; i < 3; i++ {
@@ -49,9 +55,11 @@ func StartCommitteeParty(
 
 		nextHoldIndex := intIndexOf(nextHoldCommittee, index)
 		if nextHoldIndex >= 0 {
-
+			pbc.Send([]byte{})
+			pbc.ReceiveRound()
 		} else {
-
+			pbc.Send([]byte{})
+			pbc.ReceiveRound()
 		}
 
 		holdCommittee = nextHoldCommittee
@@ -253,7 +261,7 @@ func VerificationCommitteeProtocol(
 
 	pbc.Send([]byte{})
 	// Receive complaint responses
-	_, roundMsgs = pbc.ReceiveRound()
+	pbc.ReceiveRound()
 
 	verShareMsg := fake.VerShareMessage{
 		Bk: bk,
@@ -277,17 +285,6 @@ func NextCommittee(committee []int, total int) []int {
 	}
 
 	return nextCommittee
-}
-
-// intSliceContains checks if a slice contains a number
-func intSliceContains(list []int, val int) bool {
-	for _, v := range list {
-		if v == val {
-			return true
-		}
-	}
-
-	return false
 }
 
 // intIndexOf returns the first position in a slice that has a value,
