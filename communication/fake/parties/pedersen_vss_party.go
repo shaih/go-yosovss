@@ -1,42 +1,18 @@
-package fake
+package parties
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/shaih/go-yosovss/communication"
+	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/curve25519"
-	"github.com/shaih/go-yosovss/encoding"
 	"github.com/shaih/go-yosovss/pedersen"
 )
 
-// PedersenVSSParty is a party that performs the Pedersen VSS protocol
-// and holds a share of a shared secret
-type PedersenVSSParty struct {
-	ID      int
-	Channel PartyBroadcastChannel
-}
-
-// NewPedersenVSSParty returns a new PedersenVSSParty
-func NewPedersenVSSParty(i int) PedersenVSSParty {
-	return PedersenVSSParty{
-		ID:      i,
-		Channel: NewPartyBroadcastChannel(i),
-	}
-}
-
-// GetID returns the ID of the party
-func (p PedersenVSSParty) GetID() int {
-	return p.ID
-}
-
-// GetBroadcastChannel returns the channel associated with the party
-func (p PedersenVSSParty) GetBroadcastChannel() communication.BroadcastChannel {
-	return p.Channel
-}
-
-// StartProtocol initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
-func (p PedersenVSSParty) StartProtocol(
+// StartPedersenVSSParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
+func StartPedersenVSSParty(
+	pbc fake.PartyBroadcastChannel,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
 	i int,
@@ -46,13 +22,13 @@ func (p PedersenVSSParty) StartProtocol(
 	rejectDealer := false
 
 	// Doesn't send anything first round
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 
 	// Receive verifications and shares
-	_, roundMsgs := p.Channel.ReceiveRound()
+	_, roundMsgs := pbc.ReceiveRound()
 
-	var sharerMsg SharerMessage
-	err := encoding.DecodeReflect(roundMsgs[0].Payload, &sharerMsg)
+	var sharerMsg fake.SharerMessage
+	err := msgpack.Decode(roundMsgs[0].Payload, &sharerMsg)
 	if err != nil {
 		return fmt.Errorf("sharer message decoding failed for party %d: %v", i, err)
 	}
@@ -65,7 +41,7 @@ func (p PedersenVSSParty) StartProtocol(
 
 	// Decode the share
 	var share pedersen.Share
-	err = encoding.DecodeReflect(shareEncoding, &share)
+	err = msgpack.Decode(shareEncoding, &share)
 	if err != nil {
 		return fmt.Errorf("decoding share failed for party %d: %v", i, err)
 	}
@@ -79,14 +55,14 @@ func (p PedersenVSSParty) StartProtocol(
 	}
 
 	if isValidShare {
-		p.Channel.Send([]byte{})
+		pbc.Send([]byte{})
 	} else {
 		log.Printf("Party %d broadcasted a share complaint\n", i)
-		p.Channel.Send([]byte{1}) // Non-zero length complaint message
+		pbc.Send([]byte{1}) // Non-zero length complaint message
 	}
 
 	// Get all the complaint messages broadcasted
-	_, roundMsgs = p.Channel.ReceiveRound()
+	_, roundMsgs = pbc.ReceiveRound()
 
 	complaints := make(map[int]*pedersen.Share)
 
@@ -97,12 +73,12 @@ func (p PedersenVSSParty) StartProtocol(
 	}
 
 	// Get the sharer's response to the broadcasted complaints
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 
-	_, roundMsgs = p.Channel.ReceiveRound()
+	_, roundMsgs = pbc.ReceiveRound()
 
-	var complaintResponseMsg ComplaintResponseMessage
-	err = encoding.DecodeReflect(roundMsgs[0].Payload, &complaintResponseMsg)
+	var complaintResponseMsg fake.ComplaintResponseMessage
+	err = msgpack.Decode(roundMsgs[0].Payload, &complaintResponseMsg)
 	if err != nil {
 		return fmt.Errorf("complaint responses decoding failed for party %d: %v", i, err)
 	}

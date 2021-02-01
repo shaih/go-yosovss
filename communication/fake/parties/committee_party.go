@@ -1,41 +1,17 @@
-package fake
+package parties
 
 import (
 	"fmt"
 
-	"github.com/shaih/go-yosovss/communication"
+	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/curve25519"
-	"github.com/shaih/go-yosovss/encoding"
 	"github.com/shaih/go-yosovss/pedersen"
 )
 
-// CommitteeParty is a party that performs the Pedersen VSS protocol
-// and holds a share of a shared secret
-type CommitteeParty struct {
-	ID      int
-	Channel PartyBroadcastChannel
-}
-
-// NewCommitteeParty returns a new CommitteeParty
-func NewCommitteeParty(i int) CommitteeParty {
-	return CommitteeParty{
-		ID:      i,
-		Channel: NewPartyBroadcastChannel(i),
-	}
-}
-
-// GetID returns the ID of the party
-func (p CommitteeParty) GetID() int {
-	return p.ID
-}
-
-// GetBroadcastChannel returns the channel associated with the party
-func (p CommitteeParty) GetBroadcastChannel() communication.BroadcastChannel {
-	return p.Channel
-}
-
-// StartProtocol initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
-func (p CommitteeParty) StartProtocol(
+// StartCommitteeParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
+func StartCommitteeParty(
+	pbc fake.PartyBroadcastChannel,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
 	holdCommittee []int,
@@ -53,14 +29,14 @@ func (p CommitteeParty) StartProtocol(
 		verIndex := intIndexOf(holdCommittee, index)
 
 		if holdIndex >= 0 {
-			p.HoldingCommitteeShareProtocol(params, *share, holdCommittee, verCommittee, holdIndex, t, n)
+			HoldingCommitteeShareProtocol(pbc, params, *share, holdCommittee, verCommittee, holdIndex, t, n)
 		} else if verIndex >= 0 {
-			p.VerificationCommitteeProtocol(params, holdCommittee, verIndex, t, n)
+			VerificationCommitteeProtocol(pbc, params, holdCommittee, verIndex, t, n)
 		} else {
 			// Do nothing if not in a committee
 			for i := 0; i < 4; i++ {
-				p.Channel.Send([]byte{})
-				p.Channel.ReceiveRound()
+				pbc.Send([]byte{})
+				pbc.ReceiveRound()
 			}
 		}
 
@@ -113,7 +89,8 @@ func TwoLevelShare(
 // HoldingCommitteeShareProtocol performs the actions of a party participating in the
 // current holding committee for a round of the protocol, passing shares to the verification
 // committee
-func (p CommitteeParty) HoldingCommitteeShareProtocol(
+func HoldingCommitteeShareProtocol(
+	pbc fake.PartyBroadcastChannel,
 	params pedersen.Params,
 	share pedersen.Share,
 	holdCommittee []int,
@@ -122,7 +99,6 @@ func (p CommitteeParty) HoldingCommitteeShareProtocol(
 	t int,
 	n int,
 ) error {
-
 	// Perform a two level share of s_i to get Beta_i matrix of shares and V_i matrix
 	// of verifications (with alpha_i vector as the hidden first level share vector)
 	bi, vi, err := TwoLevelShare(params, pedersen.Message(share.S), t, n)
@@ -137,7 +113,7 @@ func (p CommitteeParty) HoldingCommitteeShareProtocol(
 		return fmt.Errorf("error in creating shares of r_%d: %v", holdIndex, err)
 	}
 
-	holdShareMessage := HoldShareMessage{
+	holdShareMsg := fake.HoldShareMessage{
 		Bi: bi,
 		Vi: vi,
 		Di: di,
@@ -145,12 +121,12 @@ func (p CommitteeParty) HoldingCommitteeShareProtocol(
 	}
 
 	// Send shares to verification committee
-	p.Channel.Send(encoding.EncodeReflect(holdShareMessage))
-	p.Channel.ReceiveRound()
+	pbc.Send(msgpack.Encode(holdShareMsg))
+	pbc.ReceiveRound()
 
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 	// Receive potential complaints from verification committee
-	_, roundMsgs := p.Channel.ReceiveRound()
+	_, roundMsgs := pbc.ReceiveRound()
 
 	// Initialize nxn matrix of nil shares, to be populated to respond to complaints
 	biResponse := make([][]*pedersen.Share, n)
@@ -164,8 +140,8 @@ func (p CommitteeParty) HoldingCommitteeShareProtocol(
 
 	// Iterate over all complaint messages from the verification committee
 	for k, verifier := range verCommittee {
-		var holderComplaintMsg HolderComplaintMessage
-		err := encoding.DecodeReflect(roundMsgs[verifier].Payload, &holderComplaintMsg)
+		var holderComplaintMsg fake.HolderComplaintMessage
+		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
 		if err != nil {
 			return fmt.Errorf("failed to decode complaint of verifier %d for holder %d: %v", verifier, holdIndex, err)
 		}
@@ -179,24 +155,25 @@ func (p CommitteeParty) HoldingCommitteeShareProtocol(
 		}
 	}
 
-	holderComplaintResponseMsg := HolderComplaintResponseMessage{
+	holderComplaintResponseMsg := fake.HolderComplaintResponseMessage{
 		BiResponse: biResponse,
 		DiResponse: diResponse,
 	}
 
 	// Send out response to complaints
-	p.Channel.Send(encoding.EncodeReflect(holderComplaintResponseMsg))
-	p.Channel.ReceiveRound()
+	pbc.Send(msgpack.Encode(holderComplaintResponseMsg))
+	pbc.ReceiveRound()
 
 	// Do nothing when verification committee is sending to next holding committee
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 
 	return nil
 }
 
 // VerificationCommitteeProtocol performs the actions of a party participating in the
 // verification committee for a round of the protocol
-func (p CommitteeParty) VerificationCommitteeProtocol(
+func VerificationCommitteeProtocol(
+	pbc fake.PartyBroadcastChannel,
 	params pedersen.Params,
 	holdCommittee []int,
 	verIndex int,
@@ -206,10 +183,10 @@ func (p CommitteeParty) VerificationCommitteeProtocol(
 
 	// Does not send for round where holding committee
 	// sends shares to verification committee
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 
 	// Receive shares from holding committee
-	_, roundMsgs := p.Channel.ReceiveRound()
+	_, roundMsgs := pbc.ReceiveRound()
 
 	var bComplaints map[int][]int
 	var bk [][]*pedersen.Share
@@ -218,8 +195,8 @@ func (p CommitteeParty) VerificationCommitteeProtocol(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range holdCommittee {
-		var holdShareMsg HoldShareMessage
-		err := encoding.DecodeReflect(roundMsgs[holder].Payload, &holdShareMsg)
+		var holdShareMsg fake.HoldShareMessage
+		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
 			return fmt.Errorf("Decoding share from holder %d failed for verifier %d: %v", i, verIndex, err)
 		}
@@ -256,26 +233,26 @@ func (p CommitteeParty) VerificationCommitteeProtocol(
 
 	}
 
-	holderComplaintMsg := HolderComplaintMessage{
+	holderComplaintMsg := fake.HolderComplaintMessage{
 		BComplaints: bComplaints,
 		DComplaints: dComplaints,
 	}
 
 	// Sends complaints
-	p.Channel.Send(encoding.EncodeReflect(holderComplaintMsg))
-	p.Channel.ReceiveRound()
+	pbc.Send(msgpack.Encode(holderComplaintMsg))
+	pbc.ReceiveRound()
 
-	p.Channel.Send([]byte{})
+	pbc.Send([]byte{})
 	// Receive complaint responses
-	_, roundMsgs = p.Channel.ReceiveRound()
+	_, roundMsgs = pbc.ReceiveRound()
 
-	verShareMsg := VerShareMessage{
+	verShareMsg := fake.VerShareMessage{
 		Bk: bk,
 		Dk: dk,
 	}
 
 	// Sends shares to next holding committee
-	p.Channel.Send(encoding.EncodeReflect(verShareMsg))
+	pbc.Send(msgpack.Encode(verShareMsg))
 
 	return nil
 }
