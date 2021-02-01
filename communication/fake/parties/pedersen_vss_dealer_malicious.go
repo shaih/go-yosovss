@@ -50,7 +50,7 @@ func StartPedersenVSSMaliciousDealer(
 	}
 
 	sharerMsg := fake.SharerMessage{
-		Params:          *params,
+		Params:          params,
 		Verifications:   *verifications,
 		EncryptedShares: encryptedShares,
 	}

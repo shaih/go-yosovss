@@ -18,15 +18,16 @@ func StartCommitteeParty(
 	verCommittee []int,
 	params pedersen.Params,
 	share *pedersen.Share,
+	verifications []pedersen.Commitment,
 	index int,
 	t int,
 	n int,
 ) error {
 	// Repeat for fixed number of rounds
-	for rounds := 0; rounds < 5; rounds++ {
+	for rounds := 0; rounds < 1; rounds++ {
 
 		holdIndex := intIndexOf(holdCommittee, index)
-		verIndex := intIndexOf(holdCommittee, index)
+		verIndex := intIndexOf(verCommittee, index)
 
 		if holdIndex >= 0 {
 			HoldingCommitteeShareProtocol(pbc, params, *share, holdCommittee, verCommittee, holdIndex, t, n)
@@ -34,11 +35,14 @@ func StartCommitteeParty(
 			VerificationCommitteeProtocol(pbc, params, holdCommittee, verIndex, t, n)
 		} else {
 			// Do nothing if not in a committee
-			for i := 0; i < 4; i++ {
+			for i := 0; i < 3; i++ {
 				pbc.Send([]byte{})
 				pbc.ReceiveRound()
+
 			}
+			pbc.Send([]byte{})
 		}
+		pbc.ReceiveRound()
 
 		nextHoldCommittee := NextCommittee(holdCommittee, len(publicKeys))
 		nextVerCommittee := NextCommittee(verCommittee, len(publicKeys))
@@ -65,7 +69,7 @@ func TwoLevelShare(
 	t int,
 	n int,
 ) ([][]pedersen.Share, [][]pedersen.Commitment, error) {
-	shareList, _, err := pedersen.VSSShare(&params, pedersen.Message(m), t, n)
+	shareList, _, err := pedersen.VSSShare(params, pedersen.Message(m), t, n)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error in first level share: %v", err)
 	}
@@ -73,13 +77,13 @@ func TwoLevelShare(
 	var shareMatrix [][]pedersen.Share
 	var verMatrix [][]pedersen.Commitment
 
-	for i, share := range *shareList {
-		si, vi, err := pedersen.VSSShare(&params, pedersen.Message(share.S), t, n)
+	for _, share := range *shareList {
+		si, vi, err := pedersen.VSSShare(params, pedersen.Message(share.S), t, n)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error in second level share: %v", err)
 		}
-		shareMatrix[i] = *si
-		verMatrix[i] = *vi
+		shareMatrix = append(shareMatrix, *si)
+		verMatrix = append(verMatrix, *vi)
 
 	}
 
@@ -180,7 +184,6 @@ func VerificationCommitteeProtocol(
 	t int,
 	n int,
 ) error {
-
 	// Does not send for round where holding committee
 	// sends shares to verification committee
 	pbc.Send([]byte{})
@@ -188,10 +191,16 @@ func VerificationCommitteeProtocol(
 	// Receive shares from holding committee
 	_, roundMsgs := pbc.ReceiveRound()
 
-	var bComplaints map[int][]int
-	var bk [][]*pedersen.Share
-	var dComplaints map[int][]int
-	var dk [][]*pedersen.Share
+	bComplaints := make(map[int][]int)
+	dComplaints := make(map[int][]int)
+
+	bk := make([][]*pedersen.Share, n)
+	dk := make([][]*pedersen.Share, n)
+
+	for i := 0; i < n; i++ {
+		bk[i] = make([]*pedersen.Share, n)
+		dk[i] = make([]*pedersen.Share, n)
+	}
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range holdCommittee {
@@ -204,11 +213,11 @@ func VerificationCommitteeProtocol(
 		var holderDComplaints []int
 
 		for j := 0; j < n; j++ {
-			bIsValid, err := pedersen.VSSVerify(&params, holdShareMsg.Bi[j][verIndex], holdShareMsg.Vi[j])
+			bIsValid, err := pedersen.VSSVerify(params, holdShareMsg.Bi[j][verIndex], holdShareMsg.Vi[j])
 			if err != nil {
 				return fmt.Errorf("Validating share from holder %d failed for verifier %d: %v", i, verIndex, err)
 			}
-			dIsValid, err := pedersen.VSSVerify(&params, holdShareMsg.Di[j][verIndex], holdShareMsg.Wi[j])
+			dIsValid, err := pedersen.VSSVerify(params, holdShareMsg.Di[j][verIndex], holdShareMsg.Wi[j])
 			if err != nil {
 				return fmt.Errorf("Validating verification from holder %d failed for verifier %d: %v", i, verIndex, err)
 			}

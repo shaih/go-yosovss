@@ -3,7 +3,6 @@ package parties
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/shaih/go-yosovss/communication/fake"
 )
@@ -14,7 +13,6 @@ func StartTestParty(
 	rounds int,
 ) error {
 	for i := 0; i < rounds; i++ {
-		time.Sleep(time.Second)
 		msg := fmt.Sprintf("Message for round %d from party %d", i, pbc.ID)
 		pbc.Send([]byte(msg))
 

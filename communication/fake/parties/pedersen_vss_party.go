@@ -49,7 +49,7 @@ func StartPedersenVSSParty(
 	log.Printf("Party %d decrypted share: %v\n", i, share)
 
 	// Check the share and broadcast a complaint if it did not verify
-	isValidShare, err := pedersen.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
+	isValidShare, err := pedersen.VSSVerify(sharerMsg.Params, share, sharerMsg.Verifications)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func StartPedersenVSSParty(
 	// Check and each share broadcasted by the sharer
 	for j, share := range complaintResponseMsg.ComplaintShares {
 		if _, ok := complaints[share.Index]; ok {
-			isValidShare, err = pedersen.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
+			isValidShare, err = pedersen.VSSVerify(sharerMsg.Params, share, sharerMsg.Verifications)
 			if err != nil {
 				return fmt.Errorf("complaint share verification failed for party %d: %v", i, err)
 			}

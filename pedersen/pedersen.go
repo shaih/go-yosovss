@@ -32,7 +32,7 @@ type Commitment curve25519.Point
 type Decommitment curve25519.Scalar
 
 // GenerateParams picks two random group elements for generating commitments
-func GenerateParams() *Params {
+func GenerateParams() Params {
 	g := curve25519.RandomPoint()
 	h := curve25519.RandomPoint()
 
@@ -40,14 +40,14 @@ func GenerateParams() *Params {
 		h = curve25519.RandomPoint()
 	}
 
-	return &Params{
+	return Params{
 		G: g,
 		H: h,
 	}
 }
 
 // GenerateCommitment creates a commitment for some value m
-func GenerateCommitment(params *Params, m Message) (*Commitment, *Decommitment, error) {
+func GenerateCommitment(params Params, m Message) (*Commitment, *Decommitment, error) {
 
 	r := curve25519.RandomScalar()
 
@@ -74,7 +74,7 @@ func GenerateCommitment(params *Params, m Message) (*Commitment, *Decommitment, 
 
 // VerifyCommitment checks if a commitment was for some message m under the
 // decommitment r
-func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Decommitment) (bool, error) {
+func VerifyCommitment(params Params, commitment *Commitment, m Message, r *Decommitment) (bool, error) {
 	gm, err := curve25519.MultPointScalar(params.G, curve25519.Scalar(m)) // Compute g^m
 	if err != nil {
 		return false, fmt.Errorf("verification failed: %v", err)
@@ -95,7 +95,7 @@ func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Deco
 
 // VSSShare performs the intial dealer's step for a Pedersen VSS on the message m
 // for t-of-n reconstruction.
-func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment, error) {
+func VSSShare(params Params, m Message, t int, n int) (*[]Share, *[]Commitment, error) {
 	if t < 1 || n < 1 || t > n {
 		return nil, nil, fmt.Errorf("invalid share generation parameters")
 	}
@@ -157,7 +157,7 @@ func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment,
 
 // VSSVerify performs verification of a received share with the broadcasted
 // verification.
-func VSSVerify(params *Params, share Share, verifications []Commitment) (bool, error) {
+func VSSVerify(params Params, share Share, verifications []Commitment) (bool, error) {
 	t := len(verifications)
 	gs, err := curve25519.MultPointScalar(params.G, share.S)
 	if err != nil {
@@ -192,7 +192,7 @@ func VSSVerify(params *Params, share Share, verifications []Commitment) (bool, e
 }
 
 // VSSReconstruct reconstructs the secret shared in the Pedersen VSS scheme
-func VSSReconstruct(params *Params, shares []Share, verifications []Commitment) (*Message, error) {
+func VSSReconstruct(params Params, shares []Share, verifications []Commitment) (*Message, error) {
 	t := len(verifications)
 	n := len(shares)
 	var validShares []Share
