@@ -1,15 +1,13 @@
-package parties
+package fake
 
 import (
 	"fmt"
 	"log"
-
-	"github.com/shaih/go-yosovss/communication/fake"
 )
 
 // StartTestParty initiates the basic protocol for a party that just broadcasts test messages
 func StartTestParty(
-	pbc fake.PartyBroadcastChannel,
+	pbc PartyBroadcastChannel,
 	rounds int,
 ) error {
 	for i := 0; i < rounds; i++ {
