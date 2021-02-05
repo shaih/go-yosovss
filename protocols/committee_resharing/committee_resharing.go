@@ -1,4 +1,4 @@
-package parties
+package committee_resharing
 
 import (
 	"log"
@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/shaih/go-yosovss/communication/fake"
-	"github.com/shaih/go-yosovss/curve25519"
-	"github.com/shaih/go-yosovss/pedersen"
+	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/stretchr/testify/assert"
 )
 

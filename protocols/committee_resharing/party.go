@@ -1,12 +1,12 @@
-package parties
+package committee_resharing
 
 import (
 	"fmt"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/communication/fake"
-	"github.com/shaih/go-yosovss/curve25519"
-	"github.com/shaih/go-yosovss/pedersen"
+	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
 
 // StartCommitteeParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
