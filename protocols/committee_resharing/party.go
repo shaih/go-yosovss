@@ -125,7 +125,7 @@ func HoldingCommitteeShareProtocol(
 		return fmt.Errorf("error in creating shares of r_%d: %v", holdIndex, err)
 	}
 
-	holdShareMsg := fake.HoldShareMessage{
+	holdShareMsg := HoldShareMessage{
 		Bi: bi,
 		Vi: vi,
 		Di: di,
@@ -152,7 +152,7 @@ func HoldingCommitteeShareProtocol(
 
 	// Iterate over all complaint messages from the verification committee
 	for k, verifier := range verCommittee {
-		var holderComplaintMsg fake.HolderComplaintMessage
+		var holderComplaintMsg HolderComplaintMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
 		if err != nil {
 			return fmt.Errorf("failed to decode complaint of verifier %d for holder %d: %v", verifier, holdIndex, err)
@@ -167,7 +167,7 @@ func HoldingCommitteeShareProtocol(
 		}
 	}
 
-	holderComplaintResponseMsg := fake.HolderComplaintResponseMessage{
+	holderComplaintResponseMsg := HolderComplaintResponseMessage{
 		BiResponse: biResponse,
 		DiResponse: diResponse,
 	}
@@ -212,7 +212,7 @@ func VerificationCommitteeProtocol(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range holdCommittee {
-		var holdShareMsg fake.HoldShareMessage
+		var holdShareMsg HoldShareMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
 			return fmt.Errorf("Decoding share from holder %d failed for verifier %d: %v", i, verIndex, err)
@@ -250,7 +250,7 @@ func VerificationCommitteeProtocol(
 
 	}
 
-	holderComplaintMsg := fake.HolderComplaintMessage{
+	holderComplaintMsg := HolderComplaintMessage{
 		BComplaints: bComplaints,
 		DComplaints: dComplaints,
 	}
@@ -263,7 +263,7 @@ func VerificationCommitteeProtocol(
 	// Receive complaint responses
 	pbc.ReceiveRound()
 
-	verShareMsg := fake.VerShareMessage{
+	verShareMsg := VerShareMessage{
 		Bk: bk,
 		Dk: dk,
 	}
