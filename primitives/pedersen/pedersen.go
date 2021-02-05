@@ -3,7 +3,7 @@ package pedersen
 import (
 	"fmt"
 
-	"github.com/shaih/go-yosovss/curve25519"
+	"github.com/shaih/go-yosovss/primitives/curve25519"
 )
 
 // Params consists of two group elements g and h such that the

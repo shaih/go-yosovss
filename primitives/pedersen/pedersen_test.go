@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/shaih/go-yosovss/curve25519"
+	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/stretchr/testify/assert"
 )
 
