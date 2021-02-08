@@ -7,6 +7,7 @@ package curve25519
 import "C"
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"unsafe"
@@ -57,6 +58,15 @@ func RandomPoint() Point {
 
 	C.crypto_core_ed25519_random((*C.uchar)(&p[0]))
 	return p
+}
+
+// GetScalar returns a scalar representation of an unsigned 64-bit integer
+func GetScalar(x uint64) Scalar {
+	b := make([]byte, 8)
+	var s [32]byte
+	binary.LittleEndian.PutUint64(b, x)
+	copy(s[:], b)
+	return Scalar(s)
 }
 
 // RandomScalar returns a random scalar value in the range [0, L), where L is the order
