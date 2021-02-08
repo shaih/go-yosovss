@@ -1,5 +1,7 @@
 package curve25519
 
+import "fmt"
+
 // Polynomial is a represtation of a polynomial over Scalars
 type Polynomial struct {
 	Coefficients []Scalar
@@ -23,4 +25,24 @@ func (p *Polynomial) Evaluate(x Scalar) Scalar {
 		evaluation = AddScalar(evaluation, p.Coefficients[i])
 	}
 	return evaluation
+}
+
+// LagrangeCoeffs takes in a list of coordinates and the evaluation coordinate and returns the Lagrange coefficients
+// lambda_i derived from those points
+func LagrangeCoeffs(coords []Scalar, x Scalar) (*[]Scalar, error) {
+	lambdas := make([]Scalar, len(coords))
+	for i := 0; i < len(coords); i++ {
+		lambda := ScalarZero
+		for j := 0; j < len(coords); j++ {
+			if i != j {
+				denom, err := InvertScalar(SubScalar(coords[j], coords[i]))
+				if err != nil {
+					return nil, fmt.Errorf("error in polynomial interpolation")
+				}
+				lambda = MultScalar(lambda, MultScalar(SubScalar(x, coords[j]), denom))
+			}
+		}
+		lambdas[i] = lambda
+	}
+	return &lambdas, nil
 }

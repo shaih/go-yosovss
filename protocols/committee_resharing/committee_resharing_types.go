@@ -13,7 +13,7 @@ Di      [][]pedersen.Share      `codec:"d_i"`
 Wi      [][]pedersen.Commitment `codec:"w_i"`
 }
 
-// HolderComplaintMessage is used in the committee protocol is the messsage sent by a memeber k of the verification
+// HolderComplaintMessage is used in the committee protocol is the message sent by a member k of the verification
 // committee to declare the holders for which their sent shares did not verify. BComplaints and DComplaints
 // are each a map that with key being the identity of the holder i and the value being a list of j values for which
 // Beta_{ijk} and Delta_{ijk} are faulty, respectively.
@@ -33,8 +33,7 @@ DiResponse [][]*pedersen.Share `codec:"d_i_res"`
 }
 
 // VerShareMessage is used in the committee protocol is the message sent by members of the verification
-// committee to pass shares along to the holding committee for the next
-// round
+// committee to pass shares along to the holding committee for the next round
 type VerShareMessage struct {
 _struct struct{}            `codec:",omitempty,omitemptyarray"`
 Bk      [][]*pedersen.Share `codec:"b_k"`
