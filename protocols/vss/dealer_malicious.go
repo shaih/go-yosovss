@@ -1,4 +1,4 @@
-package pedersen_vss
+package vss
 
 import (
 	"fmt"
@@ -10,9 +10,9 @@ import (
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
 
-// StartPedersenVSSDealer intiates the actions of a honest dealer participating in a
-// t-of-n Pedersen VSS protocol to share a message m
-func StartPedersenVSSDealer(
+// StartPedersenVSSMaliciousDealer intiates the actions of a dishonest sharer
+// participating in a t-of-n Pedersen VSS protocol to share a message m
+func StartPedersenVSSMaliciousDealer(
 	pbc fake.PartyBroadcastChannel,
 	m pedersen.Message,
 	publicKeys []curve25519.PublicKey,
@@ -32,20 +32,24 @@ func StartPedersenVSSDealer(
 	log.Printf("Sharer created shares: %v\n", *shares)
 
 	var encryptedShares []curve25519.Ciphertext
+
+	// Maliciously modify some shares
+	(*shares)[1].S = curve25519.RandomScalar()
+	(*shares)[2].R = curve25519.RandomScalar()
+
 	for i, share := range *shares {
 		// Encode each share as a byte array for encryption
-
 		shareEncoding := msgpack.Encode(share)
 
 		// Encrypt share i with party i's public key
 		c, err := curve25519.Encrypt(publicKeys[i+1], curve25519.Message(shareEncoding))
 		if err != nil {
-			return fmt.Errorf("Failed to encrypt shares: %v", err)
+			return fmt.Errorf("failed to encrypt shares: %v", err)
 		}
 		encryptedShares = append(encryptedShares, c)
 	}
 
-	sharerMsg := fake.SharerMessage{
+	sharerMsg := SharerMessage{
 		Params:          params,
 		Verifications:   *verifications,
 		EncryptedShares: encryptedShares,
@@ -53,6 +57,7 @@ func StartPedersenVSSDealer(
 
 	// Broadcast verifications and shares
 	pbc.Send(msgpack.Encode(sharerMsg))
+
 	pbc.ReceiveRound()
 
 	// Does not send for complaint round
@@ -69,7 +74,7 @@ func StartPedersenVSSDealer(
 		}
 	}
 
-	complaintResponseMsg := fake.ComplaintResponseMessage{
+	complaintResponseMsg := ComplaintResponseMessage{
 		ComplaintShares: complaintShares,
 	}
 

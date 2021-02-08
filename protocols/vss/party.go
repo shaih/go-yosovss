@@ -1,4 +1,4 @@
-package pedersen_vss
+package vss
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ func StartPedersenVSSParty(
 	// Receive verifications and shares
 	_, roundMsgs := pbc.ReceiveRound()
 
-	var sharerMsg fake.SharerMessage
+	var sharerMsg SharerMessage
 	err := msgpack.Decode(roundMsgs[0].Payload, &sharerMsg)
 	if err != nil {
 		return fmt.Errorf("sharer message decoding failed for party %d: %v", i, err)
@@ -77,7 +77,7 @@ func StartPedersenVSSParty(
 
 	_, roundMsgs = pbc.ReceiveRound()
 
-	var complaintResponseMsg fake.ComplaintResponseMessage
+	var complaintResponseMsg ComplaintResponseMessage
 	err = msgpack.Decode(roundMsgs[0].Payload, &complaintResponseMsg)
 	if err != nil {
 		return fmt.Errorf("complaint responses decoding failed for party %d: %v", i, err)

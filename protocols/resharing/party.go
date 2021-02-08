@@ -1,4 +1,4 @@
-package committee_resharing
+package resharing
 
 import (
 	"fmt"
@@ -397,7 +397,7 @@ func HoldingCommitteeReceiveProtocol(
 		}
 		i++
 	}
-	
+
 	if len(aj) < t {
 		return nil, fmt.Errorf("Unable to reconstruct sufficient alpha_i and gamma_i for holder %d", holdIndex)
 	}

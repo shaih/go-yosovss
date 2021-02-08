@@ -1,4 +1,4 @@
-package committee_resharing
+package resharing
 
 import (
 	"log"

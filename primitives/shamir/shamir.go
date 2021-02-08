@@ -71,4 +71,3 @@ func Reconstruct(shares []Share) (*Message, error) {
 	m := Message(sum)
 	return &m, nil
 }
-

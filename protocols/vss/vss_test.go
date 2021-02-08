@@ -1,4 +1,4 @@
-package pedersen_vss
+package vss
 
 import (
 	"log"

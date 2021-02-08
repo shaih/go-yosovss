@@ -24,5 +24,6 @@ func TestShamirSecretSharing(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	assert.Equal(t, m, *res,"Commitment is consistent")
+
+	assert.Equal(t, m, *res, "Commitment is consistent")
 }
