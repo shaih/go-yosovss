@@ -408,10 +408,10 @@ func HoldingCommitteeReceiveProtocol(
 	}
 
 	share := pedersen.Share{
-		Index: holdIndex,
+		Index:       holdIndex,
 		IndexScalar: curve25519.GetScalar(uint64(holdIndex)),
-		R: curve25519.ScalarZero,
-		S: curve25519.ScalarZero,
+		R:           curve25519.ScalarZero,
+		S:           curve25519.ScalarZero,
 	}
 
 	for i := 0; i < t; i++ {
