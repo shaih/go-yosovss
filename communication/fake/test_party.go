@@ -11,7 +11,7 @@ func StartTestParty(
 	rounds int,
 ) error {
 	for i := 0; i < rounds; i++ {
-		msg := fmt.Sprintf("Message for round %d from party %d", i, pbc.ID)
+		msg := fmt.Sprintf("message for round %d from party %d", i, pbc.ID)
 		pbc.Send([]byte(msg))
 
 		round, roundMsgs := pbc.ReceiveRound()
@@ -21,7 +21,7 @@ func StartTestParty(
 			roundMsgsString = append(roundMsgsString, string(roundMsgString.Payload))
 		}
 
-		log.Printf("Party %d received messages: %v for round %d\n", pbc.ID, roundMsgsString, round)
+		log.Printf("party %d received messages: %v for round %d\n", pbc.ID, roundMsgsString, round)
 	}
 	return nil
 }

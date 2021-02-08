@@ -37,7 +37,7 @@ func StartCommitteeParty(
 			v = vHold
 			w = wHold
 			if err != nil {
-				return fmt.Errorf("Error in holding committee share protocol: %v", err)
+				return fmt.Errorf("error in holding committee share protocol: %v", err)
 			}
 		} else if verIndex >= 0 {
 			vHold, wHold, err := VerificationCommitteeProtocol(pbc, params, holdCommittee, verIndex, t, n)
@@ -51,7 +51,7 @@ func StartCommitteeParty(
 			pbc.Send([]byte{})
 			vHold, wHold, err := ReceiveVerifications(pbc, holdCommittee, n)
 			if err != nil {
-				return fmt.Errorf("Error in receiving holding committee verifications protocol: %v", err)
+				return fmt.Errorf("error in receiving holding committee verifications protocol: %v", err)
 			}
 			v = *vHold
 			w = *wHold
@@ -72,7 +72,7 @@ func StartCommitteeParty(
 			s, err := HoldingCommitteeReceiveProtocol(pbc, params, v, w, nextHoldCommittee, verCommittee, nextHoldIndex, t, n)
 			share = s
 			if err != nil {
-				return fmt.Errorf("Error in holding committee receive protocol: %v", err)
+				return fmt.Errorf("error in holding committee receive protocol: %v", err)
 			}
 		} else {
 			pbc.Send([]byte{})
@@ -240,7 +240,7 @@ func VerificationCommitteeProtocol(
 		var holdShareMsg HoldShareMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Decoding share from holder %d failed for verifier %d: %v", i, verIndex, err)
+			return nil, nil, fmt.Errorf("decoding share from holder %d failed for verifier %d: %v", i, verIndex, err)
 		}
 		var holderBComplaints []int
 		var holderDComplaints []int
@@ -253,11 +253,11 @@ func VerificationCommitteeProtocol(
 
 			bIsValid, err := pedersen.VSSVerify(params, holdShareMsg.Bi[j][verIndex], holdShareMsg.Vi[j])
 			if err != nil {
-				return nil, nil, fmt.Errorf("Validating share from holder %d failed for verifier %d: %v", i, verIndex, err)
+				return nil, nil, fmt.Errorf("validating share from holder %d failed for verifier %d: %v", i, verIndex, err)
 			}
 			dIsValid, err := pedersen.VSSVerify(params, holdShareMsg.Di[j][verIndex], holdShareMsg.Wi[j])
 			if err != nil {
-				return nil, nil, fmt.Errorf("Validating verification from holder %d failed for verifier %d: %v", i, verIndex, err)
+				return nil, nil, fmt.Errorf("validating verification from holder %d failed for verifier %d: %v", i, verIndex, err)
 			}
 
 			if bIsValid {
@@ -321,7 +321,7 @@ func ReceiveVerifications(
 		var holdShareMsg HoldShareMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Decoding share from holder %d failed: %v", i, err)
+			return nil, nil, fmt.Errorf("decoding share from holder %d failed: %v", i, err)
 		}
 
 		v[i] = make([][]pedersen.Commitment, n)
@@ -363,7 +363,7 @@ func HoldingCommitteeReceiveProtocol(
 		var verShareMsg VerShareMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsg)
 		if err != nil {
-			return nil, fmt.Errorf("Decoding share from verifier %d failed for holder %d: %v", k, holdIndex, err)
+			return nil, fmt.Errorf("decoding share from verifier %d failed for holder %d: %v", k, holdIndex, err)
 		}
 
 		for i := 0; i < n; i++ {
@@ -399,12 +399,12 @@ func HoldingCommitteeReceiveProtocol(
 	}
 
 	if len(aj) < t {
-		return nil, fmt.Errorf("Unable to reconstruct sufficient alpha_i and gamma_i for holder %d", holdIndex)
+		return nil, fmt.Errorf("unable to reconstruct sufficient alpha_i and gamma_i for holder %d", holdIndex)
 	}
 
 	lambdas, err := curve25519.LagrangeCoeffs(indices, curve25519.GetScalar(uint64(holdIndex)))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to compute Lagrange coefficients for holder %d: %v", holdIndex, err)
+		return nil, fmt.Errorf("unable to compute Lagrange coefficients for holder %d: %v", holdIndex, err)
 	}
 
 	share := pedersen.Share{

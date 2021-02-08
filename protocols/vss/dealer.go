@@ -40,7 +40,7 @@ func StartPedersenVSSDealer(
 		// Encrypt share i with party i's public key
 		c, err := curve25519.Encrypt(publicKeys[i+1], curve25519.Message(shareEncoding))
 		if err != nil {
-			return fmt.Errorf("Failed to encrypt shares: %v", err)
+			return fmt.Errorf("failed to encrypt shares: %v", err)
 		}
 		encryptedShares = append(encryptedShares, c)
 	}
