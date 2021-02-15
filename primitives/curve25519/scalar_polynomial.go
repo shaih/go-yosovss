@@ -2,7 +2,7 @@ package curve25519
 
 import "fmt"
 
-// Polynomial is a represtation of a polynomial over Scalars
+// Polynomial is a representation of a polynomial over Scalars
 type Polynomial struct {
 	Coefficients []Scalar
 }
@@ -32,17 +32,19 @@ func (p *Polynomial) Evaluate(x Scalar) Scalar {
 func LagrangeCoeffs(coords []Scalar, x Scalar) (*[]Scalar, error) {
 	lambdas := make([]Scalar, len(coords))
 	for i := 0; i < len(coords); i++ {
-		lambda := ScalarZero
+		num := ScalarOne
+		denom := ScalarOne
 		for j := 0; j < len(coords); j++ {
 			if i != j {
-				denom, err := InvertScalar(SubScalar(coords[j], coords[i]))
-				if err != nil {
-					return nil, fmt.Errorf("error in polynomial interpolation")
-				}
-				lambda = MultScalar(lambda, MultScalar(SubScalar(x, coords[j]), denom))
+				num = MultScalar(num, SubScalar(x, coords[j]))
+				denom = MultScalar(denom, SubScalar(coords[i], coords[j]))
 			}
 		}
-		lambdas[i] = lambda
+		reciprocal, err := InvertScalar(denom)
+		if err != nil {
+			return nil, fmt.Errorf("unable to invert denominator for term %d: %v", i, err)
+		}
+		lambdas[i] = MultScalar(num, reciprocal)
 	}
 	return &lambdas, nil
 }
