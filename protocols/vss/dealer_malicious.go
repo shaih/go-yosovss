@@ -2,18 +2,18 @@ package vss
 
 import (
 	"fmt"
+	"github.com/shaih/go-yosovss/communication"
 	"log"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
-	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
 
-// StartPedersenVSSMaliciousDealer intiates the actions of a dishonest sharer
+// StartPedersenVSSMaliciousDealer initiates the actions of a dishonest sharer
 // participating in a t-of-n Pedersen VSS protocol to share a message m
 func StartPedersenVSSMaliciousDealer(
-	pbc fake.PartyBroadcastChannel,
+	bc communication.BroadcastChannel,
 	m pedersen.Message,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
@@ -56,15 +56,15 @@ func StartPedersenVSSMaliciousDealer(
 	}
 
 	// Broadcast verifications and shares
-	pbc.Send(msgpack.Encode(sharerMsg))
+	bc.Send(msgpack.Encode(sharerMsg))
 
-	pbc.ReceiveRound()
+	bc.ReceiveRound()
 
 	// Does not send for complaint round
-	pbc.Send([]byte{})
+	bc.Send([]byte{})
 
 	// Receive potential complaints from parties
-	_, roundMsgs := pbc.ReceiveRound()
+	_, roundMsgs := bc.ReceiveRound()
 
 	// Collect shares of those who complained
 	var complaintShares []pedersen.Share
@@ -79,8 +79,8 @@ func StartPedersenVSSMaliciousDealer(
 	}
 
 	// Publish the shares of those who complained
-	pbc.Send(msgpack.Encode(complaintResponseMsg))
-	pbc.ReceiveRound()
+	bc.Send(msgpack.Encode(complaintResponseMsg))
+	bc.ReceiveRound()
 
 	return nil
 }

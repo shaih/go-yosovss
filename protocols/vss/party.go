@@ -2,17 +2,17 @@ package vss
 
 import (
 	"fmt"
+	"github.com/shaih/go-yosovss/communication"
 	"log"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
-	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
 
 // StartPedersenVSSParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
 func StartPedersenVSSParty(
-	pbc fake.PartyBroadcastChannel,
+	bc communication.BroadcastChannel,
 	publicKeys []curve25519.PublicKey,
 	sk curve25519.PrivateKey,
 	i int,
@@ -22,10 +22,10 @@ func StartPedersenVSSParty(
 	rejectDealer := false
 
 	// Doesn't send anything first round
-	pbc.Send([]byte{})
+	bc.Send([]byte{})
 
 	// Receive verifications and shares
-	_, roundMsgs := pbc.ReceiveRound()
+	_, roundMsgs := bc.ReceiveRound()
 
 	var sharerMsg SharerMessage
 	err := msgpack.Decode(roundMsgs[0].Payload, &sharerMsg)
@@ -55,14 +55,14 @@ func StartPedersenVSSParty(
 	}
 
 	if isValidShare {
-		pbc.Send([]byte{})
+		bc.Send([]byte{})
 	} else {
 		log.Printf("Party %d broadcasted a share complaint\n", i)
-		pbc.Send([]byte{1}) // Non-zero length complaint message
+		bc.Send([]byte{1}) // Non-zero length complaint message
 	}
 
 	// Get all the complaint messages broadcasted
-	_, roundMsgs = pbc.ReceiveRound()
+	_, roundMsgs = bc.ReceiveRound()
 
 	complaints := make(map[int]*pedersen.Share)
 
@@ -73,9 +73,9 @@ func StartPedersenVSSParty(
 	}
 
 	// Get the sharer's response to the broadcasted complaints
-	pbc.Send([]byte{})
+	bc.Send([]byte{})
 
-	_, roundMsgs = pbc.ReceiveRound()
+	_, roundMsgs = bc.ReceiveRound()
 
 	var complaintResponseMsg ComplaintResponseMessage
 	err = msgpack.Decode(roundMsgs[0].Payload, &complaintResponseMsg)
