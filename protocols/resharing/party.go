@@ -3,6 +3,7 @@ package resharing
 import (
 	"fmt"
 	"github.com/shaih/go-yosovss/communication"
+	"log"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
@@ -23,17 +24,18 @@ func StartCommitteeParty(
 	t int,
 	n int,
 ) error {
+
+	holdIndex := intIndexOf(holdCommittee, index)
+	verIndex := intIndexOf(verCommittee, index)
+
 	// Repeat for fixed number of rounds
 	for rounds := 0; rounds < 1; rounds++ {
-
-		holdIndex := intIndexOf(holdCommittee, index)
-		verIndex := intIndexOf(verCommittee, index)
-
 		var v [][][]pedersen.Commitment
 		var w [][][]pedersen.Commitment
 
 		if holdIndex >= 0 {
-			vHold, wHold, err := HoldingCommitteeShareProtocol(bc, params, *share, holdCommittee, verCommittee, holdIndex, t, n)
+			vHold, wHold, err := HoldingCommitteeShareProtocol(bc, params, *share, holdCommittee, verCommittee,
+				holdIndex, t, n)
 			v = vHold
 			w = wHold
 			if err != nil {
@@ -69,7 +71,8 @@ func StartCommitteeParty(
 
 		share = nil
 		if nextHoldIndex >= 0 {
-			s, err := HoldingCommitteeReceiveProtocol(bc, params, v, w, nextHoldCommittee, verCommittee, nextHoldIndex, t, n)
+			s, err := HoldingCommitteeReceiveProtocol(bc, params, v, w, nextHoldCommittee, verCommittee,
+				nextHoldIndex, t, n)
 			share = s
 			if err != nil {
 				return fmt.Errorf("error in holding committee receive protocol: %v", err)
@@ -79,9 +82,35 @@ func StartCommitteeParty(
 			bc.ReceiveRound()
 		}
 
+		ComputeNewVerifications(verifications)
+
 		holdCommittee = nextHoldCommittee
 		verCommittee = nextVerCommittee
+		holdIndex = intIndexOf(holdCommittee, index)
+		verIndex = intIndexOf(verCommittee, index)
 	}
+
+	// Final round to reconstruct message
+	bc.Send(msgpack.Encode(share))
+	_, roundMsgs := bc.ReceiveRound()
+
+	var shares []pedersen.Share
+	for i, holder := range holdCommittee {
+		var share pedersen.Share
+		err := msgpack.Decode(roundMsgs[holder].Payload, &share)
+		if err != nil {
+			return fmt.Errorf("decoding share from holder %d failed for holder %d: %v", i, holdIndex, err)
+		} else {
+			shares = append(shares, share)
+		}
+	}
+
+	m, err := pedersen.VSSReconstruct(params, shares, verifications)
+	if err != nil {
+		return fmt.Errorf("failed to reconstruct original message for party %d: %v", index, err)
+	}
+
+	log.Printf("Party %d reconstructed message: %v", index, *m)
 
 	return nil
 }
@@ -102,13 +131,13 @@ func TwoLevelShare(
 	var shareMatrix [][]pedersen.Share
 	var verMatrix [][]pedersen.Commitment
 
-	for _, share := range *shareList {
+	for _, share := range shareList {
 		si, vi, err := pedersen.VSSShare(params, pedersen.Message(share.S), t, n)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error in second level share: %v", err)
 		}
-		shareMatrix = append(shareMatrix, *si)
-		verMatrix = append(verMatrix, *vi)
+		shareMatrix = append(shareMatrix, si)
+		verMatrix = append(verMatrix, vi)
 
 	}
 
@@ -415,9 +444,11 @@ func HoldingCommitteeReceiveProtocol(
 	}
 
 	for i := 0; i < t; i++ {
-		share.R = curve25519.AddScalar(share.R, curve25519.MultScalar((*lambdas)[i], aj[i]))
-		share.S = curve25519.AddScalar(share.S, curve25519.MultScalar((*lambdas)[i], cj[i]))
+		share.R = curve25519.AddScalar(share.R, curve25519.MultScalar(lambdas[i], aj[i]))
+		share.S = curve25519.AddScalar(share.S, curve25519.MultScalar(lambdas[i], cj[i]))
 	}
+
+
 
 	return &share, nil
 }

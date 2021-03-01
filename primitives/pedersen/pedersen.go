@@ -21,7 +21,7 @@ type Share struct {
 	R           curve25519.Scalar
 }
 
-// Message is the value the commiter is committing to
+// Message is the value the committer is committing to
 type Message curve25519.Scalar
 
 // Commitment consists of elliptic curve point that serves as a
@@ -32,7 +32,7 @@ type Commitment curve25519.Point
 type Decommitment curve25519.Scalar
 
 // GenerateParams picks two random group elements for generating commitments
-func GenerateParams() Params {
+func GenerateParams() *Params {
 	g := curve25519.RandomPoint()
 	h := curve25519.RandomPoint()
 
@@ -40,7 +40,7 @@ func GenerateParams() Params {
 		h = curve25519.RandomPoint()
 	}
 
-	return Params{
+	return &Params{
 		G: g,
 		H: h,
 	}
@@ -95,7 +95,7 @@ func VerifyCommitment(params Params, commitment *Commitment, m Message, r *Decom
 
 // VSSShare performs the intial dealer's step for a Pedersen VSS on the message m
 // for t-of-n reconstruction.
-func VSSShare(params Params, m Message, t int, n int) (*[]Share, *[]Commitment, error) {
+func VSSShare(params Params, m Message, t int, n int) ([]Share, []Commitment, error) {
 	if t < 1 || n < 1 || t > n {
 		return nil, nil, fmt.Errorf("invalid share generation parameters")
 	}
@@ -152,7 +152,7 @@ func VSSShare(params Params, m Message, t int, n int) (*[]Share, *[]Commitment, 
 		}) // The share of participant i is (s_i, r_i) = (f(i), g(i))
 	}
 
-	return &shares, &verifications, nil
+	return shares, verifications, nil
 }
 
 // VSSVerify performs verification of a received share with the broadcasted

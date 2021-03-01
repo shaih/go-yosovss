@@ -29,7 +29,7 @@ func (p *Polynomial) Evaluate(x Scalar) Scalar {
 
 // LagrangeCoeffs takes in a list of coordinates and the evaluation coordinate and returns the Lagrange coefficients
 // lambda_i derived from those points
-func LagrangeCoeffs(coords []Scalar, x Scalar) (*[]Scalar, error) {
+func LagrangeCoeffs(coords []Scalar, x Scalar) ([]Scalar, error) {
 	lambdas := make([]Scalar, len(coords))
 	for i := 0; i < len(coords); i++ {
 		num := ScalarOne
@@ -46,5 +46,5 @@ func LagrangeCoeffs(coords []Scalar, x Scalar) (*[]Scalar, error) {
 		}
 		lambdas[i] = MultScalar(num, reciprocal)
 	}
-	return &lambdas, nil
+	return lambdas, nil
 }

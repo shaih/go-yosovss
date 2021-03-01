@@ -27,7 +27,7 @@ func TestCommitteeProtocol(t *testing.T) {
 	// Generate a Pedersen share of a message
 	msg := pedersen.Message(curve25519.RandomScalar())
 	params := pedersen.GenerateParams()
-	shares, verifications, _ := pedersen.VSSShare(params, msg, 2, 4)
+	shares, verifications, _ := pedersen.VSSShare(*params, msg, 2, 4)
 
 	// Initialize channels and connect with orchestrator
 	for i := 0; i < 12; i++ {
@@ -43,7 +43,7 @@ func TestCommitteeProtocol(t *testing.T) {
 		go func(i int, wg *sync.WaitGroup) {
 			defer wg.Done()
 			err := StartCommitteeParty(channels[i], pubKeys, privKeys[0],
-				initHoldCommittee, initVerCommittee, params, &(*shares)[i], *verifications, i, 2, 4)
+				initHoldCommittee, initVerCommittee, *params, &shares[i], verifications, i, 2, 4)
 			assert.Equal(t, nil, err)
 		}(i, &wg)
 	}
@@ -54,7 +54,7 @@ func TestCommitteeProtocol(t *testing.T) {
 		go func(i int, wg *sync.WaitGroup) {
 			defer wg.Done()
 			err := StartCommitteeParty(channels[i], pubKeys, privKeys[0],
-				initHoldCommittee, initVerCommittee, params, nil, *verifications, i, 2, 4)
+				initHoldCommittee, initVerCommittee, *params, nil, verifications, i, 2, 4)
 			assert.Equal(t, nil, err)
 		}(i, &wg)
 	}

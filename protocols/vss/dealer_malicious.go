@@ -28,16 +28,16 @@ func StartPedersenVSSMaliciousDealer(
 		return fmt.Errorf("Pedersen VSS share operation failed: %v", err)
 	}
 
-	log.Printf("Sharer created verifications: %v\n", *verifications)
-	log.Printf("Sharer created shares: %v\n", *shares)
+	log.Printf("Sharer created verifications: %v\n", verifications)
+	log.Printf("Sharer created shares: %v\n", shares)
 
 	var encryptedShares []curve25519.Ciphertext
 
 	// Maliciously modify some shares
-	(*shares)[1].S = curve25519.RandomScalar()
-	(*shares)[2].R = curve25519.RandomScalar()
+	shares[1].S = curve25519.RandomScalar()
+	shares[2].R = curve25519.RandomScalar()
 
-	for i, share := range *shares {
+	for i, share := range shares {
 		// Encode each share as a byte array for encryption
 		shareEncoding := msgpack.Encode(share)
 
@@ -50,8 +50,8 @@ func StartPedersenVSSMaliciousDealer(
 	}
 
 	sharerMsg := SharerMessage{
-		Params:          params,
-		Verifications:   *verifications,
+		Params:          *params,
+		Verifications:   verifications,
 		EncryptedShares: encryptedShares,
 	}
 
@@ -70,7 +70,7 @@ func StartPedersenVSSMaliciousDealer(
 	var complaintShares []pedersen.Share
 	for i, roundMsg := range roundMsgs {
 		if len(roundMsg.Payload) > 0 {
-			complaintShares = append(complaintShares, (*shares)[i])
+			complaintShares = append(complaintShares, shares[i])
 		}
 	}
 

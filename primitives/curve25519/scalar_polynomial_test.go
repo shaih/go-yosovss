@@ -41,6 +41,6 @@ func TestLagrangeCoeffs(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	assert.Equal(t, expectedLambdas, *lambdas)
+	assert.Equal(t, expectedLambdas, lambdas)
 
 }

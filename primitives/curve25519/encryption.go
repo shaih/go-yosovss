@@ -61,7 +61,7 @@ func Decrypt(pk PublicKey, sk PrivateKey, c Ciphertext) (Message, error) {
 	return Message(m), nil
 }
 
-// SetupKeys creates n public-private keypairs
+// SetupKeys creates n public-private key pairs
 func SetupKeys(n int) ([]PublicKey, []PrivateKey) {
 	var pubKeys []PublicKey
 	var privKeys []PrivateKey

@@ -17,7 +17,7 @@ type Share struct {
 type Message curve25519.Scalar
 
 // GenerateShares creates shares of t-of-n Shamir secret sharing for some secret m
-func GenerateShares(m Message, t int, n int) (*[]Share, error) {
+func GenerateShares(m Message, t int, n int) ([]Share, error) {
 	// The shares to be distributed to participants
 	var shares []Share
 
@@ -44,7 +44,7 @@ func GenerateShares(m Message, t int, n int) (*[]Share, error) {
 		}) // The share of participant i is s_i = f(i)
 	}
 
-	return &shares, nil
+	return shares, nil
 }
 
 // Reconstruct takes in t shares and then does polynomial interpolation
