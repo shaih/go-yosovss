@@ -17,8 +17,8 @@ func TestShamirSecretSharing(t *testing.T) {
 	}
 
 	reconstruct := make([]Share, 2)
-	reconstruct[0] = (*shares)[2]
-	reconstruct[1] = (*shares)[1]
+	reconstruct[0] = shares[2]
+	reconstruct[1] = shares[1]
 
 	res, err := Reconstruct(reconstruct)
 	if err != nil {

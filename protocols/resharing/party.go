@@ -82,7 +82,7 @@ func StartCommitteeParty(
 			bc.ReceiveRound()
 		}
 
-		ComputeNewVerifications(verifications)
+		//ComputeNewVerifications(verifications)
 
 		holdCommittee = nextHoldCommittee
 		verCommittee = nextVerCommittee
@@ -100,9 +100,9 @@ func StartCommitteeParty(
 		err := msgpack.Decode(roundMsgs[holder].Payload, &share)
 		if err != nil {
 			return fmt.Errorf("decoding share from holder %d failed for holder %d: %v", i, holdIndex, err)
-		} else {
-			shares = append(shares, share)
 		}
+
+		shares = append(shares, share)
 	}
 
 	m, err := pedersen.VSSReconstruct(params, shares, verifications)

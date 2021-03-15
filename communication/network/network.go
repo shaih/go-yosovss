@@ -3,7 +3,6 @@ package network
 import (
 	"fmt"
 	"github.com/shaih/go-yosovss/communication"
-	"net"
 	"sync"
 )
 

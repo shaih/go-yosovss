@@ -1,37 +1,39 @@
 package client
 
 import (
-	"bufio"
 	"fmt"
-	"net"
+	"log"
 	"os"
-	"strings"
+	"strconv"
 )
+
 func main() {
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Please provide host:port.")
-		return
+	if len(os.Args) != 3 {
+		fmt.Printf("Usage: %s [id] [server host:port] [port]\n", os.Args[0])
+		os.Exit(1)
 	}
 
-	CONNECT := arguments[1]
-	c, err := net.Dial("tcp", CONNECT)
+	id, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		fmt.Println(err)
-		return
+		fmt.Printf("id not a integer")
+		os.Exit(1)
 	}
+	connect := os.Args[2]
+	port := os.Args[3]
 
-	for {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print(">> ")
-		text, _ := reader.ReadString('\n')
-		fmt.Fprintf(c, text+"\n")
+	nbc := NewNetworkBroadcastChannel(id, connect, port)
 
-		message, _ := bufio.NewReader(c).ReadString('\n')
-		fmt.Print("->: " + message)
-		if strings.TrimSpace(string(text)) == "STOP" {
-			fmt.Println("TCP client exiting...")
-			return
+	for i := 0; i < 5; i++ {
+		msg := fmt.Sprintf("message for round %d from party %d", i, nbc.ID)
+		nbc.Send([]byte(msg))
+
+		round, roundMsgs := nbc.ReceiveRound()
+
+		var roundMsgsString []string
+		for _, roundMsgString := range roundMsgs {
+			roundMsgsString = append(roundMsgsString, string(roundMsgString.Payload))
 		}
+
+		log.Printf("party %d received messages: %v for round %d\n", nbc.ID, roundMsgsString, round)
 	}
 }

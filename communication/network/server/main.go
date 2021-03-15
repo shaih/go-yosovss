@@ -1,47 +1,25 @@
 package server
 
 import (
-	"bufio"
 	"fmt"
-	"net"
 	"os"
-	"strings"
-	"time"
+	"strconv"
 )
 
 func main() {
-	if len(os.Args) != 1 {
-		fmt.Printf("Usage: %s [port] [number of worker goroutines]\n", os.Args[0])
+	if len(os.Args) != 2 {
+		fmt.Printf("Usage: %s [port] [num clients]\n", os.Args[0])
 		os.Exit(1)
 	}
-	port := ":" + os.Args[1]
-	l, err := net.Listen("tcp", port)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer l.Close()
+	port := os.Args[1]
 
-	c, err := l.Accept()
-	if err != nil {
-		fmt.Println(err)
-		return
+	numClients, err := strconv.Atoi(os.Args[2])
+	if err != nil || numClients < 0 {
+		fmt.Printf("invalid number of clients")
+		os.Exit(1)
 	}
 
-	for {
-		netData, err := bufio.NewReader(c).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		if strings.TrimSpace(string(netData)) == "STOP" {
-			fmt.Println("Exiting TCP server!")
-			return
-		}
+	ns := NewNetworkServer()
 
-		fmt.Print("-> ", string(netData))
-		t := time.Now()
-		myTime := t.Format(time.RFC3339) + "\n"
-		c.Write([]byte(myTime))
-	}
+	ns.ListenTCP(port, numClients)
 }
