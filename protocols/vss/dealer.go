@@ -2,10 +2,10 @@ package vss
 
 import (
 	"fmt"
-	"github.com/shaih/go-yosovss/communication"
 	"log"
 
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
