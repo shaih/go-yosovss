@@ -215,19 +215,17 @@ func VSSReconstruct(params *Params, shares []Share, verifications []Commitment) 
 
 	// Polynomial interpolation evaluated at 0
 	var sum curve25519.Scalar
+	validShareValues := make([]curve25519.Scalar, t)
 	for i := 0; i < t; i++ {
+		validShareValues[i] = validShares[i].IndexScalar
+	}
+	lambdas, err := curve25519.LagrangeCoeffs(validShareValues, curve25519.GetScalar(uint64(0)))
+	if err != nil {
+		return nil, fmt.Errorf("error in polynomial interpolation")
+	}
 
-		term := validShares[i].S
-		for j := 0; j < t; j++ {
-			if i != j {
-				denom, err := curve25519.InvertScalar(curve25519.SubScalar(validShares[j].IndexScalar, validShares[i].IndexScalar))
-				if err != nil {
-					return nil, fmt.Errorf("error in polynomial interpolation")
-				}
-				term = curve25519.MultScalar(term, curve25519.MultScalar(validShares[j].IndexScalar, denom))
-			}
-		}
-		sum = curve25519.AddScalar(sum, term)
+	for i := 0; i < t; i++ {
+		sum = curve25519.AddScalar(sum, curve25519.MultScalar(validShares[i].S, lambdas[i]))
 	}
 
 	m := Message(sum)
