@@ -82,8 +82,8 @@ func (o Orchestrator) Broadcast() error {
 	return nil
 }
 
-// PartyBroadcastChannel is the channel a party participating in the
-// protocol uses to communicate with the orchestrator
+// PartyBroadcastChannel implements communication.BroadcastChannel and is the channel a party
+// participating in the protocol uses to communicate with the orchestrator
 type PartyBroadcastChannel struct {
 	ID             int
 	SendChannel    chan communication.BroadcastMessage

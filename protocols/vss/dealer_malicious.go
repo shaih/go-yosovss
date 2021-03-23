@@ -23,7 +23,7 @@ func StartPedersenVSSMaliciousDealer(
 	// Broadcast the verification shares and the encrypted shares
 	params := pedersen.GenerateParams()
 
-	shares, verifications, err := pedersen.VSSShare(*params, m, t, n)
+	shares, verifications, err := pedersen.VSSShare(params, m, t, n)
 	if err != nil {
 		return fmt.Errorf("Pedersen VSS share operation failed: %v", err)
 	}

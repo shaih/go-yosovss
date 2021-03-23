@@ -17,7 +17,7 @@ func StartCommitteeParty(
 	sk curve25519.PrivateKey,
 	holdCommittee []int,
 	verCommittee []int,
-	params pedersen.Params,
+	params *pedersen.Params,
 	share *pedersen.Share,
 	verifications []pedersen.Commitment,
 	index int,
@@ -118,7 +118,7 @@ func StartCommitteeParty(
 // TwoLevelShare performs a Shamir share followed by Pedersen VSS, and returns the resulting
 // matrix of shares and verifications
 func TwoLevelShare(
-	params pedersen.Params,
+	params *pedersen.Params,
 	m pedersen.Message,
 	t int,
 	n int,
@@ -138,7 +138,6 @@ func TwoLevelShare(
 		}
 		shareMatrix = append(shareMatrix, si)
 		verMatrix = append(verMatrix, vi)
-
 	}
 
 	return shareMatrix, verMatrix, nil
@@ -149,7 +148,7 @@ func TwoLevelShare(
 // committee. It returns the verifications of the holders.
 func HoldingCommitteeShareProtocol(
 	bc communication.BroadcastChannel,
-	params pedersen.Params,
+	params *pedersen.Params,
 	share pedersen.Share,
 	holdCommittee []int,
 	verCommittee []int,
@@ -237,7 +236,7 @@ func HoldingCommitteeShareProtocol(
 // of the protocol. It returns the verifications of the holders.
 func VerificationCommitteeProtocol(
 	bc communication.BroadcastChannel,
-	params pedersen.Params,
+	params *pedersen.Params,
 	holdCommittee []int,
 	verIndex int,
 	t int,
@@ -368,7 +367,7 @@ func ReceiveVerifications(
 // round of the protocol, receiving shares from the verification committee
 func HoldingCommitteeReceiveProtocol(
 	bc communication.BroadcastChannel,
-	params pedersen.Params,
+	params *pedersen.Params,
 	v [][][]pedersen.Commitment,
 	w [][][]pedersen.Commitment,
 	holdCommittee []int,
@@ -447,8 +446,6 @@ func HoldingCommitteeReceiveProtocol(
 		share.R = curve25519.AddScalar(share.R, curve25519.MultScalar(lambdas[i], aj[i]))
 		share.S = curve25519.AddScalar(share.S, curve25519.MultScalar(lambdas[i], cj[i]))
 	}
-
-
 
 	return &share, nil
 }
