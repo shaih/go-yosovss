@@ -2,11 +2,12 @@ package resharing
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
-	"log"
 )
 
 // StartCommitteeParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
@@ -129,8 +130,6 @@ func StartCommitteeParty(
 	m := pedersen.Message(sum)
 
 	log.Printf("Party %d reconstructed message: %v", index, m)
-
-
 	return nil
 }
 
@@ -481,8 +480,20 @@ func HoldingCommitteeReceiveProtocol(
 	for i := 0; i < t; i++ {
 		share.R = curve25519.AddScalar(share.R, curve25519.MultScalar(lambdas[i], aj[i]))
 		share.S = curve25519.AddScalar(share.S, curve25519.MultScalar(lambdas[i], cj[i]))
-	}
 
+		for j := 0; j < t; j++ {
+			prod, err := curve25519.MultPointScalar(curve25519.Point(verifications[j]), lambdas[i])
+			if err != nil {
+				return nil, nil, fmt.Errorf("unable to compute new verifications %d: %v", holdIndex, err)
+			}
+
+			sum, err := curve25519.AddPoint(curve25519.Point(verifications[j]), prod)
+			if err != nil {
+				return nil, nil, fmt.Errorf("unable to compute new verifications %d: %v", holdIndex, err)
+			}
+			verifications[j] = pedersen.Commitment(sum)
+		}
+	}
 
 	return &share, verifications, nil
 }
