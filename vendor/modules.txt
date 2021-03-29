@@ -1,4 +1,9 @@
-# github.com/davecgh/go-spew v1.1.0
+# github.com/algorand/go-algorand-sdk v1.5.1
+## explicit
+github.com/algorand/go-algorand-sdk/encoding/msgpack
+# github.com/algorand/go-codec/codec v1.1.7
+github.com/algorand/go-codec/codec
+# github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib

@@ -15,6 +15,24 @@ func TestIsValidPoint(t *testing.T) {
 	assert.False(t, IsValidPoint(q), "Zero is not valid")
 }
 
+func TestGetScalar(t *testing.T) {
+	assert.Equal(
+		t,
+		Scalar([32]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+		GetScalar(5),
+		"Single byte Scalar is correct",
+	)
+
+	assert.Equal(
+		t,
+		Scalar([32]byte{255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
+		GetScalar(4294967295), // 2^32 - 1
+		"Multiple byte Scalar is correct",
+	)
+}
+
 func TestIsEqualPoint(t *testing.T) {
 	p := RandomPoint()
 	q := p
@@ -84,5 +102,4 @@ func TestMultPointScalar(t *testing.T) {
 
 	assert.True(t, IsValidPoint(r1), "Point scalar multiplication is valid")
 	assert.Equal(t, p, r2, "Point scalar multiplication with scalar 1")
-
 }

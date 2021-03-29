@@ -3,7 +3,7 @@ package pedersen
 import (
 	"fmt"
 
-	"github.com/shaih/go-yosovss/curve25519"
+	"github.com/shaih/go-yosovss/primitives/curve25519"
 )
 
 // Params consists of two group elements g and h such that the
@@ -13,7 +13,15 @@ type Params struct {
 	H curve25519.Point
 }
 
-// Message is the value the commiter is committing to
+// Share is composed of values used in Pedersen VSS to reconstruct a secret
+type Share struct {
+	Index       int
+	IndexScalar curve25519.Scalar
+	S           curve25519.Scalar
+	R           curve25519.Scalar
+}
+
+// Message is the value the committer is committing to
 type Message curve25519.Scalar
 
 // Commitment consists of elliptic curve point that serves as a
@@ -22,14 +30,6 @@ type Commitment curve25519.Point
 
 // Decommitment is the random value r used
 type Decommitment curve25519.Scalar
-
-// Share is composed of values used in Pedersen VSS to reconstruct a secret
-type Share struct {
-	Index       int
-	IndexScalar curve25519.Scalar
-	S           curve25519.Scalar
-	R           curve25519.Scalar
-}
 
 // GenerateParams picks two random group elements for generating commitments
 func GenerateParams() *Params {
@@ -95,7 +95,7 @@ func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Deco
 
 // VSSShare performs the intial dealer's step for a Pedersen VSS on the message m
 // for t-of-n reconstruction.
-func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment, error) {
+func VSSShare(params *Params, m Message, t int, n int) ([]Share, []Commitment, error) {
 	if t < 1 || n < 1 || t > n {
 		return nil, nil, fmt.Errorf("invalid share generation parameters")
 	}
@@ -109,10 +109,10 @@ func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment,
 
 	f := curve25519.Polynomial{
 		Coefficients: make([]curve25519.Scalar, t),
-	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_t * x^t where a_0 = m and a_1,...,a_t are random
+	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_{t-1} * x^{t-1} where a_0 = m and a_1,...,a_{t-1} are random
 	g := curve25519.Polynomial{
 		Coefficients: make([]curve25519.Scalar, t),
-	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_t * x^t where b_0,...,b_t are random
+	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_{t-1]} * x^{t-1} where b_0,...,b_{t-1} are random
 
 	// Get commitment to the secret
 	commitment, decommitment, err := GenerateCommitment(params, m)
@@ -152,7 +152,7 @@ func VSSShare(params *Params, m Message, t int, n int) (*[]Share, *[]Commitment,
 		}) // The share of participant i is (s_i, r_i) = (f(i), g(i))
 	}
 
-	return &shares, &verifications, nil
+	return shares, verifications, nil
 }
 
 // VSSVerify performs verification of a received share with the broadcasted
@@ -215,19 +215,17 @@ func VSSReconstruct(params *Params, shares []Share, verifications []Commitment) 
 
 	// Polynomial interpolation evaluated at 0
 	var sum curve25519.Scalar
+	validShareValues := make([]curve25519.Scalar, t)
 	for i := 0; i < t; i++ {
+		validShareValues[i] = validShares[i].IndexScalar
+	}
+	lambdas, err := curve25519.LagrangeCoeffs(validShareValues, curve25519.GetScalar(uint64(0)))
+	if err != nil {
+		return nil, fmt.Errorf("error in polynomial interpolation")
+	}
 
-		term := validShares[i].S
-		for j := 0; j < t; j++ {
-			if i != j {
-				denom, err := curve25519.InvertScalar(curve25519.SubScalar(validShares[j].IndexScalar, validShares[i].IndexScalar))
-				if err != nil {
-					return nil, fmt.Errorf("error in polynomial interpolation")
-				}
-				term = curve25519.MultScalar(term, curve25519.MultScalar(validShares[j].IndexScalar, denom))
-			}
-		}
-		sum = curve25519.AddScalar(sum, term)
+	for i := 0; i < t; i++ {
+		sum = curve25519.AddScalar(sum, curve25519.MultScalar(validShares[i].S, lambdas[i]))
 	}
 
 	m := Message(sum)
