@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestVerificationResharing(t *testing.T) {
+
+}
+// TODO: Test two level sharing
 func TestCommitteeProtocol(t *testing.T) {
 	pubKeys, privKeys := curve25519.SetupKeys(9)
 

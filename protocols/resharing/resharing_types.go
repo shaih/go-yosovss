@@ -8,10 +8,9 @@ type HoldShareMessage struct {
 	_struct struct{}                `codec:",omitempty,omitemptyarray"`
 	Bi      [][]pedersen.Share      `codec:"b_i"`
 	Vi      [][]pedersen.Commitment `codec:"v_i"`
+	Di      [][]pedersen.Share      `codec:"D_i"`
+	Wi      [][]pedersen.Commitment `codec:"W_i"`
 	Ei      []pedersen.Commitment `codec:"e_i"`
-	Di      [][]pedersen.Share      `codec:"d_i"`
-	Wi      [][]pedersen.Commitment `codec:"w_i"`
-	Fi      []pedersen.Commitment `codec:"f_i"`
 }
 
 // HolderComplaintMessage is used in the committee protocol is the message sent by a member k of the verification
