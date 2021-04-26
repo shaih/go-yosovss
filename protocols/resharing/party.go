@@ -542,7 +542,7 @@ func HoldingCommitteeReceiveProtocol(
 	j := 0
 
 	// Use the second level shares to reconstruct the first level shares
-	for i < n && len(aj) < t {
+	for i < n && j < t {
 		var bij []pedersen.Share
 		var dij []pedersen.Share
 		for k := 0; k < n; k++ {
@@ -552,8 +552,8 @@ func HoldingCommitteeReceiveProtocol(
 		aij, err1 := pedersen.VSSReconstruct(params, bij, v[i][holdIndex])
 		cij, err2 := pedersen.VSSReconstruct(params, dij, w[i][holdIndex])
 		if err1 == nil && err2 == nil { // Use corresponding shares of alpha and gamma
-			aj = append(aj, curve25519.Scalar(*aij))
-			cj = append(cj, curve25519.Scalar(*cij))
+			aj[j] = curve25519.Scalar(*aij)
+			cj[j] = curve25519.Scalar(*cij)
 			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
 			indices[j] = i + 1
 			j++
