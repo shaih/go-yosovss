@@ -131,7 +131,14 @@ func TwoLevelShare(
 	s curve25519.Scalar,
 	t int,
 	n int,
-) ([][]pedersen.Share, [][]pedersen.Commitment, [][]pedersen.Share, [][]pedersen.Commitment, []pedersen.Commitment, error) {
+) (
+	[][]pedersen.Share,
+	[][]pedersen.Commitment,
+	[][]pedersen.Share,
+	[][]pedersen.Commitment,
+	[]pedersen.Commitment,
+	error,
+) {
 	// Perform the first level share with the given secret and decommitment
 	shareList, verList, err := pedersen.VSSShareFixedR(params, pedersen.Message(r), pedersen.Decommitment(s), t, n)
 	if err != nil {
@@ -269,7 +276,10 @@ func HoldingCommitteeShareProtocol(
 		var holderComplaintMsg HolderComplaintMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to decode complaint of verifier %d for holder %d: %v", verifier, holdIndex, err)
+			return nil, nil, nil, fmt.Errorf(
+				"failed to decode complaint of verifier %d for holder %d: %v",
+				verifier, holdIndex, err,
+			)
 		}
 
 		for _, j := range holderComplaintMsg.BComplaints[holdIndex] {
