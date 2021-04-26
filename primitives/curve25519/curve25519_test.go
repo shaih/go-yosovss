@@ -103,3 +103,41 @@ func TestMultPointScalar(t *testing.T) {
 	assert.True(t, IsValidPoint(r1), "Point scalar multiplication is valid")
 	assert.Equal(t, p, r2, "Point scalar multiplication with scalar 1")
 }
+
+//func TestMultPointScalarZero(t *testing.T) {
+//	p := RandomPoint()
+//	r1, err := MultPointScalar(p, GetScalar(0))
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	assert.True(t, IsValidPoint(r1), "Point scalar multiplication is valid")
+//}
+
+func TestPointInfinity(t *testing.T) {
+	//assert.True(t, IsValidPoint(PointInfinity), "Infinity point is valid")
+	p := RandomPoint()
+	r, err := AddPoint(p, PointInfinity)
+	if err != nil {
+		log.Fatal(err)
+	}
+	assert.Equal(t, p, r, "Add by infinity")
+
+	negP, err := MultPointScalar(p, NegateScalar(GetScalar(1)))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r1, err := AddPoint(p, negP)
+	if err != nil {
+		log.Fatal(err)
+	}
+	assert.Equal(t, PointInfinity, r1, "p + (-p) = infinity")
+	//
+	//r2, err := MultPointScalar(p, GetScalar(0))
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//assert.Equal(t, PointInfinity, r2, "0*p = infinity")
+
+}

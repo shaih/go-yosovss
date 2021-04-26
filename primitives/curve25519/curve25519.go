@@ -29,6 +29,9 @@ type Point [32]byte
 // Scalar is a non-negative integer
 type Scalar [32]byte
 
+// PointInfinity is the point at infinity
+var PointInfinity Point = Point([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+
 // ScalarZero is the scalar element 0
 var ScalarZero Scalar = Scalar([32]byte{})
 
@@ -89,7 +92,7 @@ func AddPoint(p, q Point) (Point, error) {
 	return r, nil
 }
 
-// SubPoint conputes the difference between two elliptic curve points
+// SubPoint computes the difference between two elliptic curve points
 func SubPoint(p, q Point) (Point, error) {
 	var r Point
 
@@ -148,6 +151,10 @@ func MultScalar(x, y Scalar) Scalar {
 // MultPointScalar computes the product of a scalar with a point
 func MultPointScalar(p Point, n Scalar) (Point, error) {
 	var r Point
+
+	if n == ScalarZero {
+		return PointInfinity, nil
+	}
 
 	result := C.crypto_scalarmult_ed25519_noclamp((*C.uchar)(&r[0]), (*C.uchar)(&n[0]), (*C.uchar)(&p[0]))
 	if result != 0 {

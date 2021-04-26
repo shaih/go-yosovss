@@ -72,6 +72,29 @@ func GenerateCommitment(params *Params, m Message) (*Commitment, *Decommitment, 
 	return &commitment, &decommitment, nil
 }
 
+// GenerateCommitmentFixedR creates a commitment for some value m with a fixed decommitment r
+func GenerateCommitmentFixedR(params *Params, m Message, r Decommitment) (*Commitment, error) {
+
+	gm, err := curve25519.MultPointScalar(params.G, curve25519.Scalar(m)) // Compute g^m
+	if err != nil {
+		return nil, fmt.Errorf("commitment generation failed: %v", err)
+	}
+
+	hr, err := curve25519.MultPointScalar(params.H, curve25519.Scalar(r)) // Compute h^r
+	if err != nil {
+		return nil, fmt.Errorf("commitment generation failed: %v", err)
+	}
+
+	c, err := curve25519.AddPoint(gm, hr) // Compute g^m * h^r
+	if err != nil {
+		return nil, fmt.Errorf("commitment generation failed: %v", err)
+	}
+
+	commitment := Commitment(c)
+
+	return &commitment, nil
+}
+
 // VerifyCommitment checks if a commitment was for some message m under the
 // decommitment r
 func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Decommitment) (bool, error) {
@@ -93,7 +116,7 @@ func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Deco
 	return curve25519.IsEqualPoint(curve25519.Point(*commitment), c), nil
 }
 
-// VSSShare performs the intial dealer's step for a Pedersen VSS on the message m
+// VSSShare performs the initial dealer's step for a Pedersen VSS on the message m
 // for t-of-n reconstruction.
 func VSSShare(params *Params, m Message, t int, n int) ([]Share, []Commitment, error) {
 	if t < 1 || n < 1 || t > n {
@@ -129,6 +152,68 @@ func VSSShare(params *Params, m Message, t int, n int) ([]Share, []Commitment, e
 		f.Coefficients[i] = curve25519.RandomScalar()
 		// Get commitment the random polynomial coefficients
 		commitment, decommitment, err = GenerateCommitment(params, Message(f.Coefficients[i]))
+		if err != nil {
+			return nil, nil, fmt.Errorf("error generating commitment")
+		}
+		g.Coefficients[i] = curve25519.Scalar(*decommitment)
+
+		// verification of ith coefficient is g^a_i * h^b_i
+		verifications = append(verifications, *commitment)
+	}
+
+	// Perform Shamir secret sharing on the generated polynomials to construct shares
+	evalPoint := curve25519.ScalarZero
+	for i := 1; i <= n; i++ {
+		// NOTE: Expensive step, consider changing in the future
+		evalPoint = curve25519.AddScalar(evalPoint, curve25519.ScalarOne)
+
+		shares = append(shares, Share{
+			Index:       i,
+			IndexScalar: evalPoint,
+			S:           f.Evaluate(evalPoint),
+			R:           g.Evaluate(evalPoint),
+		}) // The share of participant i is (s_i, r_i) = (f(i), g(i))
+	}
+
+	return shares, verifications, nil
+}
+
+// VSSShareFixedR performs the initial dealer's step for a Pedersen VSS on the message m
+// for t-of-n reconstruction, but with a fixed r that is the constant of the g polynomial.
+func VSSShareFixedR(params *Params, m Message, r Decommitment, t int, n int) ([]Share, []Commitment, error) {
+	if t < 1 || n < 1 || t > n {
+		return nil, nil, fmt.Errorf("invalid share generation parameters")
+	}
+
+	// The shares to be distributed to participants
+	var shares []Share
+
+	// The commitments to the coefficient of polynomials used to verify
+	// correctness of shares
+	var verifications []Commitment
+
+	f := curve25519.Polynomial{
+		Coefficients: make([]curve25519.Scalar, t),
+	} // f(x) = a_0 + a_1 * x + a_2 * x^2 + ... + a_{t-1} * x^{t-1} where a_0 = m and a_1,...,a_{t-1} are random
+	g := curve25519.Polynomial{
+		Coefficients: make([]curve25519.Scalar, t),
+	} // g(x) = b_0 + b_1 * x + b_2 * x^2 + ... + b_{t-1} * x^{t-1} where b_0 = r and b_1,...,b_{t-1} are random
+
+	// Get commitment to the secret
+	commitment, err := GenerateCommitmentFixedR(params, m, r)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error generating message commitment")
+	}
+	f.Coefficients[0] = curve25519.Scalar(m)
+	g.Coefficients[0] = curve25519.Scalar(r)
+
+	verifications = append(verifications, *commitment)
+
+	// Generate random values for remaining coefficients
+	for i := 1; i < t; i++ {
+		f.Coefficients[i] = curve25519.RandomScalar()
+		// Get commitment the random polynomial coefficients
+		commitment, decommitment, err := GenerateCommitment(params, Message(f.Coefficients[i]))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating commitment")
 		}
@@ -206,6 +291,8 @@ func VSSReconstruct(params *Params, shares []Share, verifications []Commitment) 
 
 		if isValid {
 			validShares = append(validShares, shares[i])
+		} else {
+			fmt.Printf("shares: %v, validShares: %v, i: %d, t: %d , n: %d \n", shares, validShares, i, t, n)
 		}
 	}
 
