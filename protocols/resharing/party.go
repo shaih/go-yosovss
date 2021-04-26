@@ -34,7 +34,7 @@ func StartCommitteeParty(
 		var w [][][]pedersen.Commitment
 		var e [][]pedersen.Commitment
 
-		if holdIndex >= 0 {
+		if holdIndex >= 0 { // Party is member of holding committee
 			vHold, wHold, eHold, err := HoldingCommitteeShareProtocol(bc, params, *share, holdCommittee, verCommittee,
 				holdIndex, t, n)
 			v = vHold
@@ -43,7 +43,7 @@ func StartCommitteeParty(
 			if err != nil {
 				return fmt.Errorf("error in holding committee share protocol: %v", err)
 			}
-		} else if verIndex >= 0 {
+		} else if verIndex >= 0 { // Party is member of the verification committee
 			vHold, wHold, eHold, err := VerificationCommitteeProtocol(bc, params, holdCommittee, verIndex, t, n)
 			v = vHold
 			w = wHold
@@ -51,9 +51,9 @@ func StartCommitteeParty(
 			if err != nil {
 				return fmt.Errorf("error in verification committee protocol: %v", err)
 			}
-		} else {
-			// Do nothing if not in a committee
+		} else { // Not in a committee for the round
 			bc.Send([]byte{})
+			// Receive verifications broadcasted to everyone
 			vHold, wHold, eHold, err := ReceiveVerifications(bc, holdCommittee, n)
 			if err != nil {
 				return fmt.Errorf("error in receiving holding committee verifications protocol: %v", err)
@@ -68,6 +68,7 @@ func StartCommitteeParty(
 			bc.Send([]byte{})
 		}
 
+		// Get the committee for the next round
 		nextHoldCommittee := NextCommittee(holdCommittee, len(publicKeys))
 		nextVerCommittee := NextCommittee(verCommittee, len(publicKeys))
 
@@ -75,7 +76,7 @@ func StartCommitteeParty(
 
 		share = nil
 		verifications = nil
-		if nextHoldIndex >= 0 {
+		if nextHoldIndex >= 0 { // Party is a member of the next holding committee
 			s, v, err := HoldingCommitteeReceiveProtocol(bc, params, v, w, e, nextHoldCommittee, verCommittee,
 				nextHoldIndex, t, n)
 			share = s
@@ -109,6 +110,7 @@ func StartCommitteeParty(
 		shares = append(shares, share)
 	}
 
+	// Reconstruct original message
 	m, err := pedersen.VSSReconstruct(params, shares, verifications)
 	if err != nil {
 		return fmt.Errorf("failed to reconstruct original message for party %d: %v", index, err)
@@ -127,19 +129,18 @@ func TwoLevelShare(
 	t int,
 	n int,
 ) ([][]pedersen.Share, [][]pedersen.Commitment, [][]pedersen.Share, [][]pedersen.Commitment, []pedersen.Commitment, error) {
+	// Perform the first level share with the given secret and decommitment
 	shareList, verList, err := pedersen.VSSShareFixedR(params, pedersen.Message(r), pedersen.Decommitment(s), t, n)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error in first level share: %v", err)
 	}
-
-	fmt.Printf(" shareList: %v \n verList: %v \n ", shareList, verList)
-
 
 	sShareMatrix := make([][]pedersen.Share, n)
 	rShareMatrix := make([][]pedersen.Share, n)
 	sVerMatrix := make([][]pedersen.Commitment, n)
 	rVerMatrix := make([][]pedersen.Commitment, n)
 
+	// For every share of the first level share, we perform another Pedersen sharing of both the r and s of the share
 	for i, share := range shareList {
 		si, vi, err := pedersen.VSSShare(params, pedersen.Message(share.S), t, n)
 		if err != nil {
@@ -156,6 +157,8 @@ func TwoLevelShare(
 		rVerMatrix[i] = ui
 	}
 
+	// We return a matrix of the shares and verifications of the two level share, as well as the verifications
+	// of the first level share (verList)
 	return sShareMatrix, sVerMatrix, rShareMatrix, rVerMatrix, verList, nil
 }
 
@@ -172,14 +175,14 @@ func HoldingCommitteeShareProtocol(
 	t int,
 	n int,
 ) ([][][]pedersen.Commitment, [][][]pedersen.Commitment, [][]pedersen.Commitment, error) {
-	// Perform a two level share of s_i and r_i to get Beta_i matrix of shares and V_i matrix
-	// of verifications (with alpha_i vector as the hidden first level share vector)
+	// Perform a two level share of s_i and r_i to get B_i matrix of shares and V_i matrix
+	// of verifications for the secrets of the second level share and D_i and W_i for the decommitments of the second
+	// level sharing. E_i is the verifications of the first level share,
+	// where those shares are hidden (alpha_i vector as the hidden first level share vector)
 	bi, vi, di, wi, ei, err := TwoLevelShare(params, share.S, share.R, t, n)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error in creating shares of s_%d, r_%d: %v", holdIndex, holdIndex, err)
 	}
-
-	// TODO: Encrypt columns of Bi and Di for individual verifiers
 
 	holdShareMsg := HoldShareMessage{
 		Bi: bi,
@@ -188,7 +191,6 @@ func HoldingCommitteeShareProtocol(
 		Wi: wi,
 		Ei: ei,
 	}
-
 
 	// Send shares to verification committee
 	bc.Send(msgpack.Encode(holdShareMsg))
@@ -201,7 +203,7 @@ func HoldingCommitteeShareProtocol(
 	// Receive potential complaints from verification committee
 	_, roundMsgs := bc.ReceiveRound()
 
-	// Initialize nxn matrix of nil shares, to be populated to respond to complaints
+	// Initialize n x n matrix of nil shares, to be populated to respond to complaints
 	biResponse := make([][]*pedersen.Share, n)
 	diResponse := make([][]*pedersen.Share, n)
 	for j := 0; j < n; j++ {
@@ -287,6 +289,8 @@ func VerificationCommitteeProtocol(
 		v[i] = make([][]pedersen.Commitment, n)
 		w[i] = make([][]pedersen.Commitment, n)
 		e[i] = make([]pedersen.Commitment, n)
+
+		// Construct matrix of complaints to broadcast for resolution
 		for j := 0; j < n; j++ {
 			v[i][j] = holdShareMsg.Vi[j]
 			w[i][j] = holdShareMsg.Wi[j]
@@ -403,7 +407,8 @@ func HoldingCommitteeReceiveProtocol(
 		dj[i] = make([]pedersen.Share, n)
 	}
 
-	// Construct B_j matrix
+	// Construct B_j matrix, the matrix of second level shares, from the verification committee or from
+	// resolved complaints
 	for k, verifier := range verCommittee {
 		var verShareMsg VerShareMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsg)
@@ -423,12 +428,13 @@ func HoldingCommitteeReceiveProtocol(
 
 	var aj []curve25519.Scalar
 	var cj []curve25519.Scalar
-	//var indicesScalar []curve25519.Scalar
 	indicesScalar := make([]curve25519.Scalar, t)
 	indices := make([]int, t)
 
 	i := 0
 	j := 0
+
+	// Use the second level shares to reconstruct the first level shares
 	for i < n && len(aj) < t {
 		var bij []pedersen.Share
 		var dij []pedersen.Share
@@ -444,21 +450,17 @@ func HoldingCommitteeReceiveProtocol(
 			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
 			indices[j] = i + 1
 			j++
-		} else {
-			fmt.Printf("error in reconstruction from verification committee: %v, %v, %v\n", i, j, holdIndex)
 		}
 		i++
 	}
 
-	fmt.Printf("index: %v, aj: %v, cj: %v \n ", holdIndex, aj, cj)
-
-	fmt.Printf("index: %v, e: %v\n ", holdIndex, e)
-
-
+	// Return an error if we are unable to reconstruct at least t of the first level shares
 	if len(aj) < t {
 		return nil, nil, fmt.Errorf("unable to reconstruct sufficient alpha_i and gamma_i for holder %d", holdIndex)
 	}
 
+	// Of the reconstructed shares, we take the first t of them and compute the Lagrange coefficients corresponding to
+	// those shares
 	lambdas, err := curve25519.LagrangeCoeffs(indicesScalar, curve25519.GetScalar(0))
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to compute Lagrange coefficients for holder %d: %v", holdIndex, err)
@@ -475,7 +477,8 @@ func HoldingCommitteeReceiveProtocol(
 	verifications := make([]pedersen.Commitment, t)
 
 	for i := 0; i < t; i++ {
-		// Computing the linear combination of the previous shares
+		// Computing the linear combination of the previous shares with Lagrange coefficients to construct share
+		// for the next round of the protocol.
 		share.S = curve25519.AddScalar(share.S, curve25519.MultScalar(lambdas[i], aj[i]))
 		share.R = curve25519.AddScalar(share.R, curve25519.MultScalar(lambdas[i], cj[i]))
 		testShare := pedersen.Share{
@@ -485,22 +488,17 @@ func HoldingCommitteeReceiveProtocol(
 			R:           cj[i],
 		}
 
-		// can be deleted for performance (is this necessary?)
-
-		fmt.Printf("testShare: %v, e[indicies[i]]: %v, indices[i]: %v, i: %v ", testShare, e[indices[i] - 1], indices[i] - 1, i)
+		// Verification of the first level share using the E matrix to confirm validity of the first level
 		isVerified, err := pedersen.VSSVerify(params, testShare, e[indices[i] - 1])
 		if err != nil{
 			return nil, nil, fmt.Errorf("unable to verify share %d: %v", holdIndex, err)
 		} else if !isVerified {
 			return nil, nil, fmt.Errorf("share could not be verified %d: %v", holdIndex, err)
 		}
-		// Computing the new verifications through doing the linear combination in the exponent
+		// Computing the new verifications of the first level through doing the linear combination in the exponent
 		for j := 0; j < t; j++ {
 			prod, err := curve25519.MultPointScalar(curve25519.Point(e[indices[i] - 1][j]), lambdas[i])
-			fmt.Printf("isValid: %v, %v, %v, %v\n", i ,j, holdIndex, curve25519.IsValidPoint(curve25519.Point(e[indices[i]][j])))
 			if err != nil {
-				fmt.Printf("%v", lambdas)
-				fmt.Printf("here")
 				return nil, nil, fmt.Errorf("unable to compute new verifications %d: %v", holdIndex, err)
 			}
 			var sum curve25519.Point
@@ -509,7 +507,6 @@ func HoldingCommitteeReceiveProtocol(
 			} else {
 				sum, err = curve25519.AddPoint(curve25519.Point(verifications[j]), prod)
 				if err != nil {
-
 					return nil, nil, fmt.Errorf("unable to compute new verifications %d: %v", holdIndex, err)
 				}
 			}
