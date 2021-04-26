@@ -1,14 +1,17 @@
 package resharing
 
-import "github.com/shaih/go-yosovss/primitives/pedersen"
+import (
+	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/pedersen"
+)
 
 // HoldShareMessage is used in the committee protocol and is the message sent by members of the holding committee
 // to pass shares along to the verification committee.
 type HoldShareMessage struct {
 	_struct struct{}                `codec:",omitempty,omitemptyarray"`
-	Bi      [][]pedersen.Share      `codec:"b_i"`
+	BiEnc      []curve25519.Ciphertext      `codec:"b_i"`
 	Vi      [][]pedersen.Commitment `codec:"v_i"`
-	Di      [][]pedersen.Share      `codec:"D_i"`
+	DiEnc      []curve25519.Ciphertext      `codec:"d_i"`
 	Wi      [][]pedersen.Commitment `codec:"W_i"`
 	Ei      []pedersen.Commitment `codec:"e_i"`
 }
