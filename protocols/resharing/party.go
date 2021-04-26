@@ -97,7 +97,6 @@ func StartCommitteeParty(
 	//fmt.Printf("%v", holdCommittee)
 	//fmt.Printf("%v", index)
 
-
 	// Final round to reconstruct message
 	bc.Send(msgpack.Encode(share))
 
@@ -226,22 +225,22 @@ func HoldingCommitteeShareProtocol(
 
 	for i := 0; i < len(bi); i++ {
 		for j := 0; j < len(bi[i]); j++ {
-			fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, i ,j, bi[i][j])
+			fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, i, j, bi[i][j])
 		}
 	}
 
 	for i := 0; i < len(di); i++ {
 		for j := 0; j < len(di[i]); j++ {
-			fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, i ,j, di[i][j])
+			fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, i, j, di[i][j])
 		}
 	}
 
 	holdShareMsg := HoldShareMessage{
 		BiEnc: biEnc,
-		Vi: vi,
+		Vi:    vi,
 		DiEnc: diEnc,
-		Wi: wi,
-		Ei: ei,
+		Wi:    wi,
+		Ei:    ei,
 	}
 
 	// Send shares to verification committee
@@ -434,16 +433,15 @@ func VerificationCommitteeProtocol(
 
 	for i := 0; i < len(bk); i++ {
 		for j := 0; j < len(bk[i]); j++ {
-			fmt.Printf("BK(%d, %d, %d): %v \n", i ,j, verIndex, bk[i][j])
+			fmt.Printf("BK(%d, %d, %d): %v \n", i, j, verIndex, bk[i][j])
 		}
 	}
 
 	for i := 0; i < len(dk); i++ {
 		for j := 0; j < len(dk[i]); j++ {
-			fmt.Printf("DK(%d, %d, %d): %v \n", i ,j, verIndex, dk[i][j])
+			fmt.Printf("DK(%d, %d, %d): %v \n", i, j, verIndex, dk[i][j])
 		}
 	}
-
 
 	verShareMsg := VerShareMessage{
 		Bk: bk,
@@ -520,7 +518,10 @@ func HoldingCommitteeReceiveProtocol(
 		var verShareMsg VerShareMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsg)
 		if err != nil {
-			return nil, nil, fmt.Errorf("decoding share from verifier %d failed for holder %d: %v", k, holdIndex, err)
+			return nil, nil, fmt.Errorf(
+				"decoding share from verifier %d failed for holder %d: %v",
+				k, holdIndex, err,
+			)
 		}
 
 		for i := 0; i < n; i++ {
@@ -563,7 +564,10 @@ func HoldingCommitteeReceiveProtocol(
 
 	// Return an error if we are unable to reconstruct at least t of the first level shares
 	if len(aj) < t {
-		return nil, nil, fmt.Errorf("unable to reconstruct sufficient alpha_i and gamma_i for holder %d", holdIndex)
+		return nil, nil, fmt.Errorf(
+			"unable to reconstruct sufficient alpha_i and gamma_i for holder %d",
+			holdIndex,
+		)
 	}
 
 	// Of the reconstructed shares, we take the first t of them and compute the Lagrange coefficients corresponding to
@@ -597,15 +601,15 @@ func HoldingCommitteeReceiveProtocol(
 		}
 
 		// Verification of the first level share using the E matrix to confirm validity of the first level
-		isVerified, err := pedersen.VSSVerify(params, testShare, e[indices[i] - 1])
-		if err != nil{
+		isVerified, err := pedersen.VSSVerify(params, testShare, e[indices[i]-1])
+		if err != nil {
 			return nil, nil, fmt.Errorf("unable to verify share %d: %v", holdIndex, err)
 		} else if !isVerified {
 			return nil, nil, fmt.Errorf("share could not be verified %d: %v", holdIndex, err)
 		}
 		// Computing the new verifications of the first level through doing the linear combination in the exponent
 		for j := 0; j < t; j++ {
-			prod, err := curve25519.MultPointScalar(curve25519.Point(e[indices[i] - 1][j]), lambdas[i])
+			prod, err := curve25519.MultPointScalar(curve25519.Point(e[indices[i]-1][j]), lambdas[i])
 			if err != nil {
 				return nil, nil, fmt.Errorf("unable to compute new verifications %d: %v", holdIndex, err)
 			}

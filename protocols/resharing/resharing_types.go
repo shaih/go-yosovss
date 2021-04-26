@@ -9,11 +9,11 @@ import (
 // to pass shares along to the verification committee.
 type HoldShareMessage struct {
 	_struct struct{}                `codec:",omitempty,omitemptyarray"`
-	BiEnc      []curve25519.Ciphertext      `codec:"b_i"`
+	BiEnc   []curve25519.Ciphertext `codec:"b_i"`
 	Vi      [][]pedersen.Commitment `codec:"v_i"`
-	DiEnc      []curve25519.Ciphertext      `codec:"d_i"`
+	DiEnc   []curve25519.Ciphertext `codec:"d_i"`
 	Wi      [][]pedersen.Commitment `codec:"W_i"`
-	Ei      []pedersen.Commitment `codec:"e_i"`
+	Ei      []pedersen.Commitment   `codec:"e_i"`
 }
 
 // HolderComplaintMessage is used in the committee protocol is the message sent by a member k of the verification
