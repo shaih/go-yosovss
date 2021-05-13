@@ -12,6 +12,7 @@ import (
 type Orchestrator struct {
 	Channels  map[int]PartyBroadcastChannel
 	RoundMsgs map[int]communication.BroadcastMessage
+	MessageSizes map[int] int
 	Round     int
 }
 
@@ -59,6 +60,7 @@ func (o Orchestrator) ReceiveMessages() error {
 	for i := 0; i < len(o.Channels); i++ {
 		bcastMsg := <-agg
 		o.RoundMsgs[bcastMsg.SenderID] = bcastMsg
+		o.MessageSizes[bcastMsg.SenderID] += len(bcastMsg.Payload)
 	}
 
 	return nil
