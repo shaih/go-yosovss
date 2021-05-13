@@ -21,6 +21,7 @@ func NewOrchestrator() Orchestrator {
 	return Orchestrator{
 		Channels:  make(map[int]PartyBroadcastChannel),
 		RoundMsgs: make(map[int]communication.BroadcastMessage),
+		MessageSizes: make(map[int]int),
 		Round:     0,
 	}
 }
@@ -60,7 +61,11 @@ func (o Orchestrator) ReceiveMessages() error {
 	for i := 0; i < len(o.Channels); i++ {
 		bcastMsg := <-agg
 		o.RoundMsgs[bcastMsg.SenderID] = bcastMsg
-		o.MessageSizes[bcastMsg.SenderID] += len(bcastMsg.Payload)
+		if _, ok := o.MessageSizes[bcastMsg.SenderID]; ok {
+			o.MessageSizes[bcastMsg.SenderID] += len(bcastMsg.Payload)
+		} else {
+			o.MessageSizes[bcastMsg.SenderID] = len(bcastMsg.Payload)
+		}
 	}
 
 	return nil
