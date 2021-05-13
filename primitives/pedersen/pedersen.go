@@ -28,7 +28,7 @@ type Message curve25519.Scalar
 // commitment to a message
 type Commitment curve25519.Point
 
-// Decommitment is the random value r used
+// Decommitment is the random value r used in a Pedersen commitment
 type Decommitment curve25519.Scalar
 
 // GenerateParams picks two random group elements for generating commitments
