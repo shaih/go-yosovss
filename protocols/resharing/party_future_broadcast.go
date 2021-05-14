@@ -29,7 +29,6 @@ func StartCommitteePartyFB(
 	t int,
 	n int,
 ) error {
-
 	holdIndex := intIndexOf(holdCommittee, index)
 	verIndex := intIndexOf(verCommittee, index)
 	fbIndex := intIndexOf(fbCommittee, index)
@@ -43,18 +42,20 @@ func StartCommitteePartyFB(
 		var symmEncD [][]curve25519.SymmetricCiphertext
 		var fbShareEnc [][]curve25519.Ciphertext
 		var complaints [][]bool
+		var bjEnc []curve25519.Ciphertext
+		var djEnc []curve25519.Ciphertext
 
 		// Get the committees for the next round
 		nextHoldCommittee := NextCommitteeDeterministic(holdCommittee, len(pks))
 		nextVerCommittee := NextCommitteeDeterministic(verCommittee, len(pks))
-		nextFutureBroadcastCommittee := NextCommitteeDeterministic(fbCommittee, len(pks))
+		nextFBCommittee := NextCommitteeDeterministic(fbCommittee, len(pks))
 		nextHoldIndex := intIndexOf(nextHoldCommittee, index)
 		nextVerIndex := intIndexOf(nextVerCommittee, index)
-		nextFBIndex := intIndexOf(nextFutureBroadcastCommittee, index)
+		nextFBIndex := intIndexOf(nextFBCommittee, index)
 
 		// Participate in the holding committee
 		if holdIndex >= 0 {
-			err := HoldingCommitteeShareProtocolFB(bc, params, *share, pks, ssk, holdCommittee, verCommittee, fbCommittee,
+			err := HoldingCommitteeShareProtocolFB(bc, params, *share, pks, ssk, verCommittee, fbCommittee,
 				holdIndex, t, n)
 			if err != nil {
 				return fmt.Errorf("party %d failed to perform holding committee share protocol: %v", index, err)
@@ -65,7 +66,8 @@ func StartCommitteePartyFB(
 
 		if verIndex >= 0 { // Party is member of the verification committee
 			vNew, wNew, eNew, symmEncBNew, symmEncDNew, fbShareEncNew, err :=
-				VerificationCommitteeProtocolFB(bc, pks[index], sk, params, holdCommittee, verIndex, n)
+				VerificationCommitteeProtocolFB(bc, pks, pks[index], sk, params, holdCommittee, nextHoldCommittee,
+					verIndex, n)
 			if err != nil {
 				return fmt.Errorf("party %d failed to perform verification committee protocol: %v", index, err)
 			}
@@ -90,9 +92,10 @@ func StartCommitteePartyFB(
 			symmEncB = symmEncBNew
 			symmEncD = symmEncDNew
 			fbShareEnc = fbShareEncNew
+			bc.Send([]byte{})
 		}
 
-		complaints, err := ReceiveComplaints(bc, holdCommittee, verCommittee, holdIndex, n)
+		complaints, bjEnc, djEnc, err := ReceiveComplaints(bc, holdCommittee, verCommittee, nextHoldIndex, n)
 		if err != nil {
 			return fmt.Errorf("party %d failed to receive complaints: %v", index, err)
 		}
@@ -107,21 +110,21 @@ func StartCommitteePartyFB(
 		}
 
 		if nextHoldIndex >= 0 {
-			s, v, err := HoldingCommitteeReceiveProtocolFB(bc, params, psks, v, w, e, holdCommittee, verCommittee,
-				fbCommittee, nextHoldIndex, t, n, symmEncB, symmEncD, complaints)
+			s, v, err := HoldingCommitteeReceiveProtocolFB(bc, params, pks[index], sk, psks, v, w, e, holdCommittee,
+				verCommittee, fbCommittee, nextHoldIndex, t, n, symmEncB, symmEncD, complaints, bjEnc, djEnc)
 			if err != nil {
 				return fmt.Errorf("party %d failed to perform holding committee receive protocol: %v", index, err)
 			}
 			share = s
 			verifications = v
 		} else {
-			bc.Send([]byte{})
+			bc.ReceiveRound()
 		}
 
 		// Move on to the next round of the protocol
 		holdCommittee = nextHoldCommittee
 		verCommittee = nextVerCommittee
-		fbCommittee = nextFutureBroadcastCommittee
+		fbCommittee = nextFBCommittee
 		holdIndex = nextHoldIndex
 		verIndex = nextVerIndex
 		fbIndex = nextFBIndex
@@ -137,11 +140,13 @@ func StartCommitteePartyFB(
 		var share pedersen.Share
 		err := msgpack.Decode(roundMsgs[holder].Payload, &share)
 		if err != nil {
-			return fmt.Errorf("decoding share from holder %d failed for holder %d: %v", i, holdIndex, err)
+			return fmt.Errorf("decoding share from holder %d failed for party %d: %v", i, index, err)
 		}
 
 		shares = append(shares, share)
 	}
+
+	fmt.Printf("shares: %v", shares)
 
 	// Reconstruct original message
 	m, err := pedersen.VSSReconstruct(params, shares, verifications)
@@ -162,7 +167,6 @@ func HoldingCommitteeShareProtocolFB(
 	share pedersen.Share,
 	pks []curve25519.PublicKey,
 	ssk curve25519.PrivateSignKey,
-	holdCommittee []int,
 	verCommittee []int,
 	fbCommittee []int,
 	holdIndex int,
@@ -196,19 +200,21 @@ func HoldingCommitteeShareProtocolFB(
 		dShares[k] = make([]pedersen.Share, n)
 	}
 
-	for j := 0; j < n; j++ {
-		for k := 0; k < n; k++ {
-			bShares[k][j] = bi[k][j]
-			dShares[k][j] = di[k][j]
-			fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, j ,k, bi[j][k])
-		}
-	}
 
-	for j := 0; j < len(di); j++ {
-		for k := 0; k < len(di[j]); k++ {
-			fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, j ,k, di[j][k])
-		}
-	}
+	// PRINT TESTING==================================================
+	//for j := 0; j < n; j++ {
+	//	for k := 0; k < n; k++ {
+	//		bShares[k][j] = bi[k][j]
+	//		dShares[k][j] = di[k][j]
+	//		fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, j ,k, bi[j][k])
+	//	}
+	//}
+	//
+	//for j := 0; j < len(di); j++ {
+	//	for k := 0; k < len(di[j]); k++ {
+	//		fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, j ,k, di[j][k])
+	//	}
+	//}
 
 	// Future broadcast protocol
 	keys := make([]curve25519.Key, n)
@@ -334,10 +340,12 @@ func ReceiveHolderMessages(
 // of the protocol. It returns the verifications of the holders.
 func VerificationCommitteeProtocolFB(
 	bc communication.BroadcastChannel,
+	pks []curve25519.PublicKey,
 	pk curve25519.PublicKey,
 	sk curve25519.PrivateKey,
 	params *pedersen.Params,
 	holdCommittee []int,
+	nextHoldCommittee []int,
 	verIndex int,
 	n int,
 ) (
@@ -358,9 +366,9 @@ func VerificationCommitteeProtocolFB(
 	bk := make([][]*pedersen.Share, n)
 	dk := make([][]*pedersen.Share, n)
 
-	for i := 0; i < n; i++ {
-		bk[i] = make([]*pedersen.Share, n)
-		dk[i] = make([]*pedersen.Share, n)
+	for j := 0; j < n; j++ {
+		bk[j] = make([]*pedersen.Share, n)
+		dk[j] = make([]*pedersen.Share, n)
 	}
 
 	v := make([][][]pedersen.Commitment, n)
@@ -425,15 +433,15 @@ func VerificationCommitteeProtocolFB(
 			for j := 0; j < n; j++ {
 				bIsValid, _ := pedersen.VSSVerify(params, bik[j], holdShareFbMsg.Vi[j])
 				if bIsValid {
-					bk[i][j] = &bik[j]
+					bk[j][i] = &bik[j]
 				} else {
-					bk[i][j] = nil
+					bk[j][i] = nil
 					holderBComplaints = append(holderBComplaints, j)
 				}
 			}
 		} else {
 			for j := 0; j < n; j++ {
-				bk[i][j] = nil
+				bk[j][i] = nil
 				holderBComplaints = append(holderBComplaints, j)
 			}
 		}
@@ -443,15 +451,15 @@ func VerificationCommitteeProtocolFB(
 			for j := 0; j < n; j++ {
 				dIsValid, _ := pedersen.VSSVerify(params, dik[j], holdShareFbMsg.Wi[j])
 				if dIsValid {
-					dk[i][j] = &dik[j]
+					dk[j][i] = &dik[j]
 				} else {
-					dk[i][j] = nil
+					dk[j][i] = nil
 					holderDComplaints = append(holderDComplaints, j)
 				}
 			}
 		} else {
 			for j := 0; j < n; j++ {
-				dk[i][j] = nil
+				dk[j][i] = nil
 				holderDComplaints = append(holderDComplaints, j)
 			}
 		}
@@ -460,9 +468,27 @@ func VerificationCommitteeProtocolFB(
 		dComplaints[i] = holderDComplaints
 	}
 
+	bkEnc := make([]curve25519.Ciphertext, n)
+	dkEnc := make([]curve25519.Ciphertext, n)
+
+	for j := 0; j < n; j++ {
+		bjkEnc, err := curve25519.Encrypt(pks[nextHoldCommittee[j]], msgpack.Encode(bk[j]))
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to encrypt using the public key of party %d", nextHoldCommittee[j])
+		}
+		bkEnc[j] = bjkEnc
+
+		djkEnc, err := curve25519.Encrypt(pks[nextHoldCommittee[j]], msgpack.Encode(dk[j]))
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to encrypt using the public key of party %d", nextHoldCommittee[j])
+		}
+		dkEnc[j] = djkEnc
+
+	}
+
 	verShareMsgFB := VerShareMessageFB{
-		Bk: bk,
-		Dk: dk,
+		BkEnc: bkEnc,
+		DkEnc: dkEnc,
 		BComplaints: bComplaints,
 		DComplaints: dComplaints,
 	}
@@ -479,13 +505,25 @@ func ReceiveComplaints(
 	bc communication.BroadcastChannel,
 	holdCommittee []int,
 	verCommittee []int,
-	holdIndex int,
+	nextHoldIndex int,
 	n int,
-) ([][]bool, error) {
+) ([][]bool, []curve25519.Ciphertext, []curve25519.Ciphertext, error) {
 	// complaints is a matrix of complaints where complaints[i][k] is true if there was a complaint filed for holder i
 	// by verifier k
 	complaints := make([][]bool, n)
-	for i := 0; i <= n; i++ {
+
+	var bjEnc []curve25519.Ciphertext
+	var djEnc []curve25519.Ciphertext
+
+	if nextHoldIndex >= 0 {
+		bjEnc = make([]curve25519.Ciphertext, n)
+		djEnc = make([]curve25519.Ciphertext, n)
+	} else {
+		bjEnc = nil
+		djEnc = nil
+	}
+
+	for i := 0; i < n; i++ {
 		complaints[i] = make([]bool, n)
 	}
 
@@ -493,20 +531,26 @@ func ReceiveComplaints(
 
 	// Iterate through message from the verification committee to get all the complaints filed
 	for k, verifier := range verCommittee {
-		var holderComplaintMsg HolderComplaintMessage
-		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
+		var verShareMsgFB VerShareMessageFB
+		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsgFB)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode complaint of verifier %d for holder %d: %v", verifier, holdIndex, err)
+			return nil, nil, nil, fmt.Errorf("failed to decode complaints of verifier %d: %v", k, err)
 		}
 
 		for i, _ := range holdCommittee {
-			if len(holderComplaintMsg.BComplaints[i]) > 0 {
+			if len(verShareMsgFB.BComplaints[i]) > 0 {
 				complaints[i][k] = true
 			}
 		}
+
+		// Get the shares if participating in the next holding committee
+		if nextHoldIndex >= 0 {
+			bjEnc[k] = verShareMsgFB.BkEnc[nextHoldIndex]
+			djEnc[k] = verShareMsgFB.DkEnc[nextHoldIndex]
+		}
 	}
 
-	return complaints, nil
+	return complaints, bjEnc, djEnc, nil
 }
 
 // FutureBroadcastCommitteeProtocol performs the actions of the future broadcast committee in order to resolve
@@ -581,6 +625,8 @@ func FutureBroadcastCommitteeProtocol(
 func HoldingCommitteeReceiveProtocolFB(
 	bc communication.BroadcastChannel,
 	params *pedersen.Params,
+	pk curve25519.PublicKey,
+	sk curve25519.PrivateKey,
 	psks []curve25519.PublicSignKey,
 	v [][][]pedersen.Commitment,
 	w [][][]pedersen.Commitment,
@@ -594,8 +640,9 @@ func HoldingCommitteeReceiveProtocolFB(
 	symmEncB [][]curve25519.SymmetricCiphertext,
   	symmEncD [][]curve25519.SymmetricCiphertext,
 	complaints [][]bool,
+	bjEnc []curve25519.Ciphertext,
+	djEnc []curve25519.Ciphertext,
 ) (*pedersen.Share, []pedersen.Commitment, error) {
-
 	_, roundMsgs := bc.ReceiveRound()
 
 	bj := make([][]pedersen.Share, n)
@@ -607,20 +654,35 @@ func HoldingCommitteeReceiveProtocolFB(
 
 	// Construct B_j matrix, the matrix of second level shares, from the verification committee or from
 	// resolved complaints
-	for k, verifier := range verCommittee {
-		var verShareMsg VerShareMessage
-		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsg)
+
+	for k := 0; k < n; k++ {
+		// Decrypt shares from the holding committee
+		bjkBytes, err := curve25519.Decrypt(pk, sk, bjEnc[k])
+		var bjk []pedersen.Share
 		if err != nil {
-			return nil, nil, fmt.Errorf("decoding share from verifier %d failed for holder %d: %v", k, nextHoldIndex, err)
+			return nil, nil, fmt.Errorf("failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+		}
+
+		// Decode decrypted shares from the holding committee
+		err = msgpack.Decode(bjkBytes, &bjk)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to decode shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+		}
+
+		djkBytes, err := curve25519.Decrypt(pk, sk, djEnc[k])
+		var djk []pedersen.Share
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+		}
+
+		err = msgpack.Decode(djkBytes, &djk)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to decode shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
 		}
 
 		for i := 0; i < n; i++ {
-			if verShareMsg.Bk[i][nextHoldIndex] != nil {
-				bj[i][k] = *verShareMsg.Bk[i][nextHoldIndex]
-			}
-			if verShareMsg.Dk[i][nextHoldIndex] != nil {
-				dj[i][k] = *verShareMsg.Dk[i][nextHoldIndex]
-			}
+			bj[i][k] = bjk[i]
+			dj[i][k] = djk[i]
 		}
 	}
 
@@ -686,8 +748,8 @@ func HoldingCommitteeReceiveProtocolFB(
 		}
 	}
 
-	aj := make([]curve25519.Scalar, t)
-	cj := make([]curve25519.Scalar, t)
+	var aj []curve25519.Scalar
+	var cj []curve25519.Scalar
 	indicesScalar := make([]curve25519.Scalar, t)
 	indices := make([]int, t)
 
@@ -710,6 +772,8 @@ func HoldingCommitteeReceiveProtocolFB(
 			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
 			indices[j] = i + 1
 			j++
+		} else {
+			fmt.Printf("error in reconstruction from verification committee: %v, %v, %v\n", i, j, nextHoldIndex)
 		}
 		i++
 	}

@@ -15,11 +15,11 @@ import (
 // Ei contains the verification of the share of the s_ijm where Ei[j] is the verification for the share s_ij
 type HoldShareMessage struct {
 	_struct struct{}                `codec:",omitempty,omitemptyarray"`
-	BiEnc      []curve25519.Ciphertext      `codec:"bi"`
+	BiEnc   []curve25519.Ciphertext `codec:"bi"`
 	Vi      [][]pedersen.Commitment `codec:"vi"`
-	DiEnc      []curve25519.Ciphertext      `codec:"di"`
+	DiEnc   []curve25519.Ciphertext `codec:"di"`
 	Wi      [][]pedersen.Commitment `codec:"Wi"`
-	Ei      []pedersen.Commitment `codec:"ei"`
+	Ei      []pedersen.Commitment 	`codec:"ei"`
 }
 
 // FutureBroadcastShare is the share in the future broadcast protocol to reconstruct the symmetric key, along with a
@@ -87,9 +87,9 @@ type VerShareMessage struct {
 // committee to pass shares along to the holding committee for the next round and also complaints to be resolved by
 // the verification committee
 type VerShareMessageFB struct {
-	_struct struct{}            `codec:",omitempty,omitemptyarray"`
-	Bk      [][]*pedersen.Share `codec:"b_k"`
-	Dk      [][]*pedersen.Share `codec:"d_k"`
-	BComplaints map[int][]int `codec:"b_compl"`
-	DComplaints map[int][]int `codec:"d_compl"`
+	_struct 	struct{}            	`codec:",omitempty,omitemptyarray"`
+	BkEnc      []curve25519.Ciphertext  `codec:"b_k"`
+	DkEnc      []curve25519.Ciphertext  `codec:"d_k"`
+	BComplaints map[int][]int 			`codec:"b_compl"`
+	DComplaints map[int][]int 			`codec:"d_compl"`
 }

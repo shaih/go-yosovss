@@ -432,6 +432,8 @@ func VerificationCommitteeProtocol(
 	// Receive complaint responses
 	bc.ReceiveRound()
 
+
+	// TEST PRINT ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	for i := 0; i < len(bk); i++ {
 		for j := 0; j < len(bk[i]); j++ {
 			fmt.Printf("BK(%d, %d, %d): %v \n", i ,j, verIndex, bk[i][j])
@@ -533,8 +535,21 @@ func HoldingCommitteeReceiveProtocol(
 		}
 	}
 
-	aj := make([]curve25519.Scalar, t)
-	cj := make([]curve25519.Scalar, t)
+	// TEST PRINT ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	for i := 0; i < len(bj); i++ {
+		for k := 0; k < len(bj[i]); k++ {
+			fmt.Printf("BJ(%d, %d, %d): %v \n", i ,holdIndex, k, bj[i][k])
+		}
+	}
+
+	for i := 0; i < len(dj); i++ {
+		for k := 0; k < len(dj[i]); k++ {
+			fmt.Printf("DJ(%d, %d, %d): %v \n", i ,holdIndex, k, dj[i][k])
+		}
+	}
+
+	var aj []curve25519.Scalar
+	var cj []curve25519.Scalar
 	indicesScalar := make([]curve25519.Scalar, t)
 	indices := make([]int, t)
 
@@ -543,6 +558,7 @@ func HoldingCommitteeReceiveProtocol(
 
 	// Use the second level shares to reconstruct the first level shares
 	for i < n && len(aj) < t {
+		fmt.Printf("i: %d", i)
 		var bij []pedersen.Share
 		var dij []pedersen.Share
 		for k := 0; k < n; k++ {
@@ -557,6 +573,8 @@ func HoldingCommitteeReceiveProtocol(
 			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
 			indices[j] = i + 1
 			j++
+		} else {
+			fmt.Printf("error in reconstruction from verification committee: %v, %v, %v\n", i, j, holdIndex)
 		}
 		i++
 	}

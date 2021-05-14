@@ -97,7 +97,7 @@ func TestResharingProtocolWithFutureBroadcast(t *testing.T) {
 	shares, verifications, _ := pedersen.VSSShare(params, msg, 2, 3)
 
 	// Initialize channels and connect with orchestrator
-	for i := 0; i < 9; i++ {
+	for i := 0; i < 12; i++ {
 		channels = append(channels, fake.NewPartyBroadcastChannel(i))
 		o.AddChannel(channels[i])
 	}
@@ -116,7 +116,7 @@ func TestResharingProtocolWithFutureBroadcast(t *testing.T) {
 	}
 
 	// Start all other parties that are not given a share
-	for i := 3; i < 9; i++ {
+	for i := 3; i < 12; i++ {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {
 			defer wg.Done()
