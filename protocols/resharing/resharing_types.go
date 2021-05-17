@@ -15,7 +15,6 @@ import (
 // Ei contains the verification of the share of the s_ijm where Ei[j] is the verification for the share s_ij
 type HoldShareMessage struct {
 	_struct struct{}                `codec:",omitempty,omitemptyarray"`
-<<<<<<< HEAD
 	BiEnc   []curve25519.Ciphertext `codec:"bi"`
 	Vi      [][]pedersen.Commitment `codec:"vi"`
 	DiEnc   []curve25519.Ciphertext `codec:"di"`
@@ -47,13 +46,6 @@ type HoldShareFBMessage struct {
 	SymmEncBi   []curve25519.SymmetricCiphertext `codec:"se_bi"`
 	SymmEncDi   []curve25519.SymmetricCiphertext `codec:"se_di"`
 	FBShareiEnc []curve25519.Ciphertext          `codec:"fb"`
-=======
-	BiEnc   []curve25519.Ciphertext `codec:"b_i"`
-	Vi      [][]pedersen.Commitment `codec:"v_i"`
-	DiEnc   []curve25519.Ciphertext `codec:"d_i"`
-	Wi      [][]pedersen.Commitment `codec:"W_i"`
-	Ei      []pedersen.Commitment   `codec:"e_i"`
->>>>>>> a490ed4a3f6bf14dc278ddcb07d82829f54f07d0
 }
 
 // HolderComplaintMessage is used in the committee protocol is the message sent by a member k of the verification

@@ -95,11 +95,6 @@ func StartCommitteeParty(
 		holdIndex = intIndexOf(holdCommittee, index)
 		verIndex = intIndexOf(verCommittee, index)
 	}
-<<<<<<< HEAD
-=======
-	//fmt.Printf("%v", holdCommittee)
-	//fmt.Printf("%v", index)
->>>>>>> a490ed4a3f6bf14dc278ddcb07d82829f54f07d0
 
 	// Final round to reconstruct message
 	bc.Send(msgpack.Encode(share))
@@ -134,21 +129,9 @@ func TwoLevelShare(
 	s curve25519.Scalar,
 	t int,
 	n int,
-<<<<<<< HEAD
 ) ([][]pedersen.Share, [][]pedersen.Commitment, [][]pedersen.Share, [][]pedersen.Commitment, []pedersen.Commitment, error) {
 	// Perform the first level share with the given secret and decommitment. These shares form the alpha_ijs
 	// and the verifications are the E_ijs
-=======
-) (
-	[][]pedersen.Share,
-	[][]pedersen.Commitment,
-	[][]pedersen.Share,
-	[][]pedersen.Commitment,
-	[]pedersen.Commitment,
-	error,
-) {
-	// Perform the first level share with the given secret and decommitment
->>>>>>> a490ed4a3f6bf14dc278ddcb07d82829f54f07d0
 	shareList, verList, err := pedersen.VSSShareFixedR(params, pedersen.Message(r), pedersen.Decommitment(s), t, n)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error in first level share: %v", err)
@@ -243,21 +226,6 @@ func HoldingCommitteeShareProtocol(
 		return nil, nil, nil, fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
 	}
 
-<<<<<<< HEAD
-=======
-	for i := 0; i < len(bi); i++ {
-		for j := 0; j < len(bi[i]); j++ {
-			fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, i, j, bi[i][j])
-		}
-	}
-
-	for i := 0; i < len(di); i++ {
-		for j := 0; j < len(di[i]); j++ {
-			fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, i, j, di[i][j])
-		}
-	}
-
->>>>>>> a490ed4a3f6bf14dc278ddcb07d82829f54f07d0
 	holdShareMsg := HoldShareMessage{
 		BiEnc: biEnc,
 		Vi:    vi,
@@ -460,21 +428,6 @@ func VerificationCommitteeProtocol(
 	// Receive complaint responses
 	bc.ReceiveRound()
 
-<<<<<<< HEAD
-=======
-	for i := 0; i < len(bk); i++ {
-		for j := 0; j < len(bk[i]); j++ {
-			fmt.Printf("BK(%d, %d, %d): %v \n", i, j, verIndex, bk[i][j])
-		}
-	}
-
-	for i := 0; i < len(dk); i++ {
-		for j := 0; j < len(dk[i]); j++ {
-			fmt.Printf("DK(%d, %d, %d): %v \n", i, j, verIndex, dk[i][j])
-		}
-	}
-
->>>>>>> a490ed4a3f6bf14dc278ddcb07d82829f54f07d0
 	verShareMsg := VerShareMessage{
 		Bk: bk,
 		Dk: dk,
