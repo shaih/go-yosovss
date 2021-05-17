@@ -291,8 +291,6 @@ func VSSReconstruct(params *Params, shares []Share, verifications []Commitment) 
 
 		if isValid {
 			validShares = append(validShares, shares[i])
-		} else {
-			fmt.Printf("shares: %v, validShares: %v, i: %d, t: %d , n: %d \n", shares, validShares, i, t, n)
 		}
 	}
 

@@ -24,13 +24,14 @@ func StartCommitteeParty(
 	index int,
 	t int,
 	n int,
+	totalRounds int,
 ) error {
 
 	holdIndex := intIndexOf(holdCommittee, index)
 	verIndex := intIndexOf(verCommittee, index)
 
 	// Repeat for fixed number of rounds
-	for rounds := 0; rounds < 1; rounds++ {
+	for rounds := 0; rounds < totalRounds; rounds++ {
 		var v [][][]pedersen.Commitment
 		var w [][][]pedersen.Commitment
 		var e [][]pedersen.Commitment
@@ -94,9 +95,6 @@ func StartCommitteeParty(
 		holdIndex = intIndexOf(holdCommittee, index)
 		verIndex = intIndexOf(verCommittee, index)
 	}
-	//fmt.Printf("%v", holdCommittee)
-	//fmt.Printf("%v", index)
-
 
 	// Final round to reconstruct message
 	bc.Send(msgpack.Encode(share))
@@ -222,18 +220,6 @@ func HoldingCommitteeShareProtocol(
 	diEnc, err := EncryptSharesForVer(pks, di, verCommittee)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
-	}
-
-	for i := 0; i < len(bi); i++ {
-		for j := 0; j < len(bi[i]); j++ {
-			fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, i ,j, bi[i][j])
-		}
-	}
-
-	for i := 0; i < len(di); i++ {
-		for j := 0; j < len(di[i]); j++ {
-			fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, i ,j, di[i][j])
-		}
 	}
 
 	holdShareMsg := HoldShareMessage{
@@ -432,21 +418,6 @@ func VerificationCommitteeProtocol(
 	// Receive complaint responses
 	bc.ReceiveRound()
 
-
-	// TEST PRINT ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	for i := 0; i < len(bk); i++ {
-		for j := 0; j < len(bk[i]); j++ {
-			fmt.Printf("BK(%d, %d, %d): %v \n", i ,j, verIndex, bk[i][j])
-		}
-	}
-
-	for i := 0; i < len(dk); i++ {
-		for j := 0; j < len(dk[i]); j++ {
-			fmt.Printf("DK(%d, %d, %d): %v \n", i ,j, verIndex, dk[i][j])
-		}
-	}
-
-
 	verShareMsg := VerShareMessage{
 		Bk: bk,
 		Dk: dk,
@@ -535,19 +506,6 @@ func HoldingCommitteeReceiveProtocol(
 		}
 	}
 
-	// TEST PRINT ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	for i := 0; i < len(bj); i++ {
-		for k := 0; k < len(bj[i]); k++ {
-			fmt.Printf("BJ(%d, %d, %d): %v \n", i ,holdIndex, k, bj[i][k])
-		}
-	}
-
-	for i := 0; i < len(dj); i++ {
-		for k := 0; k < len(dj[i]); k++ {
-			fmt.Printf("DJ(%d, %d, %d): %v \n", i ,holdIndex, k, dj[i][k])
-		}
-	}
-
 	var aj []curve25519.Scalar
 	var cj []curve25519.Scalar
 	indicesScalar := make([]curve25519.Scalar, t)
@@ -558,7 +516,6 @@ func HoldingCommitteeReceiveProtocol(
 
 	// Use the second level shares to reconstruct the first level shares
 	for i < n && len(aj) < t {
-		fmt.Printf("i: %d", i)
 		var bij []pedersen.Share
 		var dij []pedersen.Share
 		for k := 0; k < n; k++ {
@@ -573,8 +530,6 @@ func HoldingCommitteeReceiveProtocol(
 			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
 			indices[j] = i + 1
 			j++
-		} else {
-			fmt.Printf("error in reconstruction from verification committee: %v, %v, %v\n", i, j, holdIndex)
 		}
 		i++
 	}
@@ -588,8 +543,6 @@ func HoldingCommitteeReceiveProtocol(
 	// those shares
 	lambdas, err := curve25519.LagrangeCoeffs(indicesScalar, curve25519.GetScalar(0))
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", indicesScalar)
-
 		return nil, nil, fmt.Errorf("unable to compute Lagrange coefficients for holder %d: %v", holdIndex, err)
 	}
 
