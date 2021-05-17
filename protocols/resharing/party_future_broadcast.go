@@ -138,9 +138,9 @@ func StartCommitteePartyFB(
 
 	// Final round to reconstruct message
 	bc.Send(msgpack.Encode(share))
-
 	_, roundMsgs := bc.ReceiveRound()
 
+	// Collect shares from the holding committee in the last round of the protocol
 	var shares []pedersen.Share
 	for i, holder := range holdCommittee {
 		var share pedersen.Share
@@ -216,28 +216,33 @@ func HoldingCommitteeShareProtocolFB(
 		fbKeyShareSigs[l] = make([]curve25519.Signature, n)
 	}
 
-	// Create symmetric keys for future broadcast
+	// Create symmetric keys for future broadcast to encrypt B_ik vectors
 	for k := 0; k < n; k++ {
 		keys[k] = curve25519.GenerateSymmetricKey()
 		nonce := curve25519.Nonce([24]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
+		// Encrypt B_ik vector using key k
 		symmEncBi[k], err = curve25519.SymmetricEncrypt(keys[k], nonce,
 			curve25519.Message(msgpack.Encode(bShares[k])))
 		if err != nil {
 			return fmt.Errorf("error in encrypting s_i shares for future broadcast: %v", holdIndex)
 		}
 
+		// Encrypt D_ik vector using key k
 		symmEncDi[k], err = curve25519.SymmetricEncrypt(keys[k], nonce,
 			curve25519.Message(msgpack.Encode(dShares[k])))
 		if err != nil {
 			return fmt.Errorf("error in encrypting r_i shares for future broadcast: %v", holdIndex)
 		}
 
+		// Perform t-of-n Shamir Secret sharing on the symmetric keys to distribute to the future broadcast committee
 		fbShares, err := shamir.GenerateShares(shamir.Message(keys[k]), t, n)
 		if err != nil {
 			return fmt.Errorf("error in sharing future broadcast keys: %v", holdIndex)
 		}
 
+		// For each future broadcast committee member l, give them one share of each of the k keys, along with a
+		// signature of of the key to show its validity from the holder.
 		for l := 0; l < n; l++ {
 			fbKeyShares[l][k] = fbShares[l]
 			sig, err := curve25519.Sign(ssk, msgpack.Encode(fbShares[l]))
@@ -256,6 +261,8 @@ func HoldingCommitteeShareProtocolFB(
 			FBShareSigs: fbKeyShareSigs[l],
 		}
 
+		// Encrypt the future broadcast shares so only FB committee member l can decrypt the message containing
+		// the shamir shares s_ikl
 		encFbShare, err := curve25519.Encrypt(pks[fbCommittee[l]], msgpack.Encode(fbShare))
 		if err != nil {
 			return fmt.Errorf("unable to encrypt future broadcast share using the public key of party %d", fbCommittee[l])
@@ -459,6 +466,7 @@ func VerificationCommitteeProtocolFB(
 	bkEnc := make([]curve25519.Ciphertext, n)
 	dkEnc := make([]curve25519.Ciphertext, n)
 
+	// Encrypt the messages from the verification committee member k to next holding committee member j
 	for j := 0; j < n; j++ {
 		bjkEnc, err := curve25519.Encrypt(pks[nextHoldCommittee[j]], msgpack.Encode(bk[j]))
 		if err != nil {
@@ -503,6 +511,7 @@ func ReceiveComplaints(
 	var bjEnc []curve25519.Ciphertext
 	var djEnc []curve25519.Ciphertext
 
+	// Track the encrypted shares if the party is going to be in the next holding committee
 	if nextHoldIndex >= 0 {
 		bjEnc = make([]curve25519.Ciphertext, n)
 		djEnc = make([]curve25519.Ciphertext, n)
@@ -531,7 +540,7 @@ func ReceiveComplaints(
 			}
 		}
 
-		// Get the shares if participating in the next holding committee
+		// Get the shares if participating in the next holding committee, but only the ones relevant to the party
 		if nextHoldIndex >= 0 {
 			bjEnc[k] = verShareMsgFB.BkEnc[nextHoldIndex]
 			djEnc[k] = verShareMsgFB.DkEnc[nextHoldIndex]
@@ -751,10 +760,12 @@ func HoldingCommitteeReceiveProtocolFB(
 		aij, err1 := pedersen.VSSReconstruct(params, bij, v[i][nextHoldIndex])
 		cij, err2 := pedersen.VSSReconstruct(params, dij, w[i][nextHoldIndex])
 
+		// If the reconstruction of the first level share was successful, we add it to the set of valid shares to
+		// create the share for the next round
 		if err1 == nil && err2 == nil { // Use corresponding shares of alpha and gamma
 			aj = append(aj, curve25519.Scalar(*aij))
 			cj = append(cj, curve25519.Scalar(*cij))
-			indicesScalar = append(indicesScalar, curve25519.GetScalar(uint64(i + 1)))
+			indicesScalar = append(indicesScalar, curve25519.GetScalar(uint64(i + 1))) // Track the index of the successful share
 			indices = append(indices, i + 1)
 		}
 		i++

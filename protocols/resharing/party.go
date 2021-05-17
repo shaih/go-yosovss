@@ -30,9 +30,9 @@ func StartCommitteeParty(
 	holdIndex := intIndexOf(holdCommittee, index)
 	verIndex := intIndexOf(verCommittee, index)
 
-	// Repeat for fixed number of rounds
+	// Repeat for fixed number of resharing rounds
 	for rounds := 0; rounds < totalRounds; rounds++ {
-		var v [][][]pedersen.Commitment
+		var v [][][]pedersen.Commitment // Verifications for the
 		var w [][][]pedersen.Commitment
 		var e [][]pedersen.Commitment
 
@@ -98,9 +98,9 @@ func StartCommitteeParty(
 
 	// Final round to reconstruct message
 	bc.Send(msgpack.Encode(share))
-
 	_, roundMsgs := bc.ReceiveRound()
 
+	// Collect shares from the holding committee in the last round of the protocol
 	var shares []pedersen.Share
 	for i, holder := range holdCommittee {
 		var share pedersen.Share
@@ -122,8 +122,7 @@ func StartCommitteeParty(
 	return nil
 }
 
-// TwoLevelShare performs a Shamir share followed by Pedersen VSS, and returns the resulting
-// matrix of shares and verifications
+// TwoLevelShare performs a Pedersen VSS and then subsequently does another Pedersen VSS for the shares of the first VSS.
 func TwoLevelShare(
 	params *pedersen.Params,
 	r curve25519.Scalar,
@@ -131,7 +130,8 @@ func TwoLevelShare(
 	t int,
 	n int,
 ) ([][]pedersen.Share, [][]pedersen.Commitment, [][]pedersen.Share, [][]pedersen.Commitment, []pedersen.Commitment, error) {
-	// Perform the first level share with the given secret and decommitment
+	// Perform the first level share with the given secret and decommitment. These shares form the alpha_ijs
+	// and the verifications are the E_ijs
 	shareList, verList, err := pedersen.VSSShareFixedR(params, pedersen.Message(r), pedersen.Decommitment(s), t, n)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error in first level share: %v", err)
@@ -175,10 +175,12 @@ func EncryptSharesForVer(
 
 	for k := 0; k < len(shares); k++ {
 		sharesK := make([]pedersen.Share, len(shares)) // Shares for an individual verification committee member
+		// Create a list of shares for verification committee member k
 		for j := 0; j < len(shares); j++ {
 			sharesK[j] = shares[j][k]
 		}
 
+		// Encrypt using the key of verifidation committee member k
 		encryptedShare, err := curve25519.Encrypt(pks[verCommittee[k]], msgpack.Encode(sharesK))
 		encryptedShares[k] = encryptedShare
 		if err != nil {
@@ -212,11 +214,13 @@ func HoldingCommitteeShareProtocol(
 		return nil, nil, nil, fmt.Errorf("error in creating shares of s_%d, r_%d: %v", holdIndex, holdIndex, err)
 	}
 
+	// Encrypt B_i for verification committee
 	biEnc, err := EncryptSharesForVer(pks, bi, verCommittee)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error in encrypting s_i shares: %v", holdIndex)
 	}
 
+	// Encrypt D_i for verification committee
 	diEnc, err := EncryptSharesForVer(pks, di, verCommittee)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
@@ -230,7 +234,7 @@ func HoldingCommitteeShareProtocol(
 		Ei: ei,
 	}
 
-	// Send shares to verification committee
+	// Send shares to verification committee, along with broadcasting the verifications
 	bc.Send(msgpack.Encode(holdShareMsg))
 	v, w, e, err := ReceiveVerifications(bc, holdCommittee, n)
 	if err != nil {
@@ -251,7 +255,8 @@ func HoldingCommitteeShareProtocol(
 		}
 	}
 
-	// Iterate over all complaint messages from the verification committee
+	// Iterate over all complaint messages from the verification committee and populate response matrix for the
+	// shares that had complaints
 	for k, verifier := range verCommittee {
 		var holderComplaintMsg HolderComplaintMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
@@ -333,25 +338,26 @@ func VerificationCommitteeProtocol(
 		bikFailed := false
 		dikFailed := false
 
-		// Decrypt shares from the holding committee
+		// Decrypt B_k shares from the holding committee
 		bikBytes, err := curve25519.Decrypt(pk, sk, holdShareMsg.BiEnc[verIndex])
 		var bik []pedersen.Share
 		if err != nil {
 			bikFailed = true
 		} else {
-			// Decode decrypted shares from the holding committee
+			// Decode decrypted shares
 			err = msgpack.Decode(bikBytes, &bik)
 			if err != nil {
 				bikFailed = true
 			}
 		}
 
+		// Decrypt D_k shares from the holding committee
 		dikBytes, err := curve25519.Decrypt(pk, sk, holdShareMsg.DiEnc[verIndex])
 		var dik []pedersen.Share
 		if err != nil {
 			dikFailed = true
 		} else {
-
+			// Decode decrypted shares
 			err = msgpack.Decode(dikBytes, &dik)
 			if err != nil {
 				dikFailed = true
@@ -366,7 +372,8 @@ func VerificationCommitteeProtocol(
 		}
 
 		if !bikFailed {
-			// Construct matrix of complaints to broadcast for resolution of share of shares
+			// Check that each share is valid using verifications and construct matrix of complaints to broadcast for
+			// resolution by the holder
 			for j := 0; j < n; j++ {
 				bIsValid, _ := pedersen.VSSVerify(params, bik[j], holdShareMsg.Vi[j])
 				if bIsValid {
@@ -384,7 +391,7 @@ func VerificationCommitteeProtocol(
 		}
 
 		if !dikFailed {
-			// Construct matrix of complaints to broadcast for resolution of share of decommitments
+			// checking for share of decommitments
 			for j := 0; j < n; j++ {
 				dIsValid, _ := pedersen.VSSVerify(params, dik[j], holdShareMsg.Wi[j])
 				if dIsValid {
@@ -496,6 +503,7 @@ func HoldingCommitteeReceiveProtocol(
 			return nil, nil, fmt.Errorf("decoding share from verifier %d failed for holder %d: %v", k, holdIndex, err)
 		}
 
+		// Obtain shares from the verification committee, giving the possibility of leaving some out due to faulty shares
 		for i := 0; i < n; i++ {
 			if verShareMsg.Bk[i][holdIndex] != nil {
 				bj[i][k] = *verShareMsg.Bk[i][holdIndex]
