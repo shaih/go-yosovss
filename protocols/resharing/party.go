@@ -122,14 +122,20 @@ func StartCommitteeParty(
 	return nil
 }
 
-// TwoLevelShare performs a Pedersen VSS and then subsequently does another Pedersen VSS for the shares of the first VSS.
+// TwoLevelShare performs a sharing and then subsequently does another Pedersen VSS for the shares of the first sharing
 func TwoLevelShare(
 	params *pedersen.Params,
 	r curve25519.Scalar,
 	s curve25519.Scalar,
 	t int,
 	n int,
-) ([][]pedersen.Share, [][]pedersen.Commitment, [][]pedersen.Share, [][]pedersen.Commitment, []pedersen.Commitment, error) {
+) ([][]pedersen.Share,
+	[][]pedersen.Commitment,
+	[][]pedersen.Share,
+	[][]pedersen.Commitment,
+	[]pedersen.Commitment,
+	error,
+) {
 	// Perform the first level share with the given secret and decommitment. These shares form the alpha_ijs
 	// and the verifications are the E_ijs
 	shareList, verList, err := pedersen.VSSShareFixedR(params, pedersen.Message(r), pedersen.Decommitment(s), t, n)
@@ -539,8 +545,8 @@ func HoldingCommitteeReceiveProtocol(
 		aij, err1 := pedersen.VSSReconstruct(params, bij, v[i][holdIndex])
 		cij, err2 := pedersen.VSSReconstruct(params, dij, w[i][holdIndex])
 		if err1 == nil && err2 == nil { // Use corresponding shares of alpha and gamma
-			aj[j] = curve25519.Scalar(*aij)
-			cj[j] = curve25519.Scalar(*cij)
+			aj = append(aj, curve25519.Scalar(*aij))
+			cj = append(cj, curve25519.Scalar(*cij))
 			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
 			indices[j] = i + 1
 			j++

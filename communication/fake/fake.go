@@ -10,19 +10,19 @@ import (
 // Orchestrator simulates a secure broadcast channel
 // used for communication between parties
 type Orchestrator struct {
-	Channels  map[int]PartyBroadcastChannel
-	RoundMsgs map[int]communication.BroadcastMessage
-	MessageSizes map[int] int
-	Round     int
+	Channels     map[int]PartyBroadcastChannel
+	RoundMsgs    map[int]communication.BroadcastMessage
+	MessageSizes map[int]int
+	Round        int
 }
 
 // NewOrchestrator creates a new orchestrator
 func NewOrchestrator() Orchestrator {
 	return Orchestrator{
-		Channels:  make(map[int]PartyBroadcastChannel),
-		RoundMsgs: make(map[int]communication.BroadcastMessage),
+		Channels:     make(map[int]PartyBroadcastChannel),
+		RoundMsgs:    make(map[int]communication.BroadcastMessage),
 		MessageSizes: make(map[int]int),
-		Round:     0,
+		Round:        0,
 	}
 }
 

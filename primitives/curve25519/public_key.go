@@ -27,7 +27,7 @@ type PublicKey [32]byte
 type PrivateKey [32]byte
 
 // PublicSignKey is a public key used to verify a digital signature
-type PublicSignKey [32] byte
+type PublicSignKey [32]byte
 
 // PrivateSignKey is a secret key used to construct a digital signature
 type PrivateSignKey [64]byte
@@ -52,7 +52,7 @@ func GenerateKeys() (PublicKey, PrivateKey) {
 
 // Encrypt uses a public key to encrypt a message and produce the ciphertext
 func Encrypt(pk PublicKey, m Message) (Ciphertext, error) {
-	c := make([]byte, len(m) + C.crypto_box_SEALBYTES)
+	c := make([]byte, len(m)+C.crypto_box_SEALBYTES)
 
 	result := C.crypto_box_seal((*C.uchar)(&c[0]), (*C.uchar)(&m[0]), C.ulonglong(len(m)), (*C.uchar)(&pk[0]))
 	if result != 0 {
@@ -63,7 +63,7 @@ func Encrypt(pk PublicKey, m Message) (Ciphertext, error) {
 
 // Decrypt uses the private key to decrypt the ciphertext and produce a message
 func Decrypt(pk PublicKey, sk PrivateKey, c Ciphertext) (Message, error) {
-	m := make([]byte, len(c) - C.crypto_box_SEALBYTES)
+	m := make([]byte, len(c)-C.crypto_box_SEALBYTES)
 
 	result := C.crypto_box_seal_open((*C.uchar)(&m[0]), (*C.uchar)(&c[0]), C.ulonglong(len(c)), (*C.uchar)(&pk[0]), (*C.uchar)(&sk[0]))
 	if result != 0 {
@@ -94,7 +94,7 @@ func Sign(ssk PrivateSignKey, m Message) (Signature, error) {
 // Verify uses the public key to verify the message signature
 func Verify(psk PublicSignKey, m Message, sig Signature) bool {
 	result := C.crypto_sign_verify_detached((*C.uchar)(&sig[0]), (*C.uchar)(&m[0]), C.ulonglong(len(m)), (*C.uchar)(&psk[0]))
-	if result  != 0 {
+	if result != 0 {
 		fmt.Printf("%v", result)
 		return false
 	}

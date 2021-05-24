@@ -80,21 +80,34 @@ func TestResharingProtocolWithFutureBroadcast(t *testing.T) {
 	pubKeys, privKeys := curve25519.SetupKeys(12)
 	pubSignKeys, privSignKeys := curve25519.SetupSignKeys(12)
 
-	// Hardcoded number of rounds of the protocol
+	// Hardcoded number of rounds of messaging required for the protocol
 	numRounds := 13
 
 	// Create the orchestrator
 	o := fake.NewOrchestrator()
 
 	var channels []fake.PartyBroadcastChannel
-	initHoldCommittee := []int{0, 1, 2}
-	initVerCommittee := []int{3, 4, 5}
-	initFBCommittee := []int{6, 7, 8}
+
+	// Form initial committees, which are comprised of the ids of the parties that are participating in them
+	initCommittees := Committees{
+		Hold: []int{0, 1, 2},
+		Ver:  []int{3, 4, 5},
+		FB:   []int{6, 7, 8},
+	}
 
 	// Generate a Pedersen share of a message
 	msg := pedersen.Message(curve25519.RandomScalar())
 	params := pedersen.GenerateParams()
 	shares, verifications, _ := pedersen.VSSShare(params, msg, 2, 3)
+
+	reshareParams := Params{
+		Pks:            pubKeys,
+		Psks:           pubSignKeys,
+		PedersenParams: params,
+		T:              2, // threshold
+		N:              3, // committee size
+		TotalRounds:    3,
+	}
 
 	// Initialize channels and connect with orchestrator
 	for i := 0; i < 12; i++ {
@@ -109,8 +122,8 @@ func TestResharingProtocolWithFutureBroadcast(t *testing.T) {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			err := StartCommitteePartyFB(channels[i], pubKeys, privKeys[i], pubSignKeys, privSignKeys[i],
-				initHoldCommittee, initVerCommittee, initFBCommittee, params, &shares[i], verifications, i, 2, 3, 3)
+			err := StartCommitteePartyFB(channels[i], reshareParams, initCommittees, privKeys[i], privSignKeys[i],
+				&shares[i], verifications, i)
 			assert.Equal(t, nil, err)
 		}(i, &wg)
 	}
@@ -120,8 +133,8 @@ func TestResharingProtocolWithFutureBroadcast(t *testing.T) {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			err := StartCommitteePartyFB(channels[i], pubKeys, privKeys[i], pubSignKeys, privSignKeys[i],
-				initHoldCommittee, initVerCommittee, initFBCommittee, params, nil, verifications, i, 2, 3, 3)
+			err := StartCommitteePartyFB(channels[i], reshareParams, initCommittees, privKeys[i], privSignKeys[i],
+				nil, verifications, i)
 			assert.Equal(t, nil, err)
 		}(i, &wg)
 	}

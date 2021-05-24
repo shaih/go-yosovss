@@ -6,6 +6,40 @@ import (
 	"github.com/shaih/go-yosovss/primitives/shamir"
 )
 
+// Params contain the parameters that are used in the resharing protocol.
+// Pks are the list of public keys of all the participants in the protocol, where the list of public keys are indexed
+// by the
+// Psks are the list of public keys used for signatures  of all the par. This is separate because
+// T is the threshold for secret sharing for reconstruction
+// N is the size of the committees
+// TotalRounds is the number of resharing rounds that are conducted in the protocol
+type Params struct {
+	Pks            []curve25519.PublicKey
+	Psks           []curve25519.PublicSignKey
+	PedersenParams *pedersen.Params
+	T              int
+	N              int
+	TotalRounds    int
+}
+
+// Committees contains the list of holding, verification, and future broadcast committee members for a round of
+// resharing
+type Committees struct {
+	Hold []int
+	Ver  []int
+	FB   []int
+}
+
+// CommitteeIndices is a struct that contains for a participant in the protocol their index in each of the committees
+// for a round of resharing. If an index is -1, that means that the party is not a part of the committee for the round.
+// Otherwise, indices range from 0 to n-1. Note that these indices represent a party's index with respect to the
+// committee specifically, not the id of the party with respect to the entire protocol.
+type CommitteeIndices struct {
+	Hold int
+	Ver  int
+	FB   int
+}
+
 // HoldShareMessage is used in the committee protocol and is the message sent by members of the holding committee
 // to pass shares along to the verification committee.
 // BiEnc are the shares s_ijk meant where BiEnc[k] is the set of shares for the kth member of the verification committee
@@ -19,7 +53,7 @@ type HoldShareMessage struct {
 	Vi      [][]pedersen.Commitment `codec:"vi"`
 	DiEnc   []curve25519.Ciphertext `codec:"di"`
 	Wi      [][]pedersen.Commitment `codec:"Wi"`
-	Ei      []pedersen.Commitment 	`codec:"ei"`
+	Ei      []pedersen.Commitment   `codec:"ei"`
 }
 
 // FutureBroadcastShare is the share in the future broadcast protocol to reconstruct the symmetric key, along with a
@@ -87,9 +121,9 @@ type VerShareMessage struct {
 // committee to pass shares along to the holding committee for the next round and also complaints to be resolved by
 // the verification committee
 type VerShareMessageFB struct {
-	_struct 	struct{}            	`codec:",omitempty,omitemptyarray"`
-	BkEnc      []curve25519.Ciphertext  `codec:"b_k"`
-	DkEnc      []curve25519.Ciphertext  `codec:"d_k"`
-	BComplaints map[int][]int 			`codec:"b_compl"`
-	DComplaints map[int][]int 			`codec:"d_compl"`
+	_struct     struct{}                `codec:",omitempty,omitemptyarray"`
+	BkEnc       []curve25519.Ciphertext `codec:"b_k"`
+	DkEnc       []curve25519.Ciphertext `codec:"d_k"`
+	BComplaints map[int][]int           `codec:"b_compl"`
+	DComplaints map[int][]int           `codec:"d_compl"`
 }
