@@ -528,14 +528,12 @@ func HoldingCommitteeReceiveProtocol(
 
 	var aj []curve25519.Scalar
 	var cj []curve25519.Scalar
-	indicesScalar := make([]curve25519.Scalar, t)
-	indices := make([]int, t)
+	var indicesScalar []curve25519.Scalar
+	var indices []int
 
 	i := 0
-	j := 0
-
 	// Use the second level shares to reconstruct the first level shares
-	for i < n && j < t {
+	for i < n && len(aj) < t {
 		var bij []pedersen.Share
 		var dij []pedersen.Share
 		for k := 0; k < n; k++ {
@@ -547,9 +545,8 @@ func HoldingCommitteeReceiveProtocol(
 		if err1 == nil && err2 == nil { // Use corresponding shares of alpha and gamma
 			aj = append(aj, curve25519.Scalar(*aij))
 			cj = append(cj, curve25519.Scalar(*cij))
-			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
-			indices[j] = i + 1
-			j++
+			indicesScalar = append(indicesScalar, curve25519.GetScalar(uint64(i+1))) // Track the index of the successful share
+			indices = append(indices, i+1)
 		}
 		i++
 	}
