@@ -28,7 +28,7 @@ type Message curve25519.Scalar
 // commitment to a message
 type Commitment curve25519.Point
 
-// Decommitment is the random value r used
+// Decommitment is the random value r used in a Pedersen commitment
 type Decommitment curve25519.Scalar
 
 // GenerateParams picks two random group elements for generating commitments
@@ -291,8 +291,6 @@ func VSSReconstruct(params *Params, shares []Share, verifications []Commitment) 
 
 		if isValid {
 			validShares = append(validShares, shares[i])
-		} else {
-			fmt.Printf("shares: %v, validShares: %v, i: %d, t: %d , n: %d \n", shares, validShares, i, t, n)
 		}
 	}
 

@@ -24,14 +24,15 @@ func StartCommitteeParty(
 	index int,
 	t int,
 	n int,
+	totalRounds int,
 ) error {
 
 	holdIndex := intIndexOf(holdCommittee, index)
 	verIndex := intIndexOf(verCommittee, index)
 
-	// Repeat for fixed number of rounds
-	for rounds := 0; rounds < 1; rounds++ {
-		var v [][][]pedersen.Commitment
+	// Repeat for fixed number of resharing rounds
+	for rounds := 0; rounds < totalRounds; rounds++ {
+		var v [][][]pedersen.Commitment // Verifications for the
 		var w [][][]pedersen.Commitment
 		var e [][]pedersen.Commitment
 
@@ -94,14 +95,12 @@ func StartCommitteeParty(
 		holdIndex = intIndexOf(holdCommittee, index)
 		verIndex = intIndexOf(verCommittee, index)
 	}
-	//fmt.Printf("%v", holdCommittee)
-	//fmt.Printf("%v", index)
 
 	// Final round to reconstruct message
 	bc.Send(msgpack.Encode(share))
-
 	_, roundMsgs := bc.ReceiveRound()
 
+	// Collect shares from the holding committee in the last round of the protocol
 	var shares []pedersen.Share
 	for i, holder := range holdCommittee {
 		var share pedersen.Share
@@ -123,23 +122,22 @@ func StartCommitteeParty(
 	return nil
 }
 
-// TwoLevelShare performs a Shamir share followed by Pedersen VSS, and returns the resulting
-// matrix of shares and verifications
+// TwoLevelShare performs a sharing and then subsequently does another Pedersen VSS for the shares of the first sharing
 func TwoLevelShare(
 	params *pedersen.Params,
 	r curve25519.Scalar,
 	s curve25519.Scalar,
 	t int,
 	n int,
-) (
-	[][]pedersen.Share,
+) ([][]pedersen.Share,
 	[][]pedersen.Commitment,
 	[][]pedersen.Share,
 	[][]pedersen.Commitment,
 	[]pedersen.Commitment,
 	error,
 ) {
-	// Perform the first level share with the given secret and decommitment
+	// Perform the first level share with the given secret and decommitment. These shares form the alpha_ijs
+	// and the verifications are the E_ijs
 	shareList, verList, err := pedersen.VSSShareFixedR(params, pedersen.Message(r), pedersen.Decommitment(s), t, n)
 	if err != nil {
 		return nil, nil, nil, nil, nil, fmt.Errorf("error in first level share: %v", err)
@@ -183,10 +181,12 @@ func EncryptSharesForVer(
 
 	for k := 0; k < len(shares); k++ {
 		sharesK := make([]pedersen.Share, len(shares)) // Shares for an individual verification committee member
+		// Create a list of shares for verification committee member k
 		for j := 0; j < len(shares); j++ {
 			sharesK[j] = shares[j][k]
 		}
 
+		// Encrypt using the key of verifidation committee member k
 		encryptedShare, err := curve25519.Encrypt(pks[verCommittee[k]], msgpack.Encode(sharesK))
 		encryptedShares[k] = encryptedShare
 		if err != nil {
@@ -220,26 +220,16 @@ func HoldingCommitteeShareProtocol(
 		return nil, nil, nil, fmt.Errorf("error in creating shares of s_%d, r_%d: %v", holdIndex, holdIndex, err)
 	}
 
+	// Encrypt B_i for verification committee
 	biEnc, err := EncryptSharesForVer(pks, bi, verCommittee)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error in encrypting s_i shares: %v", holdIndex)
 	}
 
+	// Encrypt D_i for verification committee
 	diEnc, err := EncryptSharesForVer(pks, di, verCommittee)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
-	}
-
-	for i := 0; i < len(bi); i++ {
-		for j := 0; j < len(bi[i]); j++ {
-			fmt.Printf("BI(%d, %d, %d): %v \n", holdIndex, i, j, bi[i][j])
-		}
-	}
-
-	for i := 0; i < len(di); i++ {
-		for j := 0; j < len(di[i]); j++ {
-			fmt.Printf("DI(%d, %d, %d): %v \n", holdIndex, i, j, di[i][j])
-		}
 	}
 
 	holdShareMsg := HoldShareMessage{
@@ -250,7 +240,7 @@ func HoldingCommitteeShareProtocol(
 		Ei:    ei,
 	}
 
-	// Send shares to verification committee
+	// Send shares to verification committee, along with broadcasting the verifications
 	bc.Send(msgpack.Encode(holdShareMsg))
 	v, w, e, err := ReceiveVerifications(bc, holdCommittee, n)
 	if err != nil {
@@ -271,7 +261,8 @@ func HoldingCommitteeShareProtocol(
 		}
 	}
 
-	// Iterate over all complaint messages from the verification committee
+	// Iterate over all complaint messages from the verification committee and populate response matrix for the
+	// shares that had complaints
 	for k, verifier := range verCommittee {
 		var holderComplaintMsg HolderComplaintMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
@@ -356,25 +347,26 @@ func VerificationCommitteeProtocol(
 		bikFailed := false
 		dikFailed := false
 
-		// Decrypt shares from the holding committee
+		// Decrypt B_k shares from the holding committee
 		bikBytes, err := curve25519.Decrypt(pk, sk, holdShareMsg.BiEnc[verIndex])
 		var bik []pedersen.Share
 		if err != nil {
 			bikFailed = true
 		} else {
-			// Decode decrypted shares from the holding committee
+			// Decode decrypted shares
 			err = msgpack.Decode(bikBytes, &bik)
 			if err != nil {
 				bikFailed = true
 			}
 		}
 
+		// Decrypt D_k shares from the holding committee
 		dikBytes, err := curve25519.Decrypt(pk, sk, holdShareMsg.DiEnc[verIndex])
 		var dik []pedersen.Share
 		if err != nil {
 			dikFailed = true
 		} else {
-
+			// Decode decrypted shares
 			err = msgpack.Decode(dikBytes, &dik)
 			if err != nil {
 				dikFailed = true
@@ -389,7 +381,8 @@ func VerificationCommitteeProtocol(
 		}
 
 		if !bikFailed {
-			// Construct matrix of complaints to broadcast for resolution of share of shares
+			// Check that each share is valid using verifications and construct matrix of complaints to broadcast for
+			// resolution by the holder
 			for j := 0; j < n; j++ {
 				bIsValid, _ := pedersen.VSSVerify(params, bik[j], holdShareMsg.Vi[j])
 				if bIsValid {
@@ -407,7 +400,7 @@ func VerificationCommitteeProtocol(
 		}
 
 		if !dikFailed {
-			// Construct matrix of complaints to broadcast for resolution of share of decommitments
+			// checking for share of decommitments
 			for j := 0; j < n; j++ {
 				dIsValid, _ := pedersen.VSSVerify(params, dik[j], holdShareMsg.Wi[j])
 				if dIsValid {
@@ -440,18 +433,6 @@ func VerificationCommitteeProtocol(
 	bc.Send([]byte{})
 	// Receive complaint responses
 	bc.ReceiveRound()
-
-	for i := 0; i < len(bk); i++ {
-		for j := 0; j < len(bk[i]); j++ {
-			fmt.Printf("BK(%d, %d, %d): %v \n", i, j, verIndex, bk[i][j])
-		}
-	}
-
-	for i := 0; i < len(dk); i++ {
-		for j := 0; j < len(dk[i]); j++ {
-			fmt.Printf("DK(%d, %d, %d): %v \n", i, j, verIndex, dk[i][j])
-		}
-	}
 
 	verShareMsg := VerShareMessage{
 		Bk: bk,
@@ -534,6 +515,7 @@ func HoldingCommitteeReceiveProtocol(
 			)
 		}
 
+		// Obtain shares from the verification committee, giving the possibility of leaving some out due to faulty shares
 		for i := 0; i < n; i++ {
 			if verShareMsg.Bk[i][holdIndex] != nil {
 				bj[i][k] = *verShareMsg.Bk[i][holdIndex]
@@ -544,16 +526,14 @@ func HoldingCommitteeReceiveProtocol(
 		}
 	}
 
-	aj := make([]curve25519.Scalar, t)
-	cj := make([]curve25519.Scalar, t)
-	indicesScalar := make([]curve25519.Scalar, t)
-	indices := make([]int, t)
+	var aj []curve25519.Scalar
+	var cj []curve25519.Scalar
+	var indicesScalar []curve25519.Scalar
+	var indices []int
 
 	i := 0
-	j := 0
-
 	// Use the second level shares to reconstruct the first level shares
-	for i < n && j < t {
+	for i < n && len(aj) < t {
 		var bij []pedersen.Share
 		var dij []pedersen.Share
 		for k := 0; k < n; k++ {
@@ -563,11 +543,10 @@ func HoldingCommitteeReceiveProtocol(
 		aij, err1 := pedersen.VSSReconstruct(params, bij, v[i][holdIndex])
 		cij, err2 := pedersen.VSSReconstruct(params, dij, w[i][holdIndex])
 		if err1 == nil && err2 == nil { // Use corresponding shares of alpha and gamma
-			aj[j] = curve25519.Scalar(*aij)
-			cj[j] = curve25519.Scalar(*cij)
-			indicesScalar[j] = curve25519.GetScalar(uint64(i + 1))
-			indices[j] = i + 1
-			j++
+			aj = append(aj, curve25519.Scalar(*aij))
+			cj = append(cj, curve25519.Scalar(*cij))
+			indicesScalar = append(indicesScalar, curve25519.GetScalar(uint64(i+1))) // Track the index of the successful share
+			indices = append(indices, i+1)
 		}
 		i++
 	}
@@ -584,8 +563,6 @@ func HoldingCommitteeReceiveProtocol(
 	// those shares
 	lambdas, err := curve25519.LagrangeCoeffs(indicesScalar, curve25519.GetScalar(0))
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", indicesScalar)
-
 		return nil, nil, fmt.Errorf("unable to compute Lagrange coefficients for holder %d: %v", holdIndex, err)
 	}
 
