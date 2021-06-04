@@ -106,9 +106,6 @@ func StartCommitteePartyFB(
 			symmEncB = symmEncBNew
 			symmEncD = symmEncDNew
 			fbShareEnc = fbShareEncNew
-			if err != nil {
-				return fmt.Errorf("error in verification committee protocol: %v", err)
-			}
 		} else {
 			// If not part of the verification committee, a party still needs to receive the verifications (v, w, e)
 			// that are broadcasted by the dealer in the two level sharing.
