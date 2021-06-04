@@ -142,7 +142,8 @@ func StartCommitteePartyFB(
 		// members of the future broadcast committee reveal their Shamir share to the symmetric key k_{ik} in order
 		// to reconstruct the key and reveal the shares committed to by the dealer.
 		if indices.FB >= 0 {
-			err := FutureBroadcastCommitteeProtocol(bc, params.N, params.Pks[id], sk, indices.FB, complaints, fbShareEnc)
+			err := FutureBroadcastCommitteeProtocol(bc, params.N, params.Pks[id], sk,
+				indices.FB, complaints, fbShareEnc)
 			if err != nil {
 				return fmt.Errorf("party %d failed to perform future broadcast protocol: %v", id, err)
 			}
@@ -206,7 +207,7 @@ func StartCommitteePartyFB(
 	return nil
 }
 
-// HoldingCommitteeShareProtocol performs the actions of a party participating in the
+// HoldingCommitteeShareProtocolFB performs the actions of a party participating in the
 // current holding committee for a round of the protocol, passing shares to the verification
 // committee. It returns the verifications of the holders.
 func HoldingCommitteeShareProtocolFB(
@@ -305,7 +306,8 @@ func HoldingCommitteeShareProtocolFB(
 		// the shamir shares s_ikl
 		encFbShare, err := curve25519.Encrypt(params.Pks[committees.FB[l]], msgpack.Encode(fbShare))
 		if err != nil {
-			return fmt.Errorf("unable to encrypt future broadcast share using the public key of future broadcast member %d", l)
+			return fmt.Errorf(
+				"unable to encrypt future broadcast share using the public key of future broadcast member %d", l)
 		}
 		fbSharesEnc[l] = encFbShare
 
@@ -516,13 +518,15 @@ func VerificationCommitteeProtocolFB(
 	for j := 0; j < params.N; j++ {
 		bjkEnc, err := curve25519.Encrypt(params.Pks[nextHoldCommittee[j]], msgpack.Encode(bk[j]))
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to encrypt using the public key of party %d", nextHoldCommittee[j])
+			return nil, nil, nil, nil, nil, nil, fmt.Errorf(
+				"unable to encrypt using the public key of party %d", nextHoldCommittee[j])
 		}
 		bkEnc[j] = bjkEnc
 
 		djkEnc, err := curve25519.Encrypt(params.Pks[nextHoldCommittee[j]], msgpack.Encode(dk[j]))
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("unable to encrypt using the public key of party %d", nextHoldCommittee[j])
+			return nil, nil, nil, nil, nil, nil, fmt.Errorf(
+				"unable to encrypt using the public key of party %d", nextHoldCommittee[j])
 		}
 		dkEnc[j] = djkEnc
 	}
@@ -705,24 +709,28 @@ func HoldingCommitteeReceiveProtocolFB(
 		bjkBytes, err := curve25519.Decrypt(pk, sk, bjEnc[k])
 		var bjk []pedersen.Share
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+			return nil, nil, fmt.Errorf(
+				"failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
 		}
 
 		// Decode decrypted shares from the holding committee
 		err = msgpack.Decode(bjkBytes, &bjk)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
 		}
 
 		djkBytes, err := curve25519.Decrypt(pk, sk, djEnc[k])
 		var djk []pedersen.Share
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+			return nil, nil, fmt.Errorf(
+				"failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
 		}
 
 		err = msgpack.Decode(djkBytes, &djk)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
 		}
 
 		for i := 0; i < params.N; i++ {
@@ -759,32 +767,42 @@ func HoldingCommitteeReceiveProtocolFB(
 				// Reconstruct the symmetric key
 				symmKey, err := shamir.Reconstruct(symmKeyReconstructShares)
 				if err != nil {
-					return nil, nil, fmt.Errorf("unable to reconstruct the symmetric key for holder %d and verifier %d: %v", i, k, err)
+					return nil, nil, fmt.Errorf(
+						"unable to reconstruct the symmetric key for holder %d and verifier %d: %v", i, k, err)
 				}
 
 				// Use the symmetric key to decrypt the shares originally encrypted by the holding committee
-				nonce := curve25519.Nonce([24]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				nonce := curve25519.Nonce([24]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0})
 				bikSharesBytes, err := curve25519.SymmetricDecrypt(curve25519.Key(*symmKey), nonce, symmEncB[i][k])
 				if err != nil {
-					return nil, nil, fmt.Errorf("unable to decrypt symmetric encrypted shares for holder %d and verifier %d: %v", i, k, err)
+					return nil, nil, fmt.Errorf(
+						"unable to decrypt symmetric encrypted shares for holder %d and verifier %d: %v",
+						i, k, err)
 				}
 
 				dikSharesBytes, err := curve25519.SymmetricDecrypt(curve25519.Key(*symmKey), nonce, symmEncD[i][k])
 				if err != nil {
-					return nil, nil, fmt.Errorf("unable to decrypt symmetric encrypted shares for holder %d and verifier %d: %v", i, k, err)
+					return nil, nil, fmt.Errorf(
+						"unable to decrypt symmetric encrypted shares for holder %d and verifier %d: %v",
+						i, k, err)
 				}
 
 				// Decode the list of shares
 				var bikShares []pedersen.Share
 				err = msgpack.Decode(bikSharesBytes, &bikShares)
 				if err != nil {
-					return nil, nil, fmt.Errorf("unable to decode symmetric encrypted shares for holder %d and verifier %d: %v", i, k, err)
+					return nil, nil, fmt.Errorf(
+						"unable to decode symmetric encrypted shares for holder %d and verifier %d: %v",
+						i, k, err)
 				}
 
 				var dikShares []pedersen.Share
 				err = msgpack.Decode(dikSharesBytes, &dikShares)
 				if err != nil {
-					return nil, nil, fmt.Errorf("unable to decode symmetric encrypted shares for holder %d and verifier %d: %v", i, k, err)
+					return nil, nil, fmt.Errorf(
+						"unable to decode symmetric encrypted shares for holder %d and verifier %d: %v",
+						i, k, err)
 				}
 
 				bj[i][k] = bikShares[nextHoldIndex]

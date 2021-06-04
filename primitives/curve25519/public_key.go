@@ -65,7 +65,8 @@ func Encrypt(pk PublicKey, m Message) (Ciphertext, error) {
 func Decrypt(pk PublicKey, sk PrivateKey, c Ciphertext) (Message, error) {
 	m := make([]byte, len(c)-C.crypto_box_SEALBYTES)
 
-	result := C.crypto_box_seal_open((*C.uchar)(&m[0]), (*C.uchar)(&c[0]), C.ulonglong(len(c)), (*C.uchar)(&pk[0]), (*C.uchar)(&sk[0]))
+	result := C.crypto_box_seal_open(
+		(*C.uchar)(&m[0]), (*C.uchar)(&c[0]), C.ulonglong(len(c)), (*C.uchar)(&pk[0]), (*C.uchar)(&sk[0]))
 	if result != 0 {
 		return Message(m), fmt.Errorf("failed to perform decryption: %d", result)
 	}
@@ -93,7 +94,8 @@ func Sign(ssk PrivateSignKey, m Message) (Signature, error) {
 
 // Verify uses the public key to verify the message signature
 func Verify(psk PublicSignKey, m Message, sig Signature) bool {
-	result := C.crypto_sign_verify_detached((*C.uchar)(&sig[0]), (*C.uchar)(&m[0]), C.ulonglong(len(m)), (*C.uchar)(&psk[0]))
+	result := C.crypto_sign_verify_detached(
+		(*C.uchar)(&sig[0]), (*C.uchar)(&m[0]), C.ulonglong(len(m)), (*C.uchar)(&psk[0]))
 	if result != 0 {
 		fmt.Printf("%v", result)
 		return false

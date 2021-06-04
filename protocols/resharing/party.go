@@ -37,7 +37,8 @@ func StartCommitteeParty(
 		var e [][]pedersen.Commitment
 
 		if holdIndex >= 0 { // Party is member of holding committee
-			vHold, wHold, eHold, err := HoldingCommitteeShareProtocol(bc, params, *share, pks, holdCommittee, verCommittee,
+			vHold, wHold, eHold, err := HoldingCommitteeShareProtocol(bc, params, *share, pks,
+				holdCommittee, verCommittee,
 				holdIndex, t, n)
 			v = vHold
 			w = wHold
@@ -335,7 +336,8 @@ func VerificationCommitteeProtocol(
 		var holdShareMsg HoldShareMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("decoding share from holder %d failed for verifier %d: %v", i, verIndex, err)
+			return nil, nil, nil, fmt.Errorf(
+				"decoding share from holder %d failed for verifier %d: %v", i, verIndex, err)
 		}
 		var holderBComplaints []int
 		var holderDComplaints []int
@@ -515,7 +517,8 @@ func HoldingCommitteeReceiveProtocol(
 			)
 		}
 
-		// Obtain shares from the verification committee, giving the possibility of leaving some out due to faulty shares
+		// Obtain shares from the verification committee,
+		// giving the possibility of leaving some out due to faulty shares
 		for i := 0; i < n; i++ {
 			if verShareMsg.Bk[i][holdIndex] != nil {
 				bj[i][k] = *verShareMsg.Bk[i][holdIndex]
@@ -545,7 +548,8 @@ func HoldingCommitteeReceiveProtocol(
 		if err1 == nil && err2 == nil { // Use corresponding shares of alpha and gamma
 			aj = append(aj, curve25519.Scalar(*aij))
 			cj = append(cj, curve25519.Scalar(*cij))
-			indicesScalar = append(indicesScalar, curve25519.GetScalar(uint64(i+1))) // Track the index of the successful share
+			// Track the index of the successful share
+			indicesScalar = append(indicesScalar, curve25519.GetScalar(uint64(i+1)))
 			indices = append(indices, i+1)
 		}
 		i++

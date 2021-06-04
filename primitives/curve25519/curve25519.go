@@ -30,13 +30,15 @@ type Point [32]byte
 type Scalar [32]byte
 
 // PointInfinity is the point at infinity
-var PointInfinity Point = Point([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+var PointInfinity Point = Point([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0})
 
 // ScalarZero is the scalar element 0
 var ScalarZero Scalar = Scalar([32]byte{})
 
 // ScalarOne is the scalar element 1
-var ScalarOne Scalar = Scalar([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+var ScalarOne Scalar = Scalar([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0})
 
 // IsValidPoint returns true if a point is on the ed25519 curve, non-zero,
 // on the main subgroup, and of small order

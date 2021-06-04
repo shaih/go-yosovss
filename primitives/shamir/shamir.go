@@ -58,7 +58,8 @@ func Reconstruct(shares []Share) (*Message, error) {
 		term := shares[i].S
 		for j := 0; j < len(shares); j++ {
 			if i != j {
-				denom, err := curve25519.InvertScalar(curve25519.SubScalar(shares[j].IndexScalar, shares[i].IndexScalar))
+				denom, err := curve25519.InvertScalar(
+					curve25519.SubScalar(shares[j].IndexScalar, shares[i].IndexScalar))
 				if err != nil {
 					return nil, fmt.Errorf("error in polynomial interpolation")
 				}

@@ -174,7 +174,6 @@ func TestResharingProtocolWithFutureBroadcastBenchmarking(t *testing.T) {
 
 	var channels []fake.PartyBroadcastChannel
 
-
 	// Form initial committees, which are comprised of the ids of the parties that are participating in them
 	initCommittees := Committees{
 		Hold: make([]int, n),
@@ -191,14 +190,14 @@ func TestResharingProtocolWithFutureBroadcastBenchmarking(t *testing.T) {
 	// Generate a Pedersen share of a message
 	msg := pedersen.Message(curve25519.RandomScalar())
 	params := pedersen.GenerateParams()
-	shares, verifications, _ := pedersen.VSSShare(params, msg, n / 2, n)
+	shares, verifications, _ := pedersen.VSSShare(params, msg, n/2, n)
 
 	reshareParams := Params{
 		Pks:            pubKeys,
 		Psks:           pubSignKeys,
 		PedersenParams: params,
 		T:              n / 2, // threshold
-		N:              n, // committee size
+		N:              n,     // committee size
 		TotalRounds:    1,
 	}
 

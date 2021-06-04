@@ -31,7 +31,7 @@ type KeyNoncePair struct {
 	Nonce Nonce
 }
 
-// Ciphertext is the encryption of a message
+// SymmetricCiphertext is the encryption of a message
 type SymmetricCiphertext []byte
 
 // GenerateSymmetricKey outputs a key for symmetric encryption

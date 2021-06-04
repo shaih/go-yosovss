@@ -2,8 +2,8 @@ package fake
 
 import (
 	"fmt"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/shaih/go-yosovss/communication"
 )
@@ -15,7 +15,7 @@ type Orchestrator struct {
 	RoundMsgs    map[int]communication.BroadcastMessage
 	MessageSizes map[int]int
 	Round        int
-	Time	 	 time.Time
+	Time         time.Time
 }
 
 // NewOrchestrator creates a new orchestrator
@@ -25,7 +25,7 @@ func NewOrchestrator() Orchestrator {
 		RoundMsgs:    make(map[int]communication.BroadcastMessage),
 		MessageSizes: make(map[int]int),
 		Round:        0,
-		Time: 		  time.Now(),
+		Time:         time.Now(),
 	}
 }
 
@@ -68,11 +68,7 @@ func (o Orchestrator) ReceiveMessages() error {
 	for i := 0; i < len(o.Channels); i++ {
 		bcastMsg := <-agg
 		o.RoundMsgs[bcastMsg.SenderID] = bcastMsg
-		if _, ok := o.MessageSizes[bcastMsg.SenderID]; ok {
-			o.MessageSizes[bcastMsg.SenderID] += len(bcastMsg.Payload)
-		} else {
-			o.MessageSizes[bcastMsg.SenderID] = len(bcastMsg.Payload)
-		}
+		o.MessageSizes[bcastMsg.SenderID] += len(bcastMsg.Payload)
 	}
 
 	return nil
@@ -95,7 +91,6 @@ func (o Orchestrator) Broadcast() error {
 
 	// Code for benchmarking
 	// fmt.Printf("broadcast time: %v \n", time.Now())
-
 
 	return nil
 }
