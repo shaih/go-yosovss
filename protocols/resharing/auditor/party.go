@@ -1,4 +1,4 @@
-package resharing
+package auditor
 
 import (
 	"fmt"
@@ -9,10 +9,12 @@ import (
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/shamir"
+	"github.com/shaih/go-yosovss/protocols/resharing/basic"
+	"github.com/shaih/go-yosovss/protocols/resharing/common"
 )
 
-// StartCommitteePartyFB initiates the protocol for a party participating in a t-of-n Pedersen VSS protocol using
-// the future broadcast protocol
+// StartCommitteeParty initiates the protocol for a party participating in a t-of-n Pedersen VSS protocol using
+// the new protocol with auditors
 // bc: the broadcast channel that connects the party to the orchestrator
 // params: contains the parameters for the resharing protocol
 // committees: contains the initial selections of which parties are in the holding, verification, and future broadcast
@@ -24,10 +26,10 @@ import (
 // share (s_i, r_i) from the dealer. This is otherwise nil.
 // verifications: the verifications of the first sharing that is broadcasted by the dealer
 // id: the numeric value identifying this party in the protocol
-func StartCommitteePartyFB(
+func StartCommitteeParty(
 	bc communication.BroadcastChannel,
-	params Params,
-	committees Committees,
+	params common.Params,
+	committees common.Committees,
 	sk curve25519.PrivateKey,
 	ssk curve25519.PrivateSignKey,
 	share *pedersen.Share,
@@ -36,10 +38,10 @@ func StartCommitteePartyFB(
 ) error {
 
 	// Compute the indices of the party in the various initial committees (-1 if not a part of a committee)
-	indices := CommitteeIndices{
-		Hold: intIndexOf(committees.Hold, id),
-		Ver:  intIndexOf(committees.Ver, id),
-		FB:   intIndexOf(committees.FB, id),
+	indices := common.CommitteeIndices{
+		Hold: common.IntIndexOf(committees.Hold, id),
+		Ver:  common.IntIndexOf(committees.Ver, id),
+		FB:   common.IntIndexOf(committees.FB, id),
 	}
 
 	// Repeat for params.TotalRounds number of rounds of resharing
@@ -66,17 +68,17 @@ func StartCommitteePartyFB(
 		var djEnc []curve25519.Ciphertext
 
 		// Get the committees for the next round
-		nextCommittees := Committees{
-			Hold: NextCommitteeDeterministic(committees.Hold, len(params.Pks)),
-			Ver:  NextCommitteeDeterministic(committees.Ver, len(params.Pks)),
-			FB:   NextCommitteeDeterministic(committees.FB, len(params.Pks)),
+		nextCommittees := common.Committees{
+			Hold: basic.NextCommitteeDeterministic(committees.Hold, len(params.Pks)),
+			Ver:  basic.NextCommitteeDeterministic(committees.Ver, len(params.Pks)),
+			FB:   basic.NextCommitteeDeterministic(committees.FB, len(params.Pks)),
 		}
 
 		// Get the indices of the party for the next round
-		nextIndices := CommitteeIndices{
-			Hold: intIndexOf(nextCommittees.Hold, id),
-			Ver:  intIndexOf(nextCommittees.Ver, id),
-			FB:   intIndexOf(nextCommittees.FB, id),
+		nextIndices := common.CommitteeIndices{
+			Hold: common.IntIndexOf(nextCommittees.Hold, id),
+			Ver:  common.IntIndexOf(nextCommittees.Ver, id),
+			FB:   common.IntIndexOf(nextCommittees.FB, id),
 		}
 
 		// Participate in the holding committee. The holding committee performs the two level sharing and sends shares
@@ -209,8 +211,8 @@ func StartCommitteePartyFB(
 // committee. It returns the verifications of the holders.
 func HoldingCommitteeShareProtocolFB(
 	bc communication.BroadcastChannel,
-	params Params,
-	committees Committees,
+	params common.Params,
+	committees common.Committees,
 	holdIndex int,
 	share pedersen.Share,
 	ssk curve25519.PrivateSignKey,
@@ -219,17 +221,17 @@ func HoldingCommitteeShareProtocolFB(
 	// of verifications for the secrets of the second level share and D_i and W_i for the decommitments of the second
 	// level sharing. E_i is the verifications of the first level share,
 	// where those shares are hidden (alpha_i vector as the hidden first level share vector)
-	bi, vi, di, wi, ei, err := TwoLevelShare(params.PedersenParams, share.S, share.R, params.T, params.N)
+	bi, vi, di, wi, ei, err := basic.TwoLevelShare(params.PedersenParams, share.S, share.R, params.T, params.N)
 	if err != nil {
 		return fmt.Errorf("error in creating shares of s_%d, r_%d: %v", holdIndex, holdIndex, err)
 	}
 
-	biEnc, err := EncryptSharesForVer(params.Pks, bi, committees.Ver)
+	biEnc, err := basic.EncryptSharesForVer(params.Pks, bi, committees.Ver)
 	if err != nil {
 		return fmt.Errorf("error in encrypting s_i shares: %v", holdIndex)
 	}
 
-	diEnc, err := EncryptSharesForVer(params.Pks, di, committees.Ver)
+	diEnc, err := basic.EncryptSharesForVer(params.Pks, di, committees.Ver)
 	if err != nil {
 		return fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
 	}
@@ -294,7 +296,7 @@ func HoldingCommitteeShareProtocolFB(
 	fbSharesEnc := make([]curve25519.Ciphertext, params.N)
 
 	for l := 0; l < params.N; l++ {
-		fbShare := FutureBroadcastShare{
+		fbShare := common.FutureBroadcastShare{
 			FBShares:    fbKeyShares[l],
 			FBShareSigs: fbKeyShareSigs[l],
 		}
@@ -310,7 +312,7 @@ func HoldingCommitteeShareProtocolFB(
 
 	}
 
-	holdShareMsg := HoldShareFBMessage{
+	holdShareMsg := common.HoldShareFBMessage{
 		BiEnc:       biEnc,
 		Vi:          vi,
 		DiEnc:       diEnc,
@@ -358,7 +360,7 @@ func ReceiveHolderMessages(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range holdCommittee {
-		var holdShareFbMsg HoldShareFBMessage
+		var holdShareFbMsg common.HoldShareFBMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareFbMsg)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, fmt.Errorf("decoding share from holder %d failed: %v", i, err)
@@ -379,8 +381,8 @@ func ReceiveHolderMessages(
 // round of the protocol. It returns the verifications of the holders.
 func VerificationCommitteeProtocolFB(
 	bc communication.BroadcastChannel,
-	params Params,
-	committees Committees,
+	params common.Params,
+	committees common.Committees,
 	nextHoldCommittee []int,
 	verIndex int,
 	pk curve25519.PublicKey,
@@ -417,7 +419,7 @@ func VerificationCommitteeProtocolFB(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range committees.Hold {
-		var holdShareFbMsg HoldShareFBMessage
+		var holdShareFbMsg common.HoldShareFBMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareFbMsg)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil,
@@ -528,7 +530,7 @@ func VerificationCommitteeProtocolFB(
 		dkEnc[j] = djkEnc
 	}
 
-	verShareMsgFB := VerShareMessageFB{
+	verShareMsgFB := common.VerShareMessageFB{
 		BkEnc:       bkEnc,
 		DkEnc:       dkEnc,
 		BComplaints: bComplaints,
@@ -550,8 +552,8 @@ func VerificationCommitteeProtocolFB(
 // complaints were filed
 func ReceiveComplaints(
 	bc communication.BroadcastChannel,
-	committees Committees,
-	nextIndices CommitteeIndices,
+	committees common.Committees,
+	nextIndices common.CommitteeIndices,
 	n int,
 ) ([][]bool, []curve25519.Ciphertext, []curve25519.Ciphertext, error) {
 	// complaints is a matrix of complaints where complaints[i][k] is true if there was a complaint filed for holder i
@@ -578,7 +580,7 @@ func ReceiveComplaints(
 
 	// Iterate through message from the verification committee to get all the complaints filed
 	for k, verifier := range committees.Ver {
-		var verShareMsgFB VerShareMessageFB
+		var verShareMsgFB common.VerShareMessageFB
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsgFB)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to decode complaints of verifier %d: %v", k, err)
@@ -621,7 +623,7 @@ func FutureBroadcastCommitteeProtocol(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i := 0; i < n; i++ { // Iterate through each message from the holder
-		var fbShare FutureBroadcastShare
+		var fbShare common.FutureBroadcastShare
 		fbShareBytes, err := curve25519.Decrypt(pk, sk, fbShareEnc[i][fbIndex])
 		if err != nil {
 			return fmt.Errorf("decrypting future broadcast from holder %d failed: %v", i, err)
@@ -657,7 +659,7 @@ func FutureBroadcastCommitteeProtocol(
 		}
 	}
 
-	fbResMsg := FutureBroadcastResponseMessage{
+	fbResMsg := common.FutureBroadcastResponseMessage{
 		FBShares: fbShareRes,
 		FBSigs:   fbSigRes,
 	}
@@ -676,8 +678,8 @@ func FutureBroadcastCommitteeProtocol(
 // round of the protocol, receiving shares from the verification committee
 func HoldingCommitteeReceiveProtocolFB(
 	bc communication.BroadcastChannel,
-	params Params,
-	committees Committees,
+	params common.Params,
+	committees common.Committees,
 	nextHoldIndex int,
 	pk curve25519.PublicKey,
 	sk curve25519.PrivateKey,
@@ -742,7 +744,7 @@ func HoldingCommitteeReceiveProtocolFB(
 			if complaints[i][k] {
 				var symmKeyReconstructShares []shamir.Share
 				for l, fbParty := range committees.FB {
-					var fbResMsg FutureBroadcastResponseMessage
+					var fbResMsg common.FutureBroadcastResponseMessage
 					err := msgpack.Decode(roundMsgs[fbParty].Payload, &fbResMsg)
 					if err != nil {
 						return nil, nil, fmt.Errorf("decoding share from future broadcast party %d failed: %v", l, err)

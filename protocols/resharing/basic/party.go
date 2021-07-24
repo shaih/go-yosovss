@@ -1,4 +1,4 @@
-package resharing
+package basic
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
+	"github.com/shaih/go-yosovss/protocols/resharing/common"
 )
 
 // StartCommitteeParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
@@ -27,8 +28,8 @@ func StartCommitteeParty(
 	totalRounds int,
 ) error {
 
-	holdIndex := intIndexOf(holdCommittee, index)
-	verIndex := intIndexOf(verCommittee, index)
+	holdIndex := common.IntIndexOf(holdCommittee, index)
+	verIndex := common.IntIndexOf(verCommittee, index)
 
 	// Repeat for fixed number of resharing rounds
 	for rounds := 0; rounds < totalRounds; rounds++ {
@@ -75,7 +76,7 @@ func StartCommitteeParty(
 		nextHoldCommittee := NextCommitteeDeterministic(holdCommittee, len(pks))
 		nextVerCommittee := NextCommitteeDeterministic(verCommittee, len(pks))
 
-		nextHoldIndex := intIndexOf(nextHoldCommittee, index)
+		nextHoldIndex := common.IntIndexOf(nextHoldCommittee, index)
 
 		share = nil
 		verifications = nil
@@ -93,8 +94,8 @@ func StartCommitteeParty(
 
 		holdCommittee = nextHoldCommittee
 		verCommittee = nextVerCommittee
-		holdIndex = intIndexOf(holdCommittee, index)
-		verIndex = intIndexOf(verCommittee, index)
+		holdIndex = common.IntIndexOf(holdCommittee, index)
+		verIndex = common.IntIndexOf(verCommittee, index)
 	}
 
 	// Final round to reconstruct message
@@ -233,7 +234,7 @@ func HoldingCommitteeShareProtocol(
 		return nil, nil, nil, fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
 	}
 
-	holdShareMsg := HoldShareMessage{
+	holdShareMsg := common.HoldShareMessage{
 		BiEnc: biEnc,
 		Vi:    vi,
 		DiEnc: diEnc,
@@ -265,7 +266,7 @@ func HoldingCommitteeShareProtocol(
 	// Iterate over all complaint messages from the verification committee and populate response matrix for the
 	// shares that had complaints
 	for k, verifier := range verCommittee {
-		var holderComplaintMsg HolderComplaintMessage
+		var holderComplaintMsg common.HolderComplaintMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &holderComplaintMsg)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf(
@@ -283,7 +284,7 @@ func HoldingCommitteeShareProtocol(
 		}
 	}
 
-	holderComplaintResponseMsg := HolderComplaintResponseMessage{
+	holderComplaintResponseMsg := common.HolderComplaintResponseMessage{
 		BiResponse: biResponse,
 		DiResponse: diResponse,
 	}
@@ -333,7 +334,7 @@ func VerificationCommitteeProtocol(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range holdCommittee {
-		var holdShareMsg HoldShareMessage
+		var holdShareMsg common.HoldShareMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf(
@@ -423,7 +424,7 @@ func VerificationCommitteeProtocol(
 		dComplaints[i] = holderDComplaints
 	}
 
-	holderComplaintMsg := HolderComplaintMessage{
+	holderComplaintMsg := common.HolderComplaintMessage{
 		BComplaints: bComplaints,
 		DComplaints: dComplaints,
 	}
@@ -436,7 +437,7 @@ func VerificationCommitteeProtocol(
 	// Receive complaint responses
 	bc.ReceiveRound()
 
-	verShareMsg := VerShareMessage{
+	verShareMsg := common.VerShareMessage{
 		Bk: bk,
 		Dk: dk,
 	}
@@ -462,7 +463,7 @@ func ReceiveVerifications(
 
 	// Checks validity of shares and construct beta_k matrix
 	for i, holder := range holdCommittee {
-		var holdShareMsg HoldShareMessage
+		var holdShareMsg common.HoldShareMessage
 		err := msgpack.Decode(roundMsgs[holder].Payload, &holdShareMsg)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("decoding share from holder %d failed: %v", i, err)
@@ -508,7 +509,7 @@ func HoldingCommitteeReceiveProtocol(
 	// Construct B_j matrix, the matrix of second level shares, from the verification committee or from
 	// resolved complaints
 	for k, verifier := range verCommittee {
-		var verShareMsg VerShareMessage
+		var verShareMsg common.VerShareMessage
 		err := msgpack.Decode(roundMsgs[verifier].Payload, &verShareMsg)
 		if err != nil {
 			return nil, nil, fmt.Errorf(
@@ -631,15 +632,4 @@ func NextCommitteeDeterministic(committee []int, total int) []int {
 	}
 
 	return nextCommittee
-}
-
-// intIndexOf returns the first position in a slice that has a value,
-// or -1 if the slice does not contain the value.
-func intIndexOf(list []int, val int) int {
-	for i, v := range list {
-		if v == val {
-			return i
-		}
-	}
-	return -1
 }

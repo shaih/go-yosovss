@@ -1,4 +1,4 @@
-package resharing
+package common
 
 import (
 	"github.com/shaih/go-yosovss/primitives/curve25519"
