@@ -1,3 +1,14 @@
+# YOSO resharing protocols
+
+## Packages
+
+We implemented 3 versions:
+* `basic`: one without future broadcast. Should not be used
+* `futurebrodcast`: same as basic with future broadcast. Too slow algorithmically. Furthermore the receiver holding committee verifications might not be enough.
+* `auditor`: optimized version
+
+## Variable names
+
 We detail the variables used in the resharing protocol below
 
 The naming convention used is that for a given round of resharing, the holding committee is indexed by <code>i</code>, 

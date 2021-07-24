@@ -9,7 +9,6 @@ import (
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/shamir"
-	"github.com/shaih/go-yosovss/protocols/resharing/basic"
 	"github.com/shaih/go-yosovss/protocols/resharing/common"
 )
 
@@ -69,9 +68,9 @@ func StartCommitteeParty(
 
 		// Get the committees for the next round
 		nextCommittees := common.Committees{
-			Hold: basic.NextCommitteeDeterministic(committees.Hold, len(params.Pks)),
-			Ver:  basic.NextCommitteeDeterministic(committees.Ver, len(params.Pks)),
-			FB:   basic.NextCommitteeDeterministic(committees.FB, len(params.Pks)),
+			Hold: common.NextCommitteeDeterministic(committees.Hold, len(params.Pks)),
+			Ver:  common.NextCommitteeDeterministic(committees.Ver, len(params.Pks)),
+			FB:   common.NextCommitteeDeterministic(committees.FB, len(params.Pks)),
 		}
 
 		// Get the indices of the party for the next round
@@ -221,17 +220,17 @@ func HoldingCommitteeShareProtocolFB(
 	// of verifications for the secrets of the second level share and D_i and W_i for the decommitments of the second
 	// level sharing. E_i is the verifications of the first level share,
 	// where those shares are hidden (alpha_i vector as the hidden first level share vector)
-	bi, vi, di, wi, ei, err := basic.TwoLevelShare(params.PedersenParams, share.S, share.R, params.T, params.N)
+	bi, vi, di, wi, ei, err := common.TwoLevelShare(params.PedersenParams, share.S, share.R, params.T, params.N)
 	if err != nil {
 		return fmt.Errorf("error in creating shares of s_%d, r_%d: %v", holdIndex, holdIndex, err)
 	}
 
-	biEnc, err := basic.EncryptSharesForVer(params.Pks, bi, committees.Ver)
+	biEnc, err := common.EncryptSharesForVer(params.Pks, bi, committees.Ver)
 	if err != nil {
 		return fmt.Errorf("error in encrypting s_i shares: %v", holdIndex)
 	}
 
-	diEnc, err := basic.EncryptSharesForVer(params.Pks, di, committees.Ver)
+	diEnc, err := common.EncryptSharesForVer(params.Pks, di, committees.Ver)
 	if err != nil {
 		return fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
 	}
