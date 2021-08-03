@@ -2,6 +2,7 @@ package curve25519
 
 import "testing"
 
+// Test both scalar and point scalar multiplication
 func TestMatrixMul(t *testing.T) {
 	g := RandomPoint()
 
@@ -57,5 +58,29 @@ func TestMatrixMul(t *testing.T) {
 
 	if !PointMatrixEqual(expectedMulPoint, actualMulPoint) {
 		t.Errorf("incorrect point x scalar multiplication result")
+	}
+}
+
+func TestEncodeDecode(t *testing.T) {
+	mat := &ScalarMatrix{
+		rows:    3,
+		columns: 2,
+		entries: []Scalar{
+			GetScalar(2), GetScalar(3),
+			GetScalar(4), GetScalar(5),
+			GetScalar(10), GetScalar(20),
+		},
+	}
+
+	enc := mat.Encode()
+
+	dec := NewScalarMatrix(mat.rows, mat.columns)
+	err := dec.Decode(enc)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !ScalarMatrixEqual(mat, dec) {
+		t.Errorf("decoded matrix does not match original matrix")
 	}
 }

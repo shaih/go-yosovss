@@ -1,5 +1,30 @@
 package curve25519
 
+import "fmt"
+
+// Encode encodes a Scalar matrix into a byte string of
+// 32*rows*columns bytes. Scalars are encoded one-by-one
+// row-major order. Each scalar is encoded in big endian
+func (m *ScalarMatrix) Encode() []byte {
+	res := make([]byte, 32*m.rows*m.columns)
+	for i := 0; i < m.rows*m.columns; i++ {
+		copy(res[32*i:32*(i+1)], m.entries[i][:])
+	}
+	return res
+}
+
+// Decode decodes a Scalar matrix from a byte string of
+// 32*rows*columns bytes. See Encode
+func (m *ScalarMatrix) Decode(b []byte) error {
+	if len(b) != 32*m.rows*m.columns {
+		return fmt.Errorf("bytes to decode do not have the expected length")
+	}
+	for i := 0; i < m.rows*m.columns; i++ {
+		copy(m.entries[i][:], b[32*i:32*(i+1)])
+	}
+	return nil
+}
+
 func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, error) {
 	err := MatricesMulCompatible(mat1, mat2)
 	if err != nil {
