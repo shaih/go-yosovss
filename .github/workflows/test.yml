@@ -26,6 +26,9 @@ jobs:
                exit 1
           fi
         shell: bash
+      - name: Install genny
+        run:   |
+          go get github.com/cheekybits/genny
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Test

@@ -40,6 +40,9 @@ make test
 - `gosec`
     - on Ubuntu: https://github.com/securego/gosec#local-installation
     - on macOS: `brew install gosec`
+- `genny`: `go get github.com/cheekybits/genny`:
+    - Used to generate files `gen-*`
+    - Note that we commit those files too in case `genny` becomes unavailable
 
 ### Lint code
 
@@ -52,6 +55,9 @@ If you have error, you can try to automatically fix them:
 ```bash
 make lint-fix
 ```
+
+If using Goland or Visual Studio Code, it is recommended to use the Golangci integration:
+https://golangci-lint.run/usage/integrations/
 
 ### Fixing common gosec issues
 
