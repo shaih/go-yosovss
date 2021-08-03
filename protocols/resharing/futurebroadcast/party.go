@@ -7,6 +7,7 @@ import (
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/oldvss"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/shamir"
 	"github.com/shaih/go-yosovss/protocols/resharing/common"
@@ -31,7 +32,7 @@ func StartCommitteePartyFB(
 	committees common.Committees,
 	sk curve25519.PrivateKey,
 	ssk curve25519.PrivateSignKey,
-	share *pedersen.Share,
+	share *oldvss.Share,
 	verifications []pedersen.Commitment,
 	id int,
 ) error {
@@ -184,9 +185,9 @@ func StartCommitteePartyFB(
 	_, roundMsgs := bc.ReceiveRound()
 
 	// Collect shares from the holding committee in the last round of the protocol
-	var shares []pedersen.Share
+	var shares []oldvss.Share
 	for i, holder := range committees.Hold {
-		var share pedersen.Share
+		var share oldvss.Share
 		err := msgpack.Decode(roundMsgs[holder].Payload, &share)
 		if err != nil {
 			return fmt.Errorf("decoding share from holder %d failed for party %d: %v", i, id, err)
@@ -196,7 +197,7 @@ func StartCommitteePartyFB(
 	}
 
 	// Reconstruct original message
-	m, err := pedersen.VSSReconstruct(params.PedersenParams, shares, verifications)
+	m, err := oldvss.VSSReconstruct(params.PedersenParams, shares, verifications)
 	if err != nil {
 		return fmt.Errorf("failed to reconstruct original message for party %d: %v", id, err)
 	}
@@ -213,7 +214,7 @@ func HoldingCommitteeShareProtocolFB(
 	params common.Params,
 	committees common.Committees,
 	holdIndex int,
-	share pedersen.Share,
+	share oldvss.Share,
 	ssk curve25519.PrivateSignKey,
 ) error {
 	// Perform a two level share of s_i and r_i to get B_i matrix of shares and V_i matrix
@@ -235,12 +236,12 @@ func HoldingCommitteeShareProtocolFB(
 		return fmt.Errorf("error in encrypting r_i shares: %v", holdIndex)
 	}
 
-	bShares := make([][]pedersen.Share, params.N)
-	dShares := make([][]pedersen.Share, params.N)
+	bShares := make([][]oldvss.Share, params.N)
+	dShares := make([][]oldvss.Share, params.N)
 
 	for k := 0; k < params.N; k++ {
-		bShares[k] = make([]pedersen.Share, params.N)
-		dShares[k] = make([]pedersen.Share, params.N)
+		bShares[k] = make([]oldvss.Share, params.N)
+		dShares[k] = make([]oldvss.Share, params.N)
 	}
 
 	// Future broadcast protocol
@@ -401,12 +402,12 @@ func VerificationCommitteeProtocolFB(
 	bComplaints := make(map[int][]int)
 	dComplaints := make(map[int][]int)
 
-	bk := make([][]*pedersen.Share, params.N)
-	dk := make([][]*pedersen.Share, params.N)
+	bk := make([][]*oldvss.Share, params.N)
+	dk := make([][]*oldvss.Share, params.N)
 
 	for j := 0; j < params.N; j++ {
-		bk[j] = make([]*pedersen.Share, params.N)
-		dk[j] = make([]*pedersen.Share, params.N)
+		bk[j] = make([]*oldvss.Share, params.N)
+		dk[j] = make([]*oldvss.Share, params.N)
 	}
 
 	v := make([][][]pedersen.Commitment, params.N)
@@ -437,7 +438,7 @@ func VerificationCommitteeProtocolFB(
 
 		// Decrypt shares from the holding committee
 		bikBytes, err := curve25519.Decrypt(pk, sk, holdShareFbMsg.BiEnc[verIndex])
-		var bik []pedersen.Share
+		var bik []oldvss.Share
 		if err != nil {
 			bikFailed = true
 		} else {
@@ -450,7 +451,7 @@ func VerificationCommitteeProtocolFB(
 
 		// Decrypt shares from the holding committee
 		dikBytes, err := curve25519.Decrypt(pk, sk, holdShareFbMsg.DiEnc[verIndex])
-		var dik []pedersen.Share
+		var dik []oldvss.Share
 		if err != nil {
 			dikFailed = true
 		} else {
@@ -472,7 +473,7 @@ func VerificationCommitteeProtocolFB(
 		if !bikFailed {
 			// Construct matrix of complaints to broadcast for resolution of share of shares
 			for j := 0; j < params.N; j++ {
-				bIsValid, _ := pedersen.VSSVerify(params.PedersenParams, bik[j], holdShareFbMsg.Vi[j])
+				bIsValid, _ := oldvss.VSSVerify(params.PedersenParams, bik[j], holdShareFbMsg.Vi[j])
 				if bIsValid { // add share into the bk matrix if it is valid
 					bk[j][i] = &bik[j]
 				} else { // otherwise leave nil, and potentially resolve via future broadcast
@@ -490,7 +491,7 @@ func VerificationCommitteeProtocolFB(
 		if !dikFailed {
 			// Construct matrix of complaints to broadcast for resolution of share of decommitments
 			for j := 0; j < params.N; j++ {
-				dIsValid, _ := pedersen.VSSVerify(params.PedersenParams, dik[j], holdShareFbMsg.Wi[j])
+				dIsValid, _ := oldvss.VSSVerify(params.PedersenParams, dik[j], holdShareFbMsg.Wi[j])
 				if dIsValid { // add share into the bk matrix if it is valid
 					dk[j][i] = &dik[j]
 				} else { // otherwise leave nil, and potentially resolve via future broadcast
@@ -691,14 +692,14 @@ func HoldingCommitteeReceiveProtocolFB(
 	complaints [][]bool,
 	bjEnc []curve25519.Ciphertext,
 	djEnc []curve25519.Ciphertext,
-) (*pedersen.Share, []pedersen.Commitment, error) {
+) (*oldvss.Share, []pedersen.Commitment, error) {
 	_, roundMsgs := bc.ReceiveRound()
 
-	bj := make([][]pedersen.Share, params.N)
-	dj := make([][]pedersen.Share, params.N)
+	bj := make([][]oldvss.Share, params.N)
+	dj := make([][]oldvss.Share, params.N)
 	for i := 0; i < params.N; i++ {
-		bj[i] = make([]pedersen.Share, params.N)
-		dj[i] = make([]pedersen.Share, params.N)
+		bj[i] = make([]oldvss.Share, params.N)
+		dj[i] = make([]oldvss.Share, params.N)
 	}
 
 	// Construct B_j matrix, the matrix of second level shares, from the verification committee or from
@@ -706,7 +707,7 @@ func HoldingCommitteeReceiveProtocolFB(
 	for k := 0; k < params.N; k++ {
 		// Decrypt shares from the holding committee
 		bjkBytes, err := curve25519.Decrypt(pk, sk, bjEnc[k])
-		var bjk []pedersen.Share
+		var bjk []oldvss.Share
 		if err != nil {
 			return nil, nil, fmt.Errorf(
 				"failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
@@ -720,7 +721,7 @@ func HoldingCommitteeReceiveProtocolFB(
 		}
 
 		djkBytes, err := curve25519.Decrypt(pk, sk, djEnc[k])
-		var djk []pedersen.Share
+		var djk []oldvss.Share
 		if err != nil {
 			return nil, nil, fmt.Errorf(
 				"failed to decrypt shares from verifier %d to holder %d: %v", k, nextHoldIndex, err)
@@ -788,7 +789,7 @@ func HoldingCommitteeReceiveProtocolFB(
 				}
 
 				// Decode the list of shares
-				var bikShares []pedersen.Share
+				var bikShares []oldvss.Share
 				err = msgpack.Decode(bikSharesBytes, &bikShares)
 				if err != nil {
 					return nil, nil, fmt.Errorf(
@@ -796,7 +797,7 @@ func HoldingCommitteeReceiveProtocolFB(
 						i, k, err)
 				}
 
-				var dikShares []pedersen.Share
+				var dikShares []oldvss.Share
 				err = msgpack.Decode(dikSharesBytes, &dikShares)
 				if err != nil {
 					return nil, nil, fmt.Errorf(
@@ -823,17 +824,17 @@ func HoldingCommitteeReceiveProtocolFB(
 	i := 0
 	// Use the second level shares to reconstruct the first level shares
 	for i < params.N && len(aj) < params.T {
-		var bij []pedersen.Share
-		var dij []pedersen.Share
+		var bij []oldvss.Share
+		var dij []oldvss.Share
 		for k := 0; k < params.N; k++ {
 			bij = append(bij, bj[i][k])
 			dij = append(dij, dj[i][k])
 		}
 
 		// reconstruct first level share s_ij
-		aij, err1 := pedersen.VSSReconstruct(params.PedersenParams, bij, v[i][nextHoldIndex])
+		aij, err1 := oldvss.VSSReconstruct(params.PedersenParams, bij, v[i][nextHoldIndex])
 		// reconstruct first level share r_ij
-		cij, err2 := pedersen.VSSReconstruct(params.PedersenParams, dij, w[i][nextHoldIndex])
+		cij, err2 := oldvss.VSSReconstruct(params.PedersenParams, dij, w[i][nextHoldIndex])
 
 		// If the reconstruction of the first level share was successful, we add it to the set of valid shares to
 		// create the share for the next round
@@ -860,7 +861,7 @@ func HoldingCommitteeReceiveProtocolFB(
 
 	// Construction of the share for the next round of resharng protocol. The shares are initialized to zero and then
 	// constructed iteratively below using the linear combination of current shares.
-	share := pedersen.Share{
+	share := oldvss.Share{
 		Index:       nextHoldIndex + 1,
 		IndexScalar: curve25519.GetScalar(uint64(nextHoldIndex + 1)),
 		S:           curve25519.ScalarZero,
@@ -876,7 +877,7 @@ func HoldingCommitteeReceiveProtocolFB(
 		// for the next round of the protocol.
 		share.S = curve25519.AddScalar(share.S, curve25519.MultScalar(lambdas[i], aj[i]))
 		share.R = curve25519.AddScalar(share.R, curve25519.MultScalar(lambdas[i], cj[i]))
-		testShare := pedersen.Share{
+		testShare := oldvss.Share{
 			Index:       nextHoldIndex + 1,
 			IndexScalar: curve25519.GetScalar(uint64(nextHoldIndex + 1)),
 			S:           aj[i],
@@ -884,7 +885,7 @@ func HoldingCommitteeReceiveProtocolFB(
 		}
 
 		// Verification of the first level share using the E matrix to confirm validity of the first level
-		isVerified, err := pedersen.VSSVerify(params.PedersenParams, testShare, e[indices[i]-1])
+		isVerified, err := oldvss.VSSVerify(params.PedersenParams, testShare, e[indices[i]-1])
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to verify share %d: %v", nextHoldIndex, err)
 		} else if !isVerified {

@@ -1,4 +1,4 @@
-package vss
+package oldvss
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
-	"github.com/shaih/go-yosovss/primitives/pedersen"
+	"github.com/shaih/go-yosovss/primitives/oldvss"
 )
 
 // StartPedersenVSSParty initiates the protocol for party i participating in a t-of-n Pedersen VSS protocol
@@ -40,7 +40,7 @@ func StartPedersenVSSParty(
 	}
 
 	// Decode the share
-	var share pedersen.Share
+	var share oldvss.Share
 	err = msgpack.Decode(shareEncoding, &share)
 	if err != nil {
 		return fmt.Errorf("decoding share failed for party %d: %v", i, err)
@@ -49,7 +49,7 @@ func StartPedersenVSSParty(
 	log.Printf("Party %d decrypted share: %v\n", i, share)
 
 	// Check the share and broadcast a complaint if it did not verify
-	isValidShare, err := pedersen.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
+	isValidShare, err := oldvss.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func StartPedersenVSSParty(
 	// Get all the complaint messages broadcasted
 	_, roundMsgs = bc.ReceiveRound()
 
-	complaints := make(map[int]*pedersen.Share)
+	complaints := make(map[int]*oldvss.Share)
 
 	for j, roundMsg := range roundMsgs {
 		if len(roundMsg.Payload) > 0 {
@@ -86,7 +86,7 @@ func StartPedersenVSSParty(
 	// Check and each share broadcasted by the sharer
 	for j, share := range complaintResponseMsg.ComplaintShares {
 		if _, ok := complaints[share.Index]; ok {
-			isValidShare, err = pedersen.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
+			isValidShare, err = oldvss.VSSVerify(&sharerMsg.Params, share, sharerMsg.Verifications)
 			if err != nil {
 				return fmt.Errorf("complaint share verification failed for party %d: %v", i, err)
 			}

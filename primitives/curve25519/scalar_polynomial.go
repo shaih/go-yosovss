@@ -11,7 +11,7 @@ type Polynomial struct {
 // The degree of the zero polynomial is -1
 func (p *Polynomial) Degree() int {
 	i := len(p.Coefficients) - 1
-	for ; i > 0 && IsEqualScalar(p.Coefficients[i], ScalarZero); i-- {
+	for ; i > 0 && ScalarEqual(p.Coefficients[i], ScalarZero); i-- {
 	}
 	return i
 }

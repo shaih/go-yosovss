@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/algorand/go-algorand-sdk v1.5.1
+	github.com/cheekybits/genny v1.0.0
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mgechev/revive v1.0.7 // indirect

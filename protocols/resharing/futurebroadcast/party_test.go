@@ -7,6 +7,7 @@ import (
 
 	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/oldvss"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/protocols/resharing/common"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestResharingProtocolWithFutureBroadcast(t *testing.T) {
 	// Generate a Pedersen share of a message
 	msg := pedersen.Message(curve25519.RandomScalar())
 	params := pedersen.GenerateParams()
-	shares, verifications, _ := pedersen.VSSShare(params, msg, 2, 3)
+	shares, verifications, _ := oldvss.VSSShare(params, msg, 2, 3)
 
 	reshareParams := common.Params{
 		Pks:            pubKeys,
@@ -126,7 +127,7 @@ func TestResharingProtocolWithFutureBroadcastBenchmarking(t *testing.T) {
 	// Generate a Pedersen share of a message
 	msg := pedersen.Message(curve25519.RandomScalar())
 	params := pedersen.GenerateParams()
-	shares, verifications, _ := pedersen.VSSShare(params, msg, n/2, n)
+	shares, verifications, _ := oldvss.VSSShare(params, msg, n/2, n)
 
 	reshareParams := common.Params{
 		Pks:            pubKeys,

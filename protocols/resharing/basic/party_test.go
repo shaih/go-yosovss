@@ -7,6 +7,7 @@ import (
 
 	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/oldvss"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +28,7 @@ func TestResharingProtocol(t *testing.T) {
 	// Generate a Pedersen share of a message
 	msg := pedersen.Message(curve25519.RandomScalar())
 	params := pedersen.GenerateParams()
-	shares, verifications, _ := pedersen.VSSShare(params, msg, 2, 3)
+	shares, verifications, _ := oldvss.VSSShare(params, msg, 2, 3)
 
 	// Initialize channels and connect with orchestrator
 	for i := 0; i < 9; i++ {

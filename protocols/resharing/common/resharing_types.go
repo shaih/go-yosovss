@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/oldvss"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/shamir"
 )
@@ -96,9 +97,9 @@ type HolderComplaintMessage struct {
 // by a member of the holding committee when someone in the verification committee files a complaint
 // against that member
 type HolderComplaintResponseMessage struct {
-	_struct    struct{}            `codec:",omitempty,omitemptyarray"`
-	BiResponse [][]*pedersen.Share `codec:"b_i_res"`
-	DiResponse [][]*pedersen.Share `codec:"d_i_res"`
+	_struct    struct{}          `codec:",omitempty,omitemptyarray"`
+	BiResponse [][]*oldvss.Share `codec:"b_i_res"`
+	DiResponse [][]*oldvss.Share `codec:"d_i_res"`
 }
 
 // FutureBroadcastResponseMessage is used in the committee protocol and is the message that is broadcasted by a
@@ -112,9 +113,9 @@ type FutureBroadcastResponseMessage struct {
 // VerShareMessage is used in the committee protocol is the message sent by members of the verification
 // committee to pass shares along to the holding committee for the next round
 type VerShareMessage struct {
-	_struct struct{}            `codec:",omitempty,omitemptyarray"`
-	Bk      [][]*pedersen.Share `codec:"b_k"`
-	Dk      [][]*pedersen.Share `codec:"d_k"`
+	_struct struct{}          `codec:",omitempty,omitemptyarray"`
+	Bk      [][]*oldvss.Share `codec:"b_k"`
+	Dk      [][]*oldvss.Share `codec:"d_k"`
 }
 
 // VerShareMessageFB is used in the committee protocol is the message sent by members of the verification

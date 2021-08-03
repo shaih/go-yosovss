@@ -3,6 +3,9 @@
 github.com/algorand/go-algorand-sdk/encoding/msgpack
 # github.com/algorand/go-codec/codec v1.1.7
 github.com/algorand/go-codec/codec
+# github.com/cheekybits/genny v1.0.0
+## explicit
+github.com/cheekybits/genny/generic
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/mattn/go-isatty v0.0.13

@@ -1,15 +1,18 @@
-.PHONY: test lint fix-lint vendor
+.PHONY: generate test lint fix-lint vendor
 
-test:
+generate:
+	go generate ./...
+
+test: generate
 	go test ./...
 
-lint:
+lint: generate
 	golangci-lint run
 	gosec ./...
 
-lint-fix:
+lint-fix: generate
 	golangci-lint run --fix
 	gosec ./...
 
-vendor:
+vendor: generate
 	go mod vendor

@@ -47,13 +47,13 @@ func IsValidPoint(p Point) bool {
 	return result == 1
 }
 
-// IsEqualPoint returns true if two points are equal
-func IsEqualPoint(p, q Point) bool {
+// PointEqual returns true if two points are equal
+func PointEqual(p, q Point) bool {
 	return C.sodium_memcmp(unsafe.Pointer(&p[0]), unsafe.Pointer(&q[0]), 32) == 0
 }
 
-// IsEqualScalar returns true if two scalars are equal
-func IsEqualScalar(x, y Scalar) bool {
+// ScalarEqual returns true if two scalars are equal
+func ScalarEqual(x, y Scalar) bool {
 	return C.sodium_memcmp(unsafe.Pointer(&x[0]), unsafe.Pointer(&y[0]), 32) == 0
 }
 

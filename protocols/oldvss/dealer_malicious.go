@@ -1,4 +1,4 @@
-package vss
+package oldvss
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/oldvss"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
 
@@ -23,7 +24,7 @@ func StartPedersenVSSMaliciousDealer(
 	// Broadcast the verification shares and the encrypted shares
 	params := pedersen.GenerateParams()
 
-	shares, verifications, err := pedersen.VSSShare(params, m, t, n)
+	shares, verifications, err := oldvss.VSSShare(params, m, t, n)
 	if err != nil {
 		return fmt.Errorf("Pedersen VSS share operation failed: %v", err)
 	}
@@ -67,7 +68,7 @@ func StartPedersenVSSMaliciousDealer(
 	_, roundMsgs := bc.ReceiveRound()
 
 	// Collect shares of those who complained
-	var complaintShares []pedersen.Share
+	var complaintShares []oldvss.Share
 	for i, roundMsg := range roundMsgs {
 		if len(roundMsg.Payload) > 0 {
 			complaintShares = append(complaintShares, shares[i])

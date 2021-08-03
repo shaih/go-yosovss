@@ -41,8 +41,8 @@ func TestIsEqualPoint(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	assert.True(t, IsEqualPoint(p, q), "Point equality for equal values")
-	assert.False(t, IsEqualPoint(p, r), "Point equality for different values")
+	assert.True(t, PointEqual(p, q), "Point equality for equal values")
+	assert.False(t, PointEqual(p, r), "Point equality for different values")
 }
 
 func TestIsEqualScalar(t *testing.T) {
@@ -50,8 +50,8 @@ func TestIsEqualScalar(t *testing.T) {
 	y := x
 	z := RandomScalar()
 
-	assert.True(t, IsEqualScalar(x, y), "Scalar equality for equal values")
-	assert.False(t, IsEqualScalar(x, z), "Scalar equality for different values")
+	assert.True(t, ScalarEqual(x, y), "Scalar equality for equal values")
+	assert.False(t, ScalarEqual(x, z), "Scalar equality for different values")
 }
 
 func TestAddPoint(t *testing.T) {

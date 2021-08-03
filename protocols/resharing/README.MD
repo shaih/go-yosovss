@@ -3,11 +3,22 @@
 ## Packages
 
 We implemented 3 versions:
-* `basic`: one without future broadcast. Should not be used
-* `futurebrodcast`: same as basic with future broadcast. Too slow algorithmically. Furthermore the receiver holding committee verifications might not be enough.
-* `auditor`: optimized version
+* `basic`: one without future broadcast. Should not be used.
+* `futurebrodcast`: same as basic with future broadcast. Too slow algorithmically. Furthermore the receiver holding committee verifications might not be enough. Furthermore, may contain errors, not tested for security.
+  (In particular the receiving committee may not do all the required checks and the two-level sharing may be incorrect.)
+* `auditor`: new optimized (and hopefully correct & secure) version
 
-## Variable names
+## Variable names for auditor
+
+Indices:
+
+* `i`: dealer in 1,...,n
+* `j`: index of the first-level of sharing of the secret `s[i]` of the dealer `i`. Match next holding committee member `j`.
+* `k`: verification committee member OR resolution committee member
+
+Dealer `i` shares `s[i]` into `s[i][j]` for `i` in 1,...,n.
+
+## Variable names for basic and future broadcast
 
 We detail the variables used in the resharing protocol below
 
