@@ -4,7 +4,7 @@ import "fmt"
 
 // Encode encodes a Scalar matrix into a byte string of
 // 32*rows*columns bytes. Scalars are encoded one-by-one
-// row-major order. Each scalar is encoded in big endian
+// row-major order. Each scalar is encoded in little endian
 func (m *ScalarMatrix) Encode() []byte {
 	res := make([]byte, 32*m.rows*m.columns)
 	for i := 0; i < m.rows*m.columns; i++ {
@@ -45,4 +45,13 @@ func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, err
 	}
 
 	return res, nil
+}
+
+func (m *ScalarMatrix) IsZero() bool {
+	for i := 0; i < m.rows*m.columns; i++ {
+		if !ScalarEqual(ScalarZero, m.entries[i]) {
+			return false
+		}
+	}
+	return true
 }

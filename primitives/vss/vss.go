@@ -6,7 +6,6 @@ package vss
 
 import (
 	"fmt"
-
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
@@ -21,8 +20,22 @@ type Share struct {
 
 type Params struct {
 	PedersenParams *pedersen.Params
-	D              int // degree of the polynomial (reconstruction threshold t = d+1)
-	N              int // number of shares
+	N              int                     // number of shares
+	D              int                     // degree of the polynomial (reconstruction threshold t = d+1)
+	ParityMatrix   curve25519.ScalarMatrix // paritycpp-check matrix size = (n+1) * (n+1-t)
+}
+
+func NewVSSParams(pedersenParams *pedersen.Params, n, d int) (*Params, error) {
+	pm, err := ComputeParityMatrix(n, d+1)
+	if err != nil {
+		return nil, err
+	}
+	return &Params{
+		PedersenParams: pedersenParams,
+		N:              n,
+		D:              d,
+		ParityMatrix:   *pm,
+	}, nil
 }
 
 func checkCommitmentsLength(params *Params, commitments []pedersen.Commitment) error {
@@ -198,7 +211,23 @@ func VerifyShare(params *Params, share *Share, commitments []pedersen.Commitment
 
 // VerifyCommitments verifies that the commitments are consistent
 // i.e., they are on a polynomial of degree d
-func VerifyCommitments(params *pedersen.Params, share Share, verifications []pedersen.Commitment) (bool, error) {
-	// TODO
-	return false, nil
+func VerifyCommitments(params *Params, shares []Share, commitments []pedersen.Commitment) (bool, error) {
+	n := params.N
+
+	err := checkCommitmentsLength(params, commitments)
+	if err != nil {
+		return false, err
+	}
+	err = checkSharesLength(params, shares)
+	if err != nil {
+		return false, err
+	}
+
+	comVector := curve25519.PointMatrixFromEntries(1, n+1, commitments)
+	y, err := curve25519.PointMatrixScalarMatrixMul(comVector, &params.ParityMatrix)
+	if err != nil {
+		return false, err
+	}
+
+	return curve25519.PointEqual(curve25519.PointInfinity, y.At(0, 0)), nil
 }

@@ -55,6 +55,21 @@ func NewEntryTypeMatrix(rows, columns int) *EntryTypeMatrix {
 	}
 }
 
+// EntryTypeMatrixFromEntries create a new EntrypeType matrix
+// with the given entries in row-major order
+// entries are *not* copied
+// panic if length is inconsistent
+func EntryTypeMatrixFromEntries(rows, columns int, entries []EntryType) *EntryTypeMatrix {
+	if rows*columns != len(entries) {
+		panic("incorrect size of entries")
+	}
+	return &EntryTypeMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
+	}
+}
+
 func EntryTypeMatrixEqual(mat1, mat2 *EntryTypeMatrix) bool {
 	if mat1.rows != mat2.rows || mat1.columns != mat2.columns {
 		return false

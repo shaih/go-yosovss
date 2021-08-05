@@ -5,15 +5,15 @@ jobs:
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:
-      - name: Install libsodium # see https://stackoverflow.com/a/57948488/2945326
+      - name: Install libsodium, swig, and NTL # see https://stackoverflow.com/a/57948488/2945326
         # Note that we copy-paste this script in both lint.yml and test.yml
         # because "act" does not support composite actions
         # https://github.com/nektos/act/issues/339
         run:   |
           if [ "$RUNNER_OS" == "Linux" ]; then
-               sudo apt-get install -y libsodium-dev
+               sudo apt-get install -y libsodium-dev swig libntl-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
-               brew install libsodium
+               brew install libsodium swig ntl
           else
                echo "$RUNNER_OS not supported"
                exit 1

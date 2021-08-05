@@ -14,14 +14,14 @@ type Params struct {
 }
 
 // Message is the value the committer is committing to
-type Message curve25519.Scalar
+type Message = curve25519.Scalar
 
 // Commitment consists of elliptic curve point that serves as a
 // commitment to a message
-type Commitment curve25519.Point
+type Commitment = curve25519.Point
 
 // Decommitment is the random value r used in a Pedersen commitment
-type Decommitment curve25519.Scalar
+type Decommitment = curve25519.Scalar
 
 // GenerateParams picks two random group elements for generating commitments
 func GenerateParams() *Params {

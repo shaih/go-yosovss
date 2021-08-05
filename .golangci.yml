@@ -2,12 +2,17 @@ linters:
   disable:
     - structcheck
     - unused
+    - typecheck # disabled because not working with swig
   enable:
     - lll
     - revive
     - gofmt
     - gci
     #- gosec
+issues:
+  exclude-rules:
+    - path: primitives/vss
+      text: "illegal character U\\+0023 '#'" # fix issue with swig
 linters-settings:
   revive:
     ignore-generated-header: false

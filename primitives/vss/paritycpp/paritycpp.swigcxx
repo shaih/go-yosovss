@@ -1,0 +1,8 @@
+%module paritycpp
+
+%{
+#include "parity_go.h"
+%}
+
+%typemap(gotype) uint8_t *out %{[]byte%}
+%include "parity_go.h"

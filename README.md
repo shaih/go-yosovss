@@ -34,15 +34,18 @@ make test
 ### Requirements
 
 - `golangci-lint`
-    - on Ubuntu: https://golangci-lint.run/usage/install/#local-installation 
-      (note that you must have a single folder in your `$GOPATH` if you run the proposed command)
-    - on macOS: `brew install golangci-lint`
+  - on Ubuntu: https://golangci-lint.run/usage/install/#local-installation 
+    (note that you must have a single folder in your `$GOPATH` if you run the proposed command)
+  - on macOS: `brew install golangci-lint`
 - `gosec`
-    - on Ubuntu: https://github.com/securego/gosec#local-installation
-    - on macOS: `brew install gosec`
+  - on Ubuntu: https://github.com/securego/gosec#local-installation
+  - on macOS: `brew install gosec`
 - `genny`: `go get github.com/cheekybits/genny`:
-    - Used to generate files `gen-*`
-    - Note that we commit those files too in case `genny` becomes unavailable
+  - Used to generate files `gen-*`
+  - Note that we commit those files too in case `genny` becomes unavailable
+- `swig`:
+  - Used in `primitives/vss` to interface with NTL
+  - on macOS: `brew install swig`
 
 ### Lint code
 

@@ -51,6 +51,21 @@ func NewPointMatrix(rows, columns int) *PointMatrix {
 	}
 }
 
+// PointMatrixFromEntries create a new EntrypeType matrix
+// with the given entries in row-major order
+// entries are *not* copied
+// panic if length is inconsistent
+func PointMatrixFromEntries(rows, columns int, entries []Point) *PointMatrix {
+	if rows*columns != len(entries) {
+		panic("incorrect size of entries")
+	}
+	return &PointMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
+	}
+}
+
 func PointMatrixEqual(mat1, mat2 *PointMatrix) bool {
 	if mat1.rows != mat2.rows || mat1.columns != mat2.columns {
 		return false
@@ -107,6 +122,21 @@ func NewScalarMatrix(rows, columns int) *ScalarMatrix {
 		rows:    rows,
 		columns: columns,
 		entries: make([]Scalar, rows*columns),
+	}
+}
+
+// ScalarMatrixFromEntries create a new EntrypeType matrix
+// with the given entries in row-major order
+// entries are *not* copied
+// panic if length is inconsistent
+func ScalarMatrixFromEntries(rows, columns int, entries []Scalar) *ScalarMatrix {
+	if rows*columns != len(entries) {
+		panic("incorrect size of entries")
+	}
+	return &ScalarMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
 	}
 }
 
