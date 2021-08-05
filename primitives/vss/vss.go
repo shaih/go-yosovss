@@ -62,6 +62,12 @@ func checkSharesLength(params *Params, shares []Share) error {
 
 // Reconstruct reconstructs the secret shared in the Pedersen VSS scheme
 // It assumes that commitments are valid, i.e., they are indeed committing to evaluations of a degree-d polynomial
+// Use VerifyCommitments to verify the above property
+// See FixedRShare see how commitments are defined
+//
+// Shares need to contain at least t valid shares. It may contain invalid shares.
+// But it must not contain two shares with the same index, and all index/indexScalar of the shares are supposed valid
+// Only shares[i].R and shares[i].S may be invalid.
 func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitment) (*pedersen.Message, error) {
 	n := params.N
 	d := params.D
@@ -74,13 +80,9 @@ func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitme
 	if err != nil {
 		return nil, err
 	}
-	err = checkSharesLength(params, shares)
-	if err != nil {
-		return nil, err
-	}
 
 	// Find t valid shares to determine what points to interpolate through
-	for i := 0; i < n && i-len(validShares) <= n-t && len(validShares) < t; i++ {
+	for i := 0; i < len(shares) && i-len(validShares) <= n-t && len(validShares) < t; i++ {
 		isValid, err := VerifyShare(params, &shares[i], commitments)
 		if err != nil {
 			return nil, fmt.Errorf("error verifying share: %w", err)
@@ -116,7 +118,14 @@ func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitme
 
 // FixedRShare performs the initial dealer's step for a Pedersen VSS on the secret s
 // for t-of-n reconstruction, but with a fixed r that is the constant of the g polynomial.
-func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) ([]Share, []pedersen.Commitment, error) {
+//
+// shares has length n
+// commitments has length n+1
+// commitments[0] is the Pedersen commitment of the secret s with randomness r
+// commitments[i] for i > 1 is the Pedersen commitment of the share of index i, that is shares[i-1]
+func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) (
+	shares []Share, commitments []pedersen.Commitment, err error) {
+
 	n := params.N
 	d := params.D
 	t := d + 1 // reconstruction threshold
@@ -126,10 +135,10 @@ func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) ([]Sh
 	}
 
 	// The shares to be distributed to participants
-	shares := make([]Share, n)
+	shares = make([]Share, n)
 
 	// The commitments to the shares
-	commitments := make([]pedersen.Commitment, n+1)
+	commitments = make([]pedersen.Commitment, n+1)
 
 	// Polynomial used to share the secret s
 	f := curve25519.Polynomial{
@@ -166,7 +175,7 @@ func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) ([]Sh
 		// NOTE: Expensive step, consider changing in the future
 		evalPoint = curve25519.AddScalar(evalPoint, curve25519.ScalarOne)
 
-		shares[i] = Share{
+		shares[i-1] = Share{
 			Index:       i,
 			IndexScalar: evalPoint,
 			S:           f.Evaluate(evalPoint),
@@ -176,8 +185,8 @@ func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) ([]Sh
 		// Compute the commitment to the share using randomness rho_i
 		commitment, err = pedersen.GenerateCommitmentFixedR(
 			params.PedersenParams,
-			pedersen.Message(shares[i].S),
-			pedersen.Decommitment(shares[i].R),
+			pedersen.Message(shares[i-1].S),
+			pedersen.Decommitment(shares[i-1].R),
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating commitment of share %d: %w", i, err)
@@ -197,8 +206,8 @@ func VerifyShare(params *Params, share *Share, commitments []pedersen.Commitment
 		return false, err
 	}
 
-	if share.Index <= 0 || share.Index >= params.N {
-		return false, fmt.Errorf("invalid share index %d (not between 1 and n-1)", share.Index)
+	if share.Index < 1 || share.Index > params.N {
+		return false, fmt.Errorf("invalid share index %d (not between 1 and n)", share.Index)
 	}
 
 	return pedersen.VerifyCommitment(
@@ -211,14 +220,10 @@ func VerifyShare(params *Params, share *Share, commitments []pedersen.Commitment
 
 // VerifyCommitments verifies that the commitments are consistent
 // i.e., they are on a polynomial of degree d
-func VerifyCommitments(params *Params, shares []Share, commitments []pedersen.Commitment) (bool, error) {
+func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool, error) {
 	n := params.N
 
 	err := checkCommitmentsLength(params, commitments)
-	if err != nil {
-		return false, err
-	}
-	err = checkSharesLength(params, shares)
 	if err != nil {
 		return false, err
 	}
