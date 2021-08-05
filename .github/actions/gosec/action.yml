@@ -1,3 +1,6 @@
+# No more used because securego/gosec@master does not support easily libntl
+# as it uses alpine that does not have libntl
+
 # We cannot use the securego/gosec@master action because we need to install libsodium
 # This action is the same as
 # https://github.com/securego/gosec/blob/9fe0b2e21afb166f331098c282aa5de6c96d3253/action.yml

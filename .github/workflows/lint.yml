@@ -2,18 +2,20 @@ on: [push, pull_request]
 name: Lint
 jobs:
   golangci:
-    name: golangci-lint
+    name: golangci-lint-gosec
     runs-on: ubuntu-latest
     steps:
-      - name: Install libsodium, swig, and NTL # see https://stackoverflow.com/a/57948488/2945326
+      - name: Install libsodium, swig, NTL, and gosec # see https://stackoverflow.com/a/57948488/2945326
         # Note that we copy-paste this script in both lint.yml and test.yml
         # because "act" does not support composite actions
         # https://github.com/nektos/act/issues/339
         run:   |
+          mkdir "$HOME/bin"
           if [ "$RUNNER_OS" == "Linux" ]; then
                sudo apt-get install -y libsodium-dev swig libntl-dev
+               curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b "$HOME/bin" latest
           elif [ "$RUNNER_OS" == "macOS" ]; then
-               brew install libsodium swig ntl
+               brew install libsodium swig ntl gosec
           else
                echo "$RUNNER_OS not supported"
                exit 1
@@ -38,12 +40,7 @@ jobs:
 
           # Optional: if set to true then the action will use pre-installed Go
           # skip-go-installation: true
-  gosec:
-    name: gosec
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run Gosec Security Scanner
-        uses: ./.github/actions/gosec
-        with:
-          args: ./...
+      - name: gosec
+        run: |
+          export PATH="$HOME/bin:$PATH"
+          gosec ./...

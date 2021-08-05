@@ -14,6 +14,7 @@ import (
 // Matrix has size (n+1) x (n+1-t)
 func ComputeParityMatrix(n, t int) (*curve25519.ScalarMatrix, error) {
 	entries := make([]byte, 32*(n+1)*(n-t+1))
+
 	paritycpp.ComputeParityMatrixBytes(entries, n, t)
 
 	mat := curve25519.NewScalarMatrix(n+1, n-t+1)

@@ -8,7 +8,6 @@ test: generate
 
 lint: generate
 	golangci-lint run
-	gosec ./...
 
 lint-fix: generate
 	go fmt ./...
