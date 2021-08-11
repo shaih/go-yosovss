@@ -20,19 +20,19 @@ func TestPedersenCommitment(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	isValid, err := VerifyCommitment(params, c, m, r)
+	isValid, err := VerifyCommitment(params, c, &m, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	assert.True(t, isValid, "Commitment is consistent")
 
-	isValid, err = VerifyCommitment(params, c, n, r)
+	isValid, err = VerifyCommitment(params, c, &n, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	assert.False(t, isValid, "Verification fails for wrong message")
 
-	isValid, err = VerifyCommitment(params, c, m, &s)
+	isValid, err = VerifyCommitment(params, c, &m, &s)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,19 +52,19 @@ func TestPedersenCommitmentFixedR(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	isValid, err := VerifyCommitment(params, c, m, &r)
+	isValid, err := VerifyCommitment(params, c, &m, &r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	assert.True(t, isValid, "Commitment is consistent")
 
-	isValid, err = VerifyCommitment(params, c, n, &r)
+	isValid, err = VerifyCommitment(params, c, &n, &r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	assert.False(t, isValid, "Verification fails for wrong message")
 
-	isValid, err = VerifyCommitment(params, c, m, &s)
+	isValid, err = VerifyCommitment(params, c, &m, &s)
 	if err != nil {
 		log.Fatal(err)
 	}

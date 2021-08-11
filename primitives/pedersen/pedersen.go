@@ -89,8 +89,8 @@ func GenerateCommitmentFixedR(params *Params, m Message, r Decommitment) (*Commi
 
 // VerifyCommitment checks if a commitment was for some message m under the
 // decommitment r
-func VerifyCommitment(params *Params, commitment *Commitment, m Message, r *Decommitment) (bool, error) {
-	gm, err := curve25519.MultPointScalar(params.G, curve25519.Scalar(m)) // Compute g^m
+func VerifyCommitment(params *Params, commitment *Commitment, m *Message, r *Decommitment) (bool, error) {
+	gm, err := curve25519.MultPointScalar(params.G, *m) // Compute g^m
 	if err != nil {
 		return false, fmt.Errorf("verification failed: %v", err)
 	}

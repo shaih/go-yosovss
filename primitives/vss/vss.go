@@ -68,7 +68,17 @@ func checkSharesLength(params *Params, shares []Share) error {
 // Shares need to contain at least t valid shares. It may contain invalid shares.
 // But it must not contain two shares with the same index, and all index/indexScalar of the shares are supposed valid
 // Only shares[i].R and shares[i].S may be invalid.
+//
+// FIXME: not as efficient as it could be as it reconstruct the randomness R too
 func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitment) (*pedersen.Message, error) {
+	s, _, err := ReconstructWithR(params, shares, commitments)
+
+	return s, err
+}
+
+// ReconstructWithR is like Reconstruct except it also reconstructs the randomness/decommitment r
+func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Commitment) (
+	*pedersen.Message, *pedersen.Decommitment, error) {
 	n := params.N
 	d := params.D
 	t := d + 1 // reconstruction threshold
@@ -78,14 +88,14 @@ func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitme
 
 	err = checkCommitmentsLength(params, commitments)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Find t valid shares to determine what points to interpolate through
 	for i := 0; i < len(shares) && i-len(validShares) <= n-t && len(validShares) < t; i++ {
 		isValid, err := VerifyShare(params, &shares[i], commitments)
 		if err != nil {
-			return nil, fmt.Errorf("error verifying share: %w", err)
+			return nil, nil, fmt.Errorf("error verifying share: %w", err)
 		}
 
 		if isValid {
@@ -94,26 +104,32 @@ func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitme
 	}
 
 	if len(validShares) < t {
-		return nil, fmt.Errorf("insufficient valid shares") // Unable to reconstruct due to insufficient valid shares
+		return nil, nil, fmt.Errorf("insufficient valid shares") // Unable to reconstruct due to insufficient valid shares
 	}
 
 	// Polynomial interpolation evaluated at 0
-	var sum curve25519.Scalar
 	validShareValues := make([]curve25519.Scalar, t)
 	for i := 0; i < t; i++ {
 		validShareValues[i] = validShares[i].IndexScalar
 	}
 	lambdas, err := curve25519.LagrangeCoeffs(validShareValues, curve25519.GetScalar(uint64(0)))
 	if err != nil {
-		return nil, fmt.Errorf("error in polynomial interpolation")
+		return nil, nil, fmt.Errorf("error in polynomial interpolation")
 	}
 
+	// Reconstruct message via pol interpolation at 0
+	s := curve25519.ScalarZero
 	for i := 0; i < t; i++ {
-		sum = curve25519.AddScalar(sum, curve25519.MultScalar(validShares[i].S, lambdas[i]))
+		s = curve25519.AddScalar(s, curve25519.MultScalar(validShares[i].S, lambdas[i]))
 	}
 
-	m := pedersen.Message(sum)
-	return &m, nil
+	// Reconstruct randomness/decommitment
+	r := curve25519.ScalarZero
+	for i := 0; i < t; i++ {
+		r = curve25519.AddScalar(r, curve25519.MultScalar(validShares[i].R, lambdas[i]))
+	}
+
+	return &s, &r, nil
 }
 
 // FixedRShare performs the initial dealer's step for a Pedersen VSS on the secret s
@@ -213,8 +229,8 @@ func VerifyShare(params *Params, share *Share, commitments []pedersen.Commitment
 	return pedersen.VerifyCommitment(
 		params.PedersenParams,
 		&commitments[share.Index],
-		pedersen.Message(share.S),
-		(*pedersen.Decommitment)(&share.R),
+		&share.S,
+		&share.R,
 	)
 }
 
