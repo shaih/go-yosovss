@@ -7,23 +7,28 @@ import (
 	"github.com/shaih/go-yosovss/primitives/vss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sync"
 	"testing"
 )
 
-
-func TestResharingProtocol(t *testing.T) {
+// setupResharingSeq setup the resharing protocol for the given number of committees party n, the given treshold t
+// the number of parties is n * numCommittees: each committee has n different parties taken in order
+func setupResharingSeq(
+	t *testing.T,
+	n int,
+	tt int,
+) (
+	pub *PublicInput,
+	prvs []PrivateInput,
+	o fake.Orchestrator,
+	secret curve25519.Scalar,
+	rnd curve25519.Scalar,
+) {
 	require := require.New(t)
-	assert := assert.New(t)
 
-	const (
-		n          = 7                 // number of parties per committee
-		numParties = n * numCommittees // total number of parties
-		tt         = 2                 // threshold of malicious parties
-	)
+	numParties := n * numCommittees
 
 	// Create the orchestrator
-	o := fake.NewOrchestrator()
+	o = fake.NewOrchestrator()
 	var channels []fake.PartyBroadcastChannel
 
 	// Form initial committees, which are comprised of the ids of the parties that are participating in them
@@ -40,12 +45,13 @@ func TestResharingProtocol(t *testing.T) {
 	require.NoError(err)
 
 	// Generate a Pedersen share of a secret
-	secret := curve25519.RandomScalar() // secret s
-	rnd := curve25519.RandomScalar()    // randomness r
+	secret = curve25519.RandomScalar() // secret s
+	rnd = curve25519.RandomScalar()    // randomness r
 	shares, commitments, err := vss.FixedRShare(vssParams, secret, rnd)
+	require.NoError(err)
 
 	// Public input
-	pub := PublicInput{
+	pub = &PublicInput{
 		EncPKs:                   encPKs,
 		SigPKs:                   sigPKs,
 		VSSParams:                *vssParams,
@@ -63,8 +69,6 @@ func TestResharingProtocol(t *testing.T) {
 		o.AddChannel(channels[party])
 	}
 
-	var wg sync.WaitGroup
-
 	// Generate shares array: allPartiesShares[party] is nil if party not in holding/dealer committee
 	// assume that holding committee is 0,...,n-1
 	allPartiesShares := make([]*vss.Share, numParties)
@@ -72,42 +76,45 @@ func TestResharingProtocol(t *testing.T) {
 		allPartiesShares[i] = &shares[i]
 	}
 
-	// Output of all parties
-	outputCommitments := make([][]pedersen.Commitment, numParties)
-	outputShares := make([]*vss.Share, numParties)
-
-	// Start protocol
+	// Generate the private inputs
+	prvs = make([]PrivateInput, numParties)
 	for party := 0; party < numParties; party++ {
-		wg.Add(1)
-		go func(party int, wg *sync.WaitGroup) {
-			defer wg.Done()
-			prv := PrivateInput{
-				BC:    channels[party],
-				EncSK: encSKs[party],
-				SigSK: sigSKs[party],
-				Share: allPartiesShares[party],
-				Id:    party,
-			}
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(&pub, &prv)
-			require.NoError(err)
-		}(party, &wg)
+		prvs[party] = PrivateInput{
+			BC:    channels[party],
+			EncSK: encSKs[party],
+			SigSK: sigSKs[party],
+			Share: allPartiesShares[party],
+			Id:    party,
+		}
 	}
 
-	// Simulate the protocol for a fixed number of rounds
-	// Naively switches rounds whenever every party has sent a message
-	for o.Round < numRounds {
-		err := o.ReceiveMessages()
-		require.NoError(err)
-		err = o.Broadcast()
-		require.NoError(err)
-		o.Round++
-	}
+	return
+}
 
-	wg.Wait()
+// checkProtocolResults verify all the results of the protocols are as expected
+// outputCommitments can be an array of any number of output commitments (at least one)
+// outputCommitments[0]=...=outputcommitments[...] are the next commitments (error is printed if they're not all equal)
+// The last n values of outputShares are the shares output by the new holding committee.
+// The other values are checked to be nil
+func checkProtocolResults(
+	t *testing.T,
+	pub *PublicInput,
+	secret curve25519.Scalar,
+	rnd curve25519.Scalar,
+	outputCommitments [][]pedersen.Commitment,
+	outputShares []*vss.Share,
+) {
+	var err error
+
+	require := require.New(t)
+	assert := assert.New(t)
+
+	vssParams := &pub.VSSParams
+	commitments := pub.Commitments
 
 	// Check output commitments are all the same
 	nextCommitments := outputCommitments[0]
-	for party := 0; party < numParties; party++ {
+	for party := 0; party < len(outputCommitments); party++ {
 		assert.Equalf(nextCommitments, outputCommitments[party], "all output commitments must be the same")
 	}
 
@@ -127,17 +134,17 @@ func TestResharingProtocol(t *testing.T) {
 
 	// Check only next committee members, aka numParties-n, ... numParties-1
 	// have non-empty shares and extract the n above shares
-	nextShares := make([]vss.Share, n)
-	for party := 0; party < numParties-n; party++ {
+	nextShares := make([]vss.Share, pub.N)
+	for party := 0; party < len(outputShares)-pub.N; party++ {
 		assert.Nil(outputShares[party], "non next-holder committee must output nil shares")
 	}
-	for party := numParties - n; party < numParties; party++ {
+	for party := len(outputShares) - pub.N; party < len(outputShares); party++ {
 		assert.NotNil(outputShares[party])
-		nextShares[party-(numParties-n)] = *outputShares[party]
+		nextShares[party-(len(outputShares)-pub.N)] = *outputShares[party]
 	}
 
 	// Check that all nextShares are valid
-	for j := 0; j < n; j++ {
+	for j := 0; j < pub.N; j++ {
 		vss.VerifyShare(vssParams, &nextShares[j], nextCommitments)
 	}
 

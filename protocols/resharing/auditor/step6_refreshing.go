@@ -84,14 +84,14 @@ func ComputeRefreshedShare(
 		R:           curve25519.ScalarZero,
 	}
 
-	for _, i := range qualifiedDealers {
+	for ii, i := range qualifiedDealers {
 		sIJK, rIJK, err := ComputeShareIJ(pub, i, j, verSentShares, dealingMessages)
 		if err != nil {
 			return nil, err
 		}
 
-		s := curve25519.MultScalar(*sIJK, lagrangeCoeffs[i])
-		r := curve25519.MultScalar(*rIJK, lagrangeCoeffs[i])
+		s := curve25519.MultScalar(*sIJK, lagrangeCoeffs[ii])
+		r := curve25519.MultScalar(*rIJK, lagrangeCoeffs[ii])
 
 		share.S = curve25519.AddScalar(share.S, s)
 		share.R = curve25519.AddScalar(share.R, r)
@@ -178,8 +178,8 @@ func ComputeRefreshedCommitments(
 		// This is the Lagrange reconsturction
 		// of all the original commitments S_ij for qualified dealers i
 		commitments[j+1] = curve25519.PointInfinity
-		for _, i := range qualifiedDealers {
-			cc, err := curve25519.MultPointScalar(dealingMessages[i].ComS[j][0], lagrangeCoeffs[i])
+		for ii, i := range qualifiedDealers {
+			cc, err := curve25519.MultPointScalar(dealingMessages[i].ComS[j][0], lagrangeCoeffs[ii])
 			if err != nil {
 				return nil, fmt.Errorf("error point multiplication: %w", err)
 			}
