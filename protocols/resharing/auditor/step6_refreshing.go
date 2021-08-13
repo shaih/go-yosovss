@@ -9,31 +9,57 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// isDealerQualified checks wheter dealer i is qualified according to auditing messages
+// i.e., more than n/2 auditors marked them as qualified
+func isDealerQualified(
+	n int,
+	i int,
+	auditingMessages []AuditingMessage,
+) bool {
+
+	// a dealer is qualified is more than half of the auditor marked them as qualified
+	cnt := 0
+	for l := 0; l < n; l++ {
+		if auditingMessages[l].QualifiedDealers[i] {
+			cnt++
+		}
+	}
+
+	return cnt > n/2
+}
+
 // ComputeQualifiedDealers returns the list of the first t+1 qualified dealers whose shares
 // will be used for refreshing (qualifiedDealers[x] is a dealer index in 0,...,n-1)
 // and the corresponding Lagrange coefficients
 func ComputeQualifiedDealers(
 	pub *PublicInput,
+	auditingMessages []AuditingMessage,
 ) (
 	qualifiedDealers []int,
 	lagrangeCoeffs []curve25519.Scalar,
 	err error,
 ) {
-
-	// FIXME make it correct! currently, just return first t+1 dealers
-
 	qualifiedDealers = make([]int, pub.T+1)
 	qualifiedDealersScalars := make([]curve25519.Scalar, pub.T+1)
 
-	for i := 0; i < pub.T+1; i++ {
-		qualifiedDealers[i] = i
-		qualifiedDealersScalars[i] = curve25519.GetScalar(uint64(i + 1))
+	// Find the first t+1 qualified dealers
+	ii := 0
+	for i := 0; i < pub.N && ii < pub.T+1; i++ {
+		if isDealerQualified(pub.N, i, auditingMessages) {
+			qualifiedDealers[ii] = i
+			qualifiedDealersScalars[ii] = curve25519.GetScalar(uint64(i + 1))
+			ii++
+		}
+	}
+	if ii != pub.T+1 {
+		return nil, nil, fmt.Errorf("not enough qualified dealers: found %d, but need t+1=%d", ii, pub.T+1)
 	}
 
+	// Compute the Lagrange coefficients
 	lagrangeCoeffs, err = curve25519.LagrangeCoeffs(qualifiedDealersScalars, curve25519.GetScalar(uint64(0)))
 	if err != nil {
 		return nil, nil,
-		fmt.Errorf("failed to compute Lagrange coeffs for qualified dealers: %w", err)
+			fmt.Errorf("failed to compute Lagrange coeffs for qualified dealers: %w", err)
 	}
 
 	return qualifiedDealers, lagrangeCoeffs, nil

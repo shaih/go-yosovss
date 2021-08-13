@@ -9,7 +9,7 @@ import (
 	"github.com/shaih/go-yosovss/communication"
 )
 
-//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "MessageType=DealingMessage,VerificationMessage"
+//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "MessageType=DealingMessage,VerificationMessage,WitnessMessage,AuditingMessage"
 
 type MessageType generic.Type
 

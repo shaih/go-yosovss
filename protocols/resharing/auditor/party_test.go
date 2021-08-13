@@ -11,15 +11,15 @@ import (
 	"testing"
 )
 
+
 func TestResharingProtocol(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
 
 	const (
-		numRounds  = 5     // number of rounds of messaging required for the protocol
-		numParties = 3 * 6 // total number of parties
-		n          = 3     // number of parties per committee
-		tt         = 1     // threshold of malicious parties
+		n          = 7                 // number of parties per committee
+		numParties = n * numCommittees // total number of parties
+		tt         = 2                 // threshold of malicious parties
 	)
 
 	// Create the orchestrator
@@ -27,14 +27,7 @@ func TestResharingProtocol(t *testing.T) {
 	var channels []fake.PartyBroadcastChannel
 
 	// Form initial committees, which are comprised of the ids of the parties that are participating in them
-	committees := Committees{
-		Hold: []int{0, 1, 2},
-		Ver:  []int{3, 4, 5},
-		Res:  []int{6, 7, 8},
-		Wit:  []int{9, 10, 11},
-		Aud:  []int{12, 13, 14},
-		Next: []int{15, 16, 17},
-	}
+	committees := seqCommittees(n)
 
 	// Generate parameters and keys
 	encPKs, encSKs := curve25519.SetupKeys(numParties)
@@ -44,7 +37,7 @@ func TestResharingProtocol(t *testing.T) {
 		n,
 		tt,
 	)
-	require.Nil(err)
+	require.NoError(err)
 
 	// Generate a Pedersen share of a secret
 	secret := curve25519.RandomScalar() // secret s
@@ -53,13 +46,15 @@ func TestResharingProtocol(t *testing.T) {
 
 	// Public input
 	pub := PublicInput{
-		EncPKs:      encPKs,
-		SigPKs:      sigPKs,
-		VSSParams:   *vssParams,
-		T:           tt,
-		N:           n,
-		Committees:  committees,
-		Commitments: commitments,
+		EncPKs:                   encPKs,
+		SigPKs:                   sigPKs,
+		VSSParams:                *vssParams,
+		T:                        tt,
+		N:                        n,
+		AuditMinWitInvalidDealer: 1,
+		AuditMaxFalseWitDealer:   tt,
+		Committees:               committees,
+		Commitments:              commitments,
 	}
 
 	// Initialize channels and connect with orchestrator
@@ -94,7 +89,7 @@ func TestResharingProtocol(t *testing.T) {
 				Id:    party,
 			}
 			outputShares[party], outputCommitments[party], err = StartCommitteeParty(&pub, &prv)
-			require.Nil(err)
+			require.NoError(err)
 		}(party, &wg)
 	}
 
@@ -102,9 +97,9 @@ func TestResharingProtocol(t *testing.T) {
 	// Naively switches rounds whenever every party has sent a message
 	for o.Round < numRounds {
 		err := o.ReceiveMessages()
-		require.Nil(err)
+		require.NoError(err)
 		err = o.Broadcast()
-		require.Nil(err)
+		require.NoError(err)
 		o.Round++
 	}
 
@@ -122,12 +117,12 @@ func TestResharingProtocol(t *testing.T) {
 
 	// Check that original commitments are still valid
 	valid, err := vss.VerifyCommitments(vssParams, commitments)
-	require.Nil(err)
+	require.NoError(err)
 	assert.True(valid, "original commitments must be valid")
 
 	// Check that next commitments are still valid
 	valid, err = vss.VerifyCommitments(vssParams, nextCommitments)
-	require.Nil(err)
+	require.NoError(err)
 	assert.True(valid, "next commitments must be valid")
 
 	// Check only next committee members, aka numParties-n, ... numParties-1
@@ -148,12 +143,12 @@ func TestResharingProtocol(t *testing.T) {
 
 	// Check the reconstructed secret is valid
 	reconsSecret, reconsRnd, err := vss.ReconstructWithR(vssParams, nextShares, nextCommitments)
-	require.Nil(err)
+	require.NoError(err)
 	assert.Equal(&secret, reconsSecret)
 	assert.Equal(&rnd, reconsRnd)
 
 	// Check that the new commitment to the secret is the expected one
 	valid, err = pedersen.VerifyCommitment(vssParams.PedersenParams, &commitments[0], reconsSecret, reconsRnd)
-	require.Nil(err)
+	require.NoError(err)
 	assert.True(valid)
 }

@@ -25,30 +25,45 @@ type VerificationMK struct {
 	R []curve25519.Scalar // rho_1k, ..., rho_nk
 }
 
-// PerformDealing executes what a dealer does in the dealing round
-// and returns the message it should broadcast
-func PerformDealing(pub *PublicInput, prv *PrivateInput) (*DealingMessage, error) {
-	msg := &DealingMessage{
-		ComS:    make([][]pedersen.Commitment, pub.N),
-		EncVerM: make([]curve25519.Ciphertext, pub.N),
-	}
+func GenerateDealerSharesCommitments(
+	vssParams *vss.Params, s, r *curve25519.Scalar,
+) (
+	shares [][]vss.Share, comS [][]pedersen.Commitment, err error,
+) {
+    comS = make([][]pedersen.Commitment, vssParams.N)
 
 	// First-level sharing
 	// commitments are not needed as they're recomputed anyway by second level
 	// TODO this is not optimal
-	shares0, _, err := vss.FixedRShare(&pub.VSSParams, prv.Share.S, prv.Share.R)
+	shares0, _, err := vss.FixedRShare(vssParams, *s, *r)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Second-level sharing
-	shares := make([][]vss.Share, pub.N)
-	for j := 0; j < pub.N; j++ {
-		shares[j], msg.ComS[j], err = vss.FixedRShare(&pub.VSSParams, shares0[j].S, shares0[j].R)
+	shares = make([][]vss.Share, vssParams.N)
+	for j := 0; j < vssParams.N; j++ {
+		shares[j], comS[j], err = vss.FixedRShare(vssParams, shares0[j].S, shares0[j].R)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
+
+	return shares, comS, nil
+}
+
+// PerformDealing executes what a dealer does in the dealing round
+// and returns the message it should broadcast
+func PerformDealing(pub *PublicInput, prv *PrivateInput) (*DealingMessage, error) {
+	msg := &DealingMessage{
+		EncVerM: make([]curve25519.Ciphertext, pub.N),
+	}
+
+	shares, comS, err := GenerateDealerSharesCommitments(&pub.VSSParams, &prv.Share.S, &prv.Share.R)
+	if err != nil {
+		return nil, err
+	}
+	msg.ComS = comS
 
 	if len(pub.Committees.Ver) != pub.N {
 		return nil, fmt.Errorf("invalid committe length")

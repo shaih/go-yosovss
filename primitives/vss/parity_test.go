@@ -29,7 +29,7 @@ func TestComputeParityMatrix1x1(t *testing.T) {
 	require := require.New(t)
 	m, err := ComputeParityMatrix(1, 1)
 
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(2, m.Rows(), "expecting 2 rows")
 	require.Equal(1, m.Columns(), "expecting 1 column")
 	assert.True(
@@ -59,19 +59,19 @@ func TestComputeParityMatrix(t *testing.T) {
 
 			m, err := ComputeParityMatrix(tc.n, tc.t)
 
-			require.Nil(err)
+			require.NoError(err)
 			require.Equal(tc.n+1, m.Rows(), "expecting 2 rows")
 			require.Equal(tc.n+1-tc.t, m.Columns(), "expecting 1 column")
 
 			prod, err := curve25519.ScalarMatrixMul(gen, m)
-			require.Nil(err)
+			require.NoError(err)
 			assert.True(prod.IsZero(), "product of generator matrix and parity check matrix should be 0")
 
 			// Test that incorrect code words are rejected
 			// just add 1 to (0,0) in gen (not ideal but should catch most issues)
 			gen.Set(0, 0, curve25519.AddScalar(gen.At(0, 0), curve25519.ScalarOne))
 			prod, err = curve25519.ScalarMatrixMul(gen, m)
-			require.Nil(err)
+			require.NoError(err)
 			assert.False(prod.IsZero(),
 				"product of incorrect generator matrix and parity check matrix should not be 0")
 		})

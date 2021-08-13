@@ -69,7 +69,7 @@ func StartCommitteeParty(
 			return nil, nil, fmt.Errorf("party %d failed to perform verification: %w", prv.Id, err)
 		}
 		prv.BC.Send(msgpack.Encode(msg))
-	} else { // Do nothing if not part of the holding committee
+	} else { // Do nothing if not part of the verification committee
 		prv.BC.Send([]byte{})
 	}
 
@@ -90,18 +90,40 @@ func StartCommitteeParty(
 	// Witness
 	// =======
 
-	// FIXME
+	if indices.Wit >= 0 {
+		msg, err := PerformWitness(pub, dealingMessages)
+		if err != nil {
+			return nil, nil, fmt.Errorf("party %d failed to perform witness: %w", prv.Id, err)
+		}
+		prv.BC.Send(msgpack.Encode(msg))
+	} else { // Do nothing if not part of the witness committee
+		prv.BC.Send([]byte{})
+	}
 
-	prv.BC.Send([]byte{})
-	prv.BC.ReceiveRound()
+	// Receive witness messages
+	witnessMessages, err := ReceiveWitnessMessages(prv.BC, pub.Committees.Wit)
+	if err != nil {
+		return nil, nil, fmt.Errorf("party %d failed receiving witness messages: %w", prv.Id, err)
+	}
 
 	// Auditing
 	// ========
 
-	// FIXME
+	if indices.Aud >= 0 {
+		msg, err := PerformAuditing(pub, dealingMessages, witnessMessages)
+		if err != nil {
+			return nil, nil, fmt.Errorf("party %d failed to perform auditing: %w", prv.Id, err)
+		}
+		prv.BC.Send(msgpack.Encode(msg))
+	} else { // Do nothing if not part of the auditing committee
+		prv.BC.Send([]byte{})
+	}
 
-	prv.BC.Send([]byte{})
-	prv.BC.ReceiveRound()
+	// Receive auditing messages
+	auditingMessages, err := ReceiveAuditingMessages(prv.BC, pub.Committees.Aud)
+	if err != nil {
+		return nil, nil, fmt.Errorf("party %d failed receiving auditing messages: %w", prv.Id, err)
+	}
 
 	// Refreshing
 	// =========
@@ -109,7 +131,7 @@ func StartCommitteeParty(
 	// Last phase where everybody computes the commitments of the refreshed shares
 	// and parties in the new holding committee compute their refreshed shares
 
-	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(pub)
+	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(pub, auditingMessages)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to compute qualified dealers: %w", err)
 	}
