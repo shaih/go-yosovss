@@ -31,9 +31,11 @@ func isDealerQualified(
 // ComputeQualifiedDealers returns the list of the first t+1 qualified dealers whose shares
 // will be used for refreshing (qualifiedDealers[x] is a dealer index in 0,...,n-1)
 // and the corresponding Lagrange coefficients
+// disqualifiedDealersByComplaints is an output of ResolveComplaints
 func ComputeQualifiedDealers(
 	pub *PublicInput,
 	auditingMessages []AuditingMessage,
+	disqualifiedDealersByComplaints map[int]bool,
 ) (
 	qualifiedDealers []int,
 	lagrangeCoeffs []curve25519.Scalar,
@@ -45,6 +47,10 @@ func ComputeQualifiedDealers(
 	// Find the first t+1 qualified dealers
 	ii := 0
 	for i := 0; i < pub.N && ii < pub.T+1; i++ {
+		if _, ok := disqualifiedDealersByComplaints[i]; ok {
+			// disqualified by complaints
+			continue
+		}
 		if isDealerQualified(pub.N, i, auditingMessages) {
 			qualifiedDealers[ii] = i
 			qualifiedDealersScalars[ii] = curve25519.GetScalar(uint64(i + 1))
@@ -66,10 +72,12 @@ func ComputeQualifiedDealers(
 }
 
 // ComputeRefreshedShare returns the fresh share of a party j in the new holding committee
+// resolvedSharesS, resolvedSharesR come from ResolveComplaints (i.e., via future broadcast)
 func ComputeRefreshedShare(
 	pub *PublicInput, prv *PrivateInput, j int,
 	dealingMessages []DealingMessage, verificationMessages []VerificationMessage,
 	qualifiedDealers []int, lagrangeCoeffs []curve25519.Scalar,
+	resolvedSharesS, resolvedSharesR map[TripleIJK]curve25519.Scalar,
 ) (
 	share *vss.Share,
 	err error,
@@ -85,7 +93,7 @@ func ComputeRefreshedShare(
 	}
 
 	for ii, i := range qualifiedDealers {
-		sIJK, rIJK, err := ComputeShareIJ(pub, i, j, verSentShares, dealingMessages)
+		sIJK, rIJK, err := ComputeShareIJ(pub, i, j, verSentShares, dealingMessages, resolvedSharesS, resolvedSharesR)
 		if err != nil {
 			return nil, err
 		}
@@ -101,10 +109,11 @@ func ComputeRefreshedShare(
 }
 
 // ComputeShareIJ computes sigma_ij and rho_ij from the verification committee messages
-// FIXME Need to use future broadcast if necessary
+// resolvedSharesS, resolvedSharesR come from ResolveComplaints (i.e., via future broadcast)
 func ComputeShareIJ(
 	pub *PublicInput, i int, j int,
 	verSentShares []VerSentShares, dealingMessages []DealingMessage,
+	resolvedSharesS, resolvedSharesR map[TripleIJK]curve25519.Scalar,
 ) (
 	*pedersen.Message,
 	*pedersen.Decommitment,
@@ -113,16 +122,27 @@ func ComputeShareIJ(
 	sharesIJ := make([]vss.Share, 0, pub.N) // sharesIJ[k] corresponds to sigma_ijk
 
 	for k := 0; k < pub.N; k++ {
-		if verSentShares[k].S[i] == nil || verSentShares[k].R[i] == nil {
-			// FIXME: that's where we use future broadcast
-			continue
+		if _, ok := resolvedSharesS[TripleIJK{i, j, k}]; ok {
+			// If future broadcast/resolution is available, we must use that
+			log.Infof("use resolved shares for i=%d,j=%d,k=%d", i, j, k)
+
+			sharesIJ = append(sharesIJ, vss.Share{
+				Index:       k + 1,
+				IndexScalar: curve25519.GetScalar(uint64(k + 1)),
+				S:           resolvedSharesS[TripleIJK{i, j, k}],
+				R:           resolvedSharesR[TripleIJK{i, j, k}],
+			})
+		} else if len(verSentShares[k].S) == pub.N && len(verSentShares[k].R) == pub.N &&
+			verSentShares[k].S[i] != nil && verSentShares[k].R[i] != nil {
+			// Otherwise we use the shares from the verification committee if available
+
+			sharesIJ = append(sharesIJ, vss.Share{
+				Index:       k + 1,
+				IndexScalar: curve25519.GetScalar(uint64(k + 1)),
+				S:           *verSentShares[k].S[i],
+				R:           *verSentShares[k].R[i],
+			})
 		}
-		sharesIJ = append(sharesIJ, vss.Share{
-			Index:       k + 1,
-			IndexScalar: curve25519.GetScalar(uint64(k + 1)),
-			S:           *verSentShares[k].S[i],
-			R:           *verSentShares[k].R[i],
-		})
 	}
 
 	sIJK, rIJK, err := vss.ReconstructWithR(&pub.VSSParams, sharesIJ, dealingMessages[i].ComS[j])
@@ -140,6 +160,12 @@ func DecryptVerSentShares(
 ) {
 	verSentShares = make([]VerSentShares, pub.N)
 	for k := 0; k < pub.N; k++ {
+		if len(verificationMessages[k].EncShares) != pub.N {
+			// when the length is incorrect, we continue and consider the verification committee member to be malicious
+			log.Infof("verificationMessages[%d].EncShares has incorrect length", k)
+			continue
+		}
+
 		m, err := curve25519.Decrypt(pub.EncPKs[prv.Id], prv.EncSK, verificationMessages[k].EncShares[j])
 		if err != nil {
 			// when we cannot decrypt, we continue and consider the verification committee member to be malicious

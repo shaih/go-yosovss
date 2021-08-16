@@ -45,7 +45,7 @@ func GenerateDealerSharesCommitments(
 ) (
 	shares [][]vss.Share, comS [][]pedersen.Commitment, err error,
 ) {
-    comS = make([][]pedersen.Commitment, vssParams.N)
+	comS = make([][]pedersen.Commitment, vssParams.N)
 
 	// First-level sharing
 	// commitments are not needed as they're recomputed anyway by second level
@@ -117,7 +117,6 @@ func PerformDealing(pub *PublicInput, prv *PrivateInput) (*DealingMessage, error
 
 	return msg, nil
 }
-
 
 // ComputeMK computes the verification committee message M[k] see above
 func ComputeMK(n int, shares [][]vss.Share, k int) VerificationMK {

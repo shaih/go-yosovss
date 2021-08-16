@@ -18,7 +18,7 @@ const (
 
 // WitnessMessage is the message witness committee members send during witness round
 type WitnessMessage struct {
-	_struct      struct{}           `codec:",omitempty,omitemptyarray"`
+	_struct      struct{}            `codec:",omitempty,omitemptyarray"`
 	WitnessSeeds []*[SeedLength]byte `codec:"W"` // WitnessSeeds[i] = nil if dealer passed the test, or a witness seed otherwise
 }
 
@@ -57,7 +57,10 @@ func CheckDealerCommitmentsWithSeed(
 
 	// Expand the seed
 	r := make([]byte, (n+7)/8)
-	SeedToBytes(seed, r)
+	err = SeedToBytes(seed, r)
+	if err != nil {
+		return false, fmt.Errorf("error converting seed to bytes: %w", err)
+	}
 
 	// Set comSprime to 0
 	for k := 0; k < n+1; k++ {

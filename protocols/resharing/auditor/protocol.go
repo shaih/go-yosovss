@@ -24,6 +24,11 @@ func StartCommitteeParty(
 	nextCommitments []pedersen.Commitment,
 	err error,
 ) {
+	// FIXME: everywhere the protocol may fail if some malicious messages are sent
+	// instead the protocol should continue and treat the party as malicious
+	// but for debugging it is so much simpler not to add this, so we did not yet
+	// However, a real implementation must add all these tests and handle things properly
+
 	myLog := log.WithFields(log.Fields{
 		"id": prv.Id,
 		"n":  pub.N,
@@ -82,10 +87,21 @@ func StartCommitteeParty(
 	// Resolution (= Future Broadcast)
 	// ===============================
 
-	// FIXME
+	if indices.Res >= 0 {
+		msg, err := PerformResolution(pub, prv, indices.Res, dealingMessages, verificationMessages)
+		if err != nil {
+			return nil, nil, fmt.Errorf("party %d failed to perform resolution: %w", prv.Id, err)
+		}
+		prv.BC.Send(msgpack.Encode(msg))
+	} else { // Do nothing if not part of the verification committee
+		prv.BC.Send([]byte{})
+	}
 
-	prv.BC.Send([]byte{})
-	prv.BC.ReceiveRound()
+	// Receive resolution messages
+	resolutionMessages, err := ReceiveResolutionMessages(prv.BC, pub.Committees.Res)
+	if err != nil {
+		return nil, nil, fmt.Errorf("party %d failed receiving resolution messages: %w", prv.Id, err)
+	}
 
 	// Witness
 	// =======
@@ -131,7 +147,10 @@ func StartCommitteeParty(
 	// Last phase where everybody computes the commitments of the refreshed shares
 	// and parties in the new holding committee compute their refreshed shares
 
-	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(pub, auditingMessages)
+	resolvedSharesS, resolvedSharedR, disqualifiedDealersByComplaints, err := ResolveComplaints(
+		pub, dealingMessages, verificationMessages, resolutionMessages)
+	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(
+		pub, auditingMessages, disqualifiedDealersByComplaints)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to compute qualified dealers: %w", err)
 	}
@@ -143,6 +162,7 @@ func StartCommitteeParty(
 			pub, prv, indices.Next,
 			dealingMessages, verificationMessages,
 			qualifiedDealers, lagrangeCoefs,
+			resolvedSharesS, resolvedSharedR,
 		)
 		if err != nil {
 			return nil, nil, err

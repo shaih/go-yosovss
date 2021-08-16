@@ -5,7 +5,6 @@ const (
 	numCommittees = 6 // number of committees
 )
 
-
 func rangeSlice(start, length int) []int {
 	s := make([]int, length)
 	for i := 0; i < length; i++ {

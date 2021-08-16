@@ -39,4 +39,3 @@ func (c *Committees) Indices(id int) CommitteeIndices {
 		Next: common.IntIndexOf(c.Next, id),
 	}
 }
-

@@ -86,3 +86,22 @@ func ReceiveAuditingMessages(bc communication.BroadcastChannel, parties []int) (
 
 	return messages, nil
 }
+
+// This file is a template generating gen-matrix_generic.go
+
+// ReceiveResolutionMessages receives and parse the messages sent by dealers in the dealing round
+// parties is the list of parties in the round
+func ReceiveResolutionMessages(bc communication.BroadcastChannel, parties []int) ([]ResolutionMessage, error) {
+	messages := make([]ResolutionMessage, len(parties))
+
+	_, bm := bc.ReceiveRound()
+
+	for i, party := range parties {
+		err := msgpack.Decode(bm[party].Payload, &messages[i])
+		if err != nil {
+			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
+		}
+	}
+
+	return messages, nil
+}

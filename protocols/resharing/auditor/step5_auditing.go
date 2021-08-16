@@ -42,7 +42,7 @@ func PerformAuditing(
 
 	for i := 0; i < pub.N; i++ {
 		witnesses := make([]FullWitness, 0, pub.N) // list of witnesses
-		nbWitnesses := 0 // number of actual witnesses
+		nbWitnesses := 0                           // number of actual witnesses
 		// since we cannot shrink the witnesses slice easily
 		// what we do is moving the used witnesses to the end
 		// and decrementing nbWitnesses
@@ -66,7 +66,7 @@ func PerformAuditing(
 		}
 
 		for {
-			if nbWitnesses > pub.T - len(invalidWit) {
+			if nbWitnesses > pub.T-len(invalidWit) {
 				// dealer i is disqualified
 				break
 			}

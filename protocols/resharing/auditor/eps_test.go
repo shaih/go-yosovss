@@ -13,9 +13,9 @@ func TestReconstructEpsKey(t *testing.T) {
 		n int
 		d int
 	}{
-		{11,5},
-		{2,1},
-		{21,3},
+		{11, 5},
+		{2, 1},
+		{21, 3},
 	}
 
 	for _, tc := range testCases {

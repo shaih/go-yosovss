@@ -145,7 +145,9 @@ func checkProtocolResults(
 
 	// Check that all nextShares are valid
 	for j := 0; j < pub.N; j++ {
-		vss.VerifyShare(vssParams, &nextShares[j], nextCommitments)
+		valid, err := vss.VerifyShare(vssParams, &nextShares[j], nextCommitments)
+		require.NoError(err)
+		assert.True(valid)
 	}
 
 	// Check the reconstructed secret is valid

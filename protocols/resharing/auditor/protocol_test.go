@@ -65,8 +65,9 @@ func TestResharingProtocol(t *testing.T) {
 	)
 }
 
-func TestResharingProtocolCheatingDealer(t *testing.T) {
+func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 	// Make the dealer 0 cheating so that it is disqualified
+	// comS is made incorrect
 
 	var err error
 
@@ -74,7 +75,7 @@ func TestResharingProtocolCheatingDealer(t *testing.T) {
 	assert := assert.New(t)
 
 	const (
-		n          = 12                 // number of parties per committee
+		n          = 12                // number of parties per committee
 		numParties = n * numCommittees // total number of parties
 		tt         = 2                 // threshold of malicious parties
 	)
@@ -127,7 +128,7 @@ func TestResharingProtocolCheatingDealer(t *testing.T) {
 			auditingMessages, err := ReceiveAuditingMessages(prvs[0].BC, pub.Committees.Aud)
 			require.NoError(err)
 
-			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, auditingMessages)
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, auditingMessages, map[int]bool{})
 			require.NoError(err)
 
 			// Check qualified dealers are [1,...,t+1]
@@ -156,5 +157,118 @@ func TestResharingProtocolCheatingDealer(t *testing.T) {
 		rnd,
 		outputCommitments[1:], // ignore dealer 0
 		outputShares[1:],      // ignore dealer 0
+	)
+}
+
+func TestResharingProtocolVerifiedComplain(t *testing.T) {
+	// Make the verification member k=0 cheating and complaining about dealer 0
+	// so that future broadcast needs to be used
+
+	var err error
+
+	require := require.New(t)
+	assert := assert.New(t)
+
+	const (
+		n          = 12                // number of parties per committee
+		numParties = n * numCommittees // total number of parties
+		tt         = 2                 // threshold of malicious parties
+	)
+
+	pub, prvs, o, secret, rnd := setupResharingSeq(t, n, tt)
+
+	// Output of all parties
+	outputCommitments := make([][]pedersen.Commitment, numParties)
+	outputShares := make([]*vss.Share, numParties)
+
+	var wg sync.WaitGroup
+
+	// Start protocol for all but dealer 0
+	for party := 0; party < numParties; party++ {
+		if party == n {
+			// this is verification member k=0
+			continue
+		}
+		wg.Add(1)
+		go func(party int, wg *sync.WaitGroup) {
+			defer wg.Done()
+			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			require.NoError(err)
+		}(party, &wg)
+	}
+
+	// Start cheating dealer 0
+	{
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+
+			prv := prvs[n]
+
+			// Dealing
+			prv.BC.Send([]byte{})
+			dealingMessages, err := ReceiveDealingMessages(prv.BC, pub.Committees.Hold)
+			require.NoError(err)
+
+			// Ver
+			complaints := make([]bool, n)
+			complaints[0] = true
+			prv.BC.Send(msgpack.Encode(VerificationMessage{
+				Complaints: complaints,
+				EncShares:  nil,
+			}))
+			verificationMessages, err := ReceiveVerificationMessages(prv.BC, pub.Committees.Ver)
+			require.NoError(err)
+
+			// Res
+			prv.BC.Send([]byte{})
+			resolutionMessages, err := ReceiveResolutionMessages(prv.BC, pub.Committees.Res)
+			require.NoError(err)
+
+			// Wit
+			prv.BC.Send([]byte{})
+			_, err = ReceiveWitnessMessages(prv.BC, pub.Committees.Wit)
+			require.NoError(err)
+
+			// Aud
+			prv.BC.Send([]byte{})
+			auditingMessages, err := ReceiveAuditingMessages(prv.BC, pub.Committees.Aud)
+			require.NoError(err)
+
+			_, _, disqualifiedDealers, err := ResolveComplaints(pub, dealingMessages, verificationMessages, resolutionMessages)
+			require.NoError(err)
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, auditingMessages, disqualifiedDealers)
+			require.NoError(err)
+
+			// Check qualified dealers are [0,...,t]
+			assert.Equal(rangeSlice(0, pub.T+1), qualifiedDealers)
+		}(&wg)
+	}
+
+	// Simulate the protocol for a fixed number of rounds
+	// Naively switches rounds whenever every party has sent a message
+	for o.Round < numRounds {
+		err := o.ReceiveMessages()
+		require.NoError(err)
+		err = o.Broadcast()
+		require.NoError(err)
+		o.Round++
+	}
+
+	// Wait for all go routines to finish
+	wg.Wait()
+
+	// fix committee verification n:
+	outputCommitments[n] = outputCommitments[0]
+	outputShares[n] = outputShares[0]
+
+	// Check the results
+	checkProtocolResults(
+		t,
+		pub,
+		secret,
+		rnd,
+		outputCommitments,
+		outputShares,
 	)
 }
