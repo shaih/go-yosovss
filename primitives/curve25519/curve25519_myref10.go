@@ -33,3 +33,15 @@ func MultBaseGPointScalar(n *Scalar) (*Point, error) {
 	}
 	return &r, nil
 }
+
+// AddPoints sums the points given as input using a more customized algorithm
+func AddPoints(pointsToSum []Point) (*Point, error) {
+	r := Point{}
+	// TODO WARNING: using pointsToSum[0][0] assumes that the slice is contiguous
+	result := myref10.Crypto_ed25519_add_points(&r[0], &pointsToSum[0][0], len(pointsToSum))
+	if result != 0 {
+		return nil, fmt.Errorf("failed to summing points: %d", result)
+	}
+
+	return &r, nil
+}

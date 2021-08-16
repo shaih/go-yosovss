@@ -187,3 +187,17 @@ func multBaseGPointScalar2(n *Scalar) (*Point, error) {
 	}
 	return &r, nil
 }
+
+// AddPointsNaive sums the points given as input
+func AddPointsNaive(pointsToSum []Point) (*Point, error) {
+	var err error
+	r := &Point{}
+	*r = PointInfinity
+	for _, p := range pointsToSum {
+		r, err = AddPoint(r, &p)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
+}

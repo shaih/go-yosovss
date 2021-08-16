@@ -62,31 +62,36 @@ func CheckDealerCommitmentsWithSeed(
 		return false, fmt.Errorf("error converting seed to bytes: %w", err)
 	}
 
-	// Set comSprime to 0
+	//// Set comSprime to 0
+	//for k := 0; k < n+1; k++ {
+	//	comSprime[k] = curve25519.PointInfinity
+	//}
+
 	for k := 0; k < n+1; k++ {
-		comSprime[k] = curve25519.PointInfinity
-	}
+		pointsToSum := make([]curve25519.Point, 0, n+1)
 
-	// First row is a bit different: it is origCom, comS[0][0], ..., comS[n-1][0]
-	if GetBit(r, 0) {
-		comSprime[0] = *origCom
-		for k := 0; k < n; k++ {
-			comSprime[k+1] = comS[k][0]
-		}
-	}
-
-	// Other rows are normal
-	for j := 0; j < n; j++ {
-		if GetBit(r, j+1) { // row (j+1) is selected
-			for k := 0; k < n+1; k++ {
-				sum, err := curve25519.AddPoint(&comSprime[k], &comS[j][k])
-				if err != nil {
-					return false, fmt.Errorf("error adding points checking seed: %w", err)
-				}
-				comSprime[k] = *sum
+		// First row is a bit different: it is origCom, comS[0][0], ..., comS[n-1][0]
+		if GetBit(r, 0) {
+			if k == 0{
+				pointsToSum = append(pointsToSum, *origCom)
+			} else {
+				pointsToSum = append(pointsToSum, comS[k-1][0])
 			}
-
 		}
+
+		// Other rows are normal
+		for j := 0; j < n; j++ {
+			if GetBit(r, j+1) { // row (j+1) is selected
+				pointsToSum = append(pointsToSum, comS[j][k])
+			}
+		}
+
+		// Sum all the selected points
+		c, err := curve25519.AddPoints(pointsToSum)
+		if err != nil {
+			return false, fmt.Errorf("error while adding points for k=%d: %w", k, err)
+		}
+		comSprime[k] = *c
 	}
 
 	// Check comS' is ok

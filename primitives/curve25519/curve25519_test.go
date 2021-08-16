@@ -1,6 +1,7 @@
 package curve25519
 
 import (
+	"github.com/stretchr/testify/require"
 	"log"
 	"testing"
 
@@ -145,53 +146,24 @@ func TestPointInfinity(t *testing.T) {
 
 }
 
-func BenchmarkMultPointScalar(b *testing.B) {
+func TestAddPointsNaive(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
 	p := RandomPoint()
-	n := RandomScalar()
 
-	for i := 0; i < b.N; i++ {
-		_, _ = MultPointScalar(p, n)
-	}
-}
+	r, err := AddPointsNaive([]Point{PointInfinity, PointInfinity, PointInfinity})
+	require.NoError(err)
+	assert.Equal(PointInfinity, *r)
 
-func BenchmarkMultBaseGPointScalar(b *testing.B) {
-	n := RandomScalar()
+	r, err = AddPointsNaive([]Point{PointInfinity, *p, PointInfinity})
+	require.NoError(err)
+	assert.Equal(*p, *r)
 
-	for i := 0; i < b.N; i++ {
-		_, _ = MultBaseGPointScalar(n)
-	}
-}
+	r, err = AddPointsNaive([]Point{PointInfinity, *p, *p, *p, PointInfinity, *p})
+	require.NoError(err)
+	r2, err := MultPointScalar(p, GetScalar(4))
+	require.NoError(err)
+	assert.Equal(*r2, *r)
 
-func BenchmarkMultBaseGPointScalar2(b *testing.B) {
-	n := RandomScalar()
-
-	for i := 0; i < b.N; i++ {
-		_, _ = multBaseGPointScalar2(n)
-	}
-}
-
-func BenchmarkMultBaseHPointScalar(b *testing.B) {
-	n := RandomScalar()
-
-	for i := 0; i < b.N; i++ {
-		_, _ = MultBaseHPointScalar(n)
-	}
-}
-
-func BenchmarkAddPoint(b *testing.B) {
-	p := RandomPoint()
-	q := RandomPoint()
-
-	for i := 0; i < b.N; i++ {
-		_, _ = AddPoint(p, q)
-	}
-}
-
-func BenchmarkMultScalar(b *testing.B) {
-	p := RandomScalar()
-	n := RandomScalar()
-
-	for i := 0; i < b.N; i++ {
-		_ = MultScalar(p, n)
-	}
 }

@@ -80,6 +80,7 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 
 	seed := [SeedLength]byte{0x01, 0x02}
 	valid, err := CheckDealerCommitmentsWithSeed(vssParams, seed, origCom, comS)
+	require.NoError(err)
 	assert.True(valid, "valid commitments should pass the test")
 
 	// make the commitments incorrect
@@ -104,4 +105,37 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 		}
 	}
 	assert.True(invalid, "commitments should have been detected as invalid at least once over 20 tries")
+}
+
+func BenchmarkCheckDealerCommitmentsWithSeed(b *testing.B) {
+	assert := assert.New(b)
+	require := require.New(b)
+
+	// Don't forget to switch back to a small n
+	const (
+		tt = 64
+		n  = 2*tt + 1
+	)
+
+	fmt.Printf("BenchmarkCheckDealerCommitmentsWithSeed n=%d, t=%d\n", n, tt)
+
+	vssParams, err := vss.NewVSSParams(pedersen.GenerateParams(), n, tt-1)
+	require.NoError(err)
+
+	s := curve25519.RandomScalar()
+	r := curve25519.RandomScalar()
+	origCom, err := pedersen.GenerateCommitmentFixedR(vssParams.PedersenParams, s, r)
+	require.NoError(err)
+
+	_, comS, err := GenerateDealerSharesCommitments(vssParams, s, r)
+
+	seed := [SeedLength]byte{0x01, 0x02}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		valid, err := CheckDealerCommitmentsWithSeed(vssParams, seed, origCom, comS)
+		require.NoError(err)
+		assert.True(valid, "valid commitments should pass the test")
+	}
 }

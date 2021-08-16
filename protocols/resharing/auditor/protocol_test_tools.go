@@ -13,7 +13,7 @@ import (
 // setupResharingSeq setup the resharing protocol for the given number of committees party n, the given treshold t
 // the number of parties is n * numCommittees: each committee has n different parties taken in order
 func setupResharingSeq(
-	t *testing.T,
+	t testing.TB,
 	n int,
 	tt int,
 ) (
@@ -30,7 +30,7 @@ func setupResharingSeq(
 // the number of parties is n: each committee has the same n parties in the same order
 // used for benchmarking essentially
 func setupResharingSame(
-	t *testing.T,
+	t testing.TB,
 	n int,
 	tt int,
 ) (
@@ -46,7 +46,7 @@ func setupResharingSame(
 // setupResharing setup the resharing protocol for the given number of committees party n, the given treshold t
 // the number of parties numParties, the committees Committees
 func setupResharing(
-	t *testing.T,
+	t testing.TB,
 	n int,
 	tt int,
 	numParties int,

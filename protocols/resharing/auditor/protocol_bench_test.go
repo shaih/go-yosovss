@@ -236,7 +236,7 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 128      // threshold of malicious parties
+		tt         = 256      // threshold of malicious parties
 		n          = 2*tt + 1 // number of parties per committee
 		numParties = n        // total number of parties
 	)
@@ -402,4 +402,33 @@ func nextManualRound(t *testing.T, o *fake.Orchestrator, lastTime *time.Time) {
 	*lastTime = time.Now()
 
 	o.Round++
+}
+
+func BenchmarkPerformDealing(b *testing.B) {
+	var err error
+
+	// Disable logging for efficiency
+	originalLogLevel := log.GetLevel()
+	log.SetLevel(log.ErrorLevel)
+
+	require := require.New(b)
+
+	const (
+		tt         = 64       // threshold of malicious parties
+		n          = 2*tt + 1 // number of parties per committee
+		numParties = n        // total number of parties
+	)
+
+	fmt.Printf("BenchmarkPerformDealing: n=%d, t=%d\n", n, tt)
+
+	pub, prvs, _, _, _ := setupResharingSame(b, n, tt)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err = PerformDealing(pub, &prvs[0])
+		require.NoError(err)
+	}
+
+	// Reset log level
+	log.SetLevel(originalLogLevel)
 }
