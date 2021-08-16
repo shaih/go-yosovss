@@ -141,3 +141,21 @@ func TestPointInfinity(t *testing.T) {
 	//assert.Equal(t, PointInfinity, r2, "0*p = infinity")
 
 }
+
+func BenchmarkMultPointScalar(b *testing.B) {
+	p := RandomPoint()
+	n := RandomScalar()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = MultPointScalar(p, n)
+	}
+}
+
+func BenchmarkMultScalar(b *testing.B) {
+	p := RandomScalar()
+	n := RandomScalar()
+
+	for i := 0; i < b.N; i++ {
+		_ = MultScalar(p, n)
+	}
+}

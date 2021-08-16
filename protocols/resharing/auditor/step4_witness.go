@@ -88,7 +88,7 @@ func CheckDealerCommitmentsWithSeed(
 	}
 
 	// Check comS' is ok
-	return vss.VerifyCommitments(vssParams, comSprime)
+	return vss.VerifyCommitmentsRandomized(vssParams, comSprime)
 }
 
 // PerformWitness executes what a witness committee member does in the dealing round

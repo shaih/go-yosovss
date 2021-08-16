@@ -40,6 +40,11 @@ func TestVSS(t *testing.T) {
 			require.NoError(err)
 			assert.True(valid, "honestly generated commitments are valid")
 
+			// Checking that commitments are valid with randomized algorithm
+			valid, err = VerifyCommitmentsRandomized(params, commitments)
+			require.NoError(err)
+			assert.True(valid, "honestly generated commitments are valid with randomized algorithm")
+
 			// Checking that shares are valid
 			for i := 0; i < tc.n; i++ {
 				valid, err = VerifyShare(params, &shares[i], commitments)
@@ -72,9 +77,133 @@ func TestVSS(t *testing.T) {
 			// Checking that verify commitments fail with first invalid commitment
 			commitmentsWith0Invalid := make([]pedersen.Commitment, tc.n+1)
 			copy(commitmentsWith0Invalid, commitments)
-			valid, err = VerifyCommitments(params, commitments)
+			commitmentsWith0Invalid[0], err = curve25519.MultPointScalar(commitmentsWith0Invalid[0], curve25519.GetScalar(2))
 			require.NoError(err)
-			assert.True(valid, "incorrect commitments are invalid")
+			valid, err = VerifyCommitments(params, commitmentsWith0Invalid)
+			require.NoError(err)
+			assert.False(valid, "incorrect commitments are invalid")
+
+			// Checking that verify commitments fail with first invalid commitment with randomized algorithm
+			valid, err = VerifyCommitmentsRandomized(params, commitmentsWith0Invalid)
+			require.NoError(err)
+			assert.False(valid, "incorrect commitments are invalid with randomized algorithm")
+
+			// Checking that verify commitments fail with first invalid commitment
+			commitmentsWithLastInvalid := make([]pedersen.Commitment, tc.n+1)
+			copy(commitmentsWithLastInvalid, commitments)
+			commitmentsWithLastInvalid[tc.n-1], err = curve25519.MultPointScalar(commitmentsWithLastInvalid[tc.n-1], curve25519.GetScalar(3))
+			require.NoError(err)
+			valid, err = VerifyCommitments(params, commitmentsWithLastInvalid)
+			require.NoError(err)
+			assert.False(valid, "incorrect commitments are invalid")
+
+			// Checking that verify commitments fail with first invalid commitment with randomized algorithm
+			valid, err = VerifyCommitmentsRandomized(params, commitmentsWithLastInvalid)
+			require.NoError(err)
+			assert.False(valid, "incorrect commitments are invalid with randomized algorithm")
+		})
+	}
+}
+
+// The functions below benchmark each step of the VSS verification
+
+func BenchmarkVerifyCommitmentsStep1GenerateUVector(b *testing.B) {
+	testCases := []struct {
+		n int
+		d int
+	}{
+		{2*32 + 1, 32},
+		{2*64 + 1, 64},
+		{2*128 + 1, 128},
+		{2*256 + 1, 256},
+	}
+
+	for _, tc := range testCases {
+		b.Run(fmt.Sprintf("n=%d,d=%d", tc.n, tc.d), func(b *testing.B) {
+			n := tc.n
+			d := tc.d
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				// Generate a random vector u
+				uVector := curve25519.NewScalarMatrix(n-d, 1)
+				for i := 0; i < n-d; i++ {
+					uVector.Set(i, 0, curve25519.RandomScalar())
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkVerifyCommitmentsStep2MatrixMult(b *testing.B) {
+	testCases := []struct {
+		n int
+		d int
+	}{
+		{2*32 + 1, 32},
+		{2*64 + 1, 64},
+		{2*128 + 1, 128},
+		{2*256 + 1, 256},
+	}
+
+	for _, tc := range testCases {
+		b.Run(fmt.Sprintf("n=%d,d=%d", tc.n, tc.d), func(b *testing.B) {
+			n := tc.n
+			d := tc.d
+
+			params, err := NewVSSParams(pedersen.GenerateParams(), n, d)
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			// Generate a random vector u
+			uVector := curve25519.NewScalarMatrix(n-d, 1)
+			for i := 0; i < n-d; i++ {
+				uVector.Set(i, 0, curve25519.RandomScalar())
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				// Multiply the parity matrix by the vector u to get a random vector v in the image of the parity matrix
+				_, err = curve25519.ScalarMatrixMul(&params.ParityMatrix, uVector)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkVerifyCommitmentsStep3PointScalarMult(b *testing.B) {
+	testCases := []struct {
+		n int
+		d int
+	}{
+		{2*32 + 1, 32},
+		{2*64 + 1, 64},
+		{2*128 + 1, 128},
+		{2*256 + 1, 256},
+	}
+
+	for _, tc := range testCases {
+		b.Run(fmt.Sprintf("n=%d,d=%d", tc.n, tc.d), func(b *testing.B) {
+			n := tc.n
+
+			comVector := curve25519.NewPointMatrix(1, n+1)
+			vVector := curve25519.NewScalarMatrix(n+1, 1)
+			for i := 0; i <= n; i++ {
+				comVector.Set(0, i, curve25519.RandomPoint())
+				vVector.Set(i, 0, curve25519.RandomScalar())
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				// Multiply comVector by v
+				_, err := curve25519.PointMatrixScalarMatrixMul(comVector, vVector)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
 		})
 	}
 }

@@ -3,7 +3,6 @@ package fake
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/shaih/go-yosovss/communication"
 )
@@ -15,7 +14,6 @@ type Orchestrator struct {
 	RoundMsgs    map[int]communication.BroadcastMessage
 	MessageSizes map[int]int
 	Round        int
-	Time         time.Time
 }
 
 // NewOrchestrator creates a new orchestrator
@@ -25,7 +23,6 @@ func NewOrchestrator() Orchestrator {
 		RoundMsgs:    make(map[int]communication.BroadcastMessage),
 		MessageSizes: make(map[int]int),
 		Round:        0,
-		Time:         time.Now(),
 	}
 }
 
@@ -74,8 +71,14 @@ func (o Orchestrator) ReceiveMessages() error {
 	return nil
 }
 
-// Broadcast sends to all parties the messages in the round
-func (o Orchestrator) Broadcast() error {
+// WaitMessageChannel waits until the indicated channel received a message
+// Does not remove the message from the channel, so it can be used later with ReceiveMessages()
+func (o Orchestrator) WaitMessageChannel(channel int) {
+	msg := <-o.Channels[channel].SendChannel // wait
+	o.Channels[channel].SendChannel <- msg   // put back the message
+}
+
+func (o Orchestrator) collectRoundMessages() communication.RoundMessages {
 	var msgs []communication.BroadcastMessage
 	for i := 0; i < len(o.Channels); i++ {
 		msgs = append(msgs, o.RoundMsgs[i])
@@ -84,14 +87,27 @@ func (o Orchestrator) Broadcast() error {
 		Messages: msgs,
 		Round:    o.Round,
 	}
+	return roundMsgs
+}
+
+// SendMessageChannels sends the round messages to the indicated channels
+// Calling it with a slice [0,...,len(o.Channels)-1] is equivalent to calling Broadcast()
+func (o Orchestrator) SendMessageChannels(channels []int) error {
+	roundMsgs := o.collectRoundMessages()
+
+	for _, i := range channels {
+		o.Channels[i].ReceiveChannel <- roundMsgs
+	}
+	return nil
+}
+
+// Broadcast sends to all parties the messages in the round
+func (o Orchestrator) Broadcast() error {
+	roundMsgs := o.collectRoundMessages()
 
 	for _, bc := range o.Channels {
 		bc.ReceiveChannel <- roundMsgs
 	}
-
-	// Code for benchmarking
-	// fmt.Printf("broadcast time: %v \n", time.Now())
-
 	return nil
 }
 

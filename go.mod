@@ -10,6 +10,10 @@ require (
 	github.com/mgechev/revive v1.0.7 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
-	golang.org/x/sys v0.0.0-20210603125802-9665404d3644 // indirect
+	github.com/ugorji/go/codec v1.2.6
+	github.com/ugorji/go/codec/codecgen v1.2.6 // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/mod v0.5.0 // indirect
+	golang.org/x/sys v0.0.0-20210816074244-15123e1e1f71 // indirect
+	golang.org/x/tools v0.1.5 // indirect
 )

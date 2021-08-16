@@ -27,3 +27,16 @@ func seqCommittees(n int) Committees {
 		Next: rangeSlice(5*n, n),
 	}
 }
+
+// sameCommittees generates committees of n parties
+// where parties 0,...,n-1 are in all the committees
+func sameCommittees(n int) Committees {
+	return Committees{
+		Hold: rangeSlice(0, n),
+		Ver:  rangeSlice(0, n),
+		Res:  rangeSlice(0, n),
+		Wit:  rangeSlice(0, n),
+		Aud:  rangeSlice(0, n),
+		Next: rangeSlice(0, n),
+	}
+}

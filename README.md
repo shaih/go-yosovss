@@ -17,6 +17,13 @@ Go implementation of YOSO-style verifiable secret sharing
 - `libsodium` 1.0
     - on Ubuntu: `sudo apt install libsodium-dev`
     - on macOS: `brew install libsodium`
+- `swig`
+    - Used in `primitives/vss` to interface with NTL
+    - on Ubuntu: `sudo apt install swig`
+    - on macOS: `brew install swig`
+- `ntl`:
+    - on Ubuntu: `sudo apt install libntl-dev`
+    - on macOS: `brew install ntl`
 
 Note: Contrary to the Algorand source code, we do not have the same requirement of traceability, so we install `libsodium` independently:
 https://github.com/algorand/go-algorand/issues/20#issuecomment-506777532
@@ -41,11 +48,11 @@ make test
   - on Ubuntu: https://github.com/securego/gosec#local-installation
   - on macOS: `brew install gosec`
 - `genny`: `go get github.com/cheekybits/genny`:
-  - Used to generate files `gen-*`
+  - Used to generate files `gen-*` except `gen-codecgen.go`
   - Note that we commit those files too in case `genny` becomes unavailable
-- `swig`:
-  - Used in `primitives/vss` to interface with NTL
-  - on macOS: `brew install swig`
+- `codecgen`: `go get -u github.com/ugorji/go/codec/codecgen`:
+  - Used to improve performance of go-codec
+  - Do not forget to update `protocol/resharing/auditor/codecgen.go` if adding new structures that need to be encoded
 
 ### Lint code
 

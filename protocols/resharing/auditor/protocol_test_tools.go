@@ -23,16 +23,46 @@ func setupResharingSeq(
 	secret curve25519.Scalar,
 	rnd curve25519.Scalar,
 ) {
-	require := require.New(t)
+	return setupResharing(t, n, tt, n*numCommittees, seqCommittees(n))
+}
 
-	numParties := n * numCommittees
+// setupResharingSame setup the resharing protocol for the given number of committees party n, the given treshold t
+// the number of parties is n: each committee has the same n parties in the same order
+// used for benchmarking essentially
+func setupResharingSame(
+	t *testing.T,
+	n int,
+	tt int,
+) (
+	pub *PublicInput,
+	prvs []PrivateInput,
+	o fake.Orchestrator,
+	secret curve25519.Scalar,
+	rnd curve25519.Scalar,
+) {
+	return setupResharing(t, n, tt, n, sameCommittees(n))
+}
+
+// setupResharing setup the resharing protocol for the given number of committees party n, the given treshold t
+// the number of parties numParties, the committees Committees
+func setupResharing(
+	t *testing.T,
+	n int,
+	tt int,
+	numParties int,
+	committees Committees,
+) (
+	pub *PublicInput,
+	prvs []PrivateInput,
+	o fake.Orchestrator,
+	secret curve25519.Scalar,
+	rnd curve25519.Scalar,
+) {
+	require := require.New(t)
 
 	// Create the orchestrator
 	o = fake.NewOrchestrator()
 	var channels []fake.PartyBroadcastChannel
-
-	// Form initial committees, which are comprised of the ids of the parties that are participating in them
-	committees := seqCommittees(n)
 
 	// Generate parameters and keys
 	encPKs, encSKs := curve25519.SetupKeys(numParties)
@@ -70,10 +100,9 @@ func setupResharingSeq(
 	}
 
 	// Generate shares array: allPartiesShares[party] is nil if party not in holding/dealer committee
-	// assume that holding committee is 0,...,n-1
 	allPartiesShares := make([]*vss.Share, numParties)
-	for i := 0; i < n; i++ {
-		allPartiesShares[i] = &shares[i]
+	for i, party := range committees.Hold {
+		allPartiesShares[party] = &shares[i]
 	}
 
 	// Generate the private inputs

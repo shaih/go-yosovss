@@ -238,6 +238,7 @@ func VerifyShare(params *Params, share *Share, commitments []pedersen.Commitment
 // i.e., they are on a polynomial of degree d
 func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool, error) {
 	n := params.N
+	d := params.D
 
 	err := checkCommitmentsLength(params, commitments)
 	if err != nil {
@@ -246,6 +247,50 @@ func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool,
 
 	comVector := curve25519.PointMatrixFromEntries(1, n+1, commitments)
 	y, err := curve25519.PointMatrixScalarMatrixMul(comVector, &params.ParityMatrix)
+	if err != nil {
+		return false, err
+	}
+
+	// Checking that the vector y is zero
+	zero := true
+	for j := 0; j < n-d; j++ {
+		if !curve25519.PointEqual(curve25519.PointInfinity, y.At(0, j)) {
+			zero = false
+			break
+		}
+	}
+	return zero, nil
+}
+
+// VerifyCommitmentsRandomized is similar to VerifyCommitments
+// except it uses a randomized test
+// it picks a random vector in the image of the parity matrix
+// probability of failure = 1/p which is negligible
+func VerifyCommitmentsRandomized(params *Params, commitments []pedersen.Commitment) (bool, error) {
+	n := params.N
+	d := params.D
+
+	err := checkCommitmentsLength(params, commitments)
+	if err != nil {
+		return false, err
+	}
+
+	comVector := curve25519.PointMatrixFromEntries(1, n+1, commitments)
+
+	// Generate a random vector u
+	uVector := curve25519.NewScalarMatrix(n-d, 1)
+	for i := 0; i < n-d; i++ {
+		uVector.Set(i, 0, curve25519.RandomScalar())
+	}
+
+	// Multiply the parity matrix by the vector u to get a random vector v in the image of the parity matrix
+	vVector, err := curve25519.ScalarMatrixMul(&params.ParityMatrix, uVector)
+	if err != nil {
+		return false, err
+	}
+
+	// Multiply comVector by v
+	y, err := curve25519.PointMatrixScalarMatrixMul(comVector, vVector)
 	if err != nil {
 		return false, err
 	}
