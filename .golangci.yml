@@ -3,12 +3,16 @@ linters:
     - structcheck
     - unused
     - typecheck # disabled because not working with swig
+    - deadcode # disabled because not working with swig
   enable:
     - lll
     - revive
     - gofmt
     - gci
     #- gosec
+run:
+  skip-dirs:
+    - primitives/curve25519/myref10
 issues:
   exclude-rules:
     - path: primitives/vss

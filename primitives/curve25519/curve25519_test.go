@@ -154,11 +154,19 @@ func BenchmarkMultPointScalar(b *testing.B) {
 	}
 }
 
-func BenchmarkMultBasePointScalar(b *testing.B) {
+func BenchmarkMultBaseGPointScalar(b *testing.B) {
 	n := RandomScalar()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = MultBasePointScalar(n)
+		_, _ = MultBaseGPointScalar(n)
+	}
+}
+
+func BenchmarkMultBaseHPointScalar(b *testing.B) {
+	n := RandomScalar()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = MultBaseHPointScalar(n)
 	}
 }
 

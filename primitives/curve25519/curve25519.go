@@ -171,8 +171,8 @@ func MultPointScalar(p *Point, n *Scalar) (*Point, error) {
 	return &r, nil
 }
 
-// MultPointScalar computes the product of a scalar with the base point
-func MultBasePointScalar(n *Scalar) (*Point, error) {
+// MultBaseGPointScalar computes the product of a scalar with the base point G
+func MultBaseGPointScalar(n *Scalar) (*Point, error) {
 	var r Point
 
 	// High-level libsodium forbids result to be 0
