@@ -43,17 +43,7 @@ func GenerateCommitment(params *Params, m *Message) (*Commitment, *Decommitment,
 
 	r := curve25519.RandomScalar()
 
-	gm, err := curve25519.MultBaseGPointScalar(m) // Compute g^m
-	if err != nil {
-		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
-	}
-
-	hr, err := curve25519.MultBaseHPointScalar(r) // Compute h^r
-	if err != nil {
-		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
-	}
-
-	c, err := curve25519.AddPoint(gm, hr) // Compute g^m * h^r
+	c, err := curve25519.DoubleMultBaseGHPointScalar(m, r) // Compute g^m * h^r
 	if err != nil {
 		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
@@ -64,17 +54,7 @@ func GenerateCommitment(params *Params, m *Message) (*Commitment, *Decommitment,
 // GenerateCommitmentFixedR creates a commitment for some value m with a fixed decommitment r
 func GenerateCommitmentFixedR(params *Params, m *Message, r *Decommitment) (*Commitment, error) {
 
-	gm, err := curve25519.MultBaseGPointScalar(m) // Compute g^m
-	if err != nil {
-		return nil, fmt.Errorf("commitment generation failed: %v", err)
-	}
-
-	hr, err := curve25519.MultBaseHPointScalar(r) // Compute h^r
-	if err != nil {
-		return nil, fmt.Errorf("commitment generation failed: %v", err)
-	}
-
-	c, err := curve25519.AddPoint(gm, hr) // Compute g^m * h^r
+	c, err := curve25519.DoubleMultBaseGHPointScalar(m, r) // Compute g^m * h^r
 	if err != nil {
 		return nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
@@ -85,17 +65,8 @@ func GenerateCommitmentFixedR(params *Params, m *Message, r *Decommitment) (*Com
 // VerifyCommitment checks if a commitment was for some message m under the
 // decommitment r
 func VerifyCommitment(params *Params, commitment *Commitment, m *Message, r *Decommitment) (bool, error) {
-	gm, err := curve25519.MultBaseGPointScalar(m) // Compute g^m
-	if err != nil {
-		return false, fmt.Errorf("verification failed: %v", err)
-	}
 
-	hr, err := curve25519.MultBaseHPointScalar(r) // Compute h^r
-	if err != nil {
-		return false, fmt.Errorf("verification failed: %v", err)
-	}
-
-	c, err := curve25519.AddPoint(gm, hr) // Compute g^m * h^r
+	c, err := curve25519.DoubleMultBaseGHPointScalar(m, r) // Compute g^m * h^r
 	if err != nil {
 		return false, fmt.Errorf("verification failed: %v", err)
 	}

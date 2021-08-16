@@ -95,3 +95,41 @@ func TestAddPoints(t *testing.T) {
 	require.NoError(err)
 	assert.Equal(*r2, *r)
 }
+
+func TestDoubleMultBaseGHPointScalar(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	a := RandomScalar()
+	b := RandomScalar()
+
+	// Computation naive
+	ag, err := MultBaseGPointScalar(a)
+	require.NoError(err)
+	bh, err := MultBaseHPointScalar(b)
+	require.NoError(err)
+	y1, err := AddPoint(ag, bh)
+	require.NoError(err)
+
+	// Computation with the fast function
+	y2, err := DoubleMultBaseGHPointScalar(a, b)
+	require.NoError(err)
+	assert.Equal(*y1, *y2)
+}
+
+func TestDoubleMultBaseGHPointScalarZero(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	y, err := DoubleMultBaseGHPointScalar(&ScalarZero, &ScalarZero)
+	require.NoError(err)
+	assert.Equal(PointInfinity, *y)
+
+	y, err = DoubleMultBaseGHPointScalar(&ScalarOne, &ScalarZero)
+	require.NoError(err)
+	assert.Equal(BaseG, *y)
+
+	y, err = DoubleMultBaseGHPointScalar(&ScalarZero, &ScalarOne)
+	require.NoError(err)
+	assert.Equal(BaseH, *y)
+}

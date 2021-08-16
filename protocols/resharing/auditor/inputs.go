@@ -13,7 +13,7 @@ import (
 // In the real-world, it would not and additional logic should be used for committee selection
 type PublicInput struct {
 	EncPKs                   []curve25519.PublicKey     // encryption public keys
-	SigPKs                   []curve25519.PublicSignKey // signature public keys
+	SigPKs                   []curve25519.PublicSignKey // signature public keys - NOT USED
 	VSSParams                vss.Params                 // parameters for the VSS
 	T                        int                        // max number of malicious parties (=VSSParams.D)
 	N                        int                        // size of the committee (=VSSParams.N)

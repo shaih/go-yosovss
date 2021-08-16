@@ -13,6 +13,11 @@ int
 crypto_scalarmult_ed25519_base_g(unsigned char *q,
                                  const unsigned char *n);
 
+int
+crypto_double_scalarmult_ed25519_base_gh(unsigned char *q,
+                                         const unsigned char *ng,
+                                         const unsigned char *nh);
+
 /**
  * Sum all the points in p and store the result in r
  * @param r result array of 32 bytes

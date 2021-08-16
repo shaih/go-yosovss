@@ -16,6 +16,11 @@ type PartyDebugParams struct {
 	SkipWitness                 bool // generate an empty witness
 	SkipRefreshing              bool // skip the refreshing part and return empty nextShares/nextCommitments
 	SkipVerificationVerifyShare bool // skip verification of VSS shares in verification
+	SkipDealingFutureBroadcast  bool // skip generating anything related to future broadcast when dealing
+	// warning: may trigger other issues. If one party skip future broadcast in dealing committee
+	// this flag must be set when calling ALL the other parties in the following committees
+	// as otherwise dealers may be incorrectly disqualified
+	// furthermore, no future broadcast should ever be needed or the code may panic
 }
 
 // StartCommitteeParty initiates the protocol for a party participating in a t-of-n Pedersen VSS protocol using
@@ -51,7 +56,7 @@ func StartCommitteeParty(
 	// The holding committee performs the two level sharing and sends shares
 	// to the verification committee.
 	if indices.Hold >= 0 {
-		msg, err := PerformDealing(pub, prv)
+		msg, err := PerformDealing(pub, prv, dbg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("party %d failed to perform dealing: %w", prv.Id, err)
 		}
@@ -164,6 +169,7 @@ func StartCommitteeParty(
 			resolutionMessages,
 			auditingMessages,
 			indices.Next,
+			dbg,
 		)
 		if err != nil {
 			return nil, nil, err

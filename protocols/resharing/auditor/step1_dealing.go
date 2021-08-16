@@ -69,7 +69,11 @@ func GenerateDealerSharesCommitments(
 
 // PerformDealing executes what a dealer does in the dealing round
 // and returns the message it should broadcast
-func PerformDealing(pub *PublicInput, prv *PrivateInput) (*DealingMessage, error) {
+func PerformDealing(
+	pub *PublicInput,
+	prv *PrivateInput,
+	dbg *PartyDebugParams,
+) (*DealingMessage, error) {
 	msg := &DealingMessage{
 		EncVerM: make([]curve25519.Ciphertext, pub.N),
 		EncResM: make([]curve25519.SymmetricCiphertext, pub.N),
@@ -89,9 +93,13 @@ func PerformDealing(pub *PublicInput, prv *PrivateInput) (*DealingMessage, error
 	// Generate keys and shares for resolution committee (future broadcast)
 	var epsL []EpsL
 	var epsKeys []curve25519.Key
-	epsKeys, epsL, msg.HashEps, err = GenerateAllEps(pub.N, pub.T)
-	if err != nil {
-		return nil, err
+	if !dbg.SkipDealingFutureBroadcast {
+		epsKeys, epsL, msg.HashEps, err = GenerateAllEps(pub.N, pub.T)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		msg.HashEps = [][][HashLength]byte{} // just to please go-codec
 	}
 
 	// Encryption for verification committee and resolution committee
@@ -104,15 +112,23 @@ func PerformDealing(pub *PublicInput, prv *PrivateInput) (*DealingMessage, error
 		// Encrypt M[k] for the verification committee
 		msg.EncVerM[k], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Ver[k]], mkMsg)
 
-		// Encrypt M[k] for resolution / future broadcast
-		// Use a zero nonce as the key is fresh
-		zeroNonce := curve25519.Nonce{}
-		msg.EncResM[k], err = curve25519.SymmetricEncrypt(epsKeys[k], zeroNonce, mkMsg)
+		if !dbg.SkipDealingFutureBroadcast {
+			// Encrypt M[k] for resolution / future broadcast
+			// Use a zero nonce as the key is fresh
+			zeroNonce := curve25519.Nonce{}
+			msg.EncResM[k], err = curve25519.SymmetricEncrypt(epsKeys[k], zeroNonce, mkMsg)
+		} else {
+			msg.EncResM[k] = curve25519.SymmetricCiphertext{} // just to please go-codec
+		}
 	}
 
 	// Encrypt epsL for each resolution committee member
 	for l := 0; l < pub.N; l++ {
-		msg.EncEpsL[l], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Res[l]], msgpack.Encode(epsL[l]))
+		if !dbg.SkipDealingFutureBroadcast {
+			msg.EncEpsL[l], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Res[l]], msgpack.Encode(epsL[l]))
+		} else {
+			msg.EncEpsL[l] = curve25519.Ciphertext{} // just to please go-codec
+		}
 	}
 
 	return msg, nil

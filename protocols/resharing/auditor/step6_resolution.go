@@ -15,15 +15,15 @@ type TripleIJK struct {
 
 // CheckDealingMessages check if msg is valid
 // If not, print an info log message
-func CheckDealingMessages(pub *PublicInput, msg DealingMessage, i int) bool {
+func CheckDealingMessages(pub *PublicInput, msg DealingMessage, i int, dbg *PartyDebugParams) bool {
 	// TODO: we actually may need to do that before ResolveComplaints
 	// TODO" tests may not be sufficient
 
 	n := pub.N
 
 	// Check dealer message are valid and disqualify if invalid
-	if len(msg.EncResM) != n ||
-		len(msg.HashEps) != n ||
+	if (!dbg.SkipDealingFutureBroadcast && len(msg.EncResM) != n) ||
+		(!dbg.SkipDealingFutureBroadcast && len(msg.HashEps) != n) ||
 		len(msg.EncVerM) != n ||
 		len(msg.ComS) != n {
 		log.Infof("dealer %d disqualified as it sent incorrect message", i)
@@ -42,10 +42,12 @@ func CheckDealingMessages(pub *PublicInput, msg DealingMessage, i int) bool {
 		}
 	}
 
-	for k := 0; k < n; k++ {
-		if len(msg.HashEps) != n {
-			log.Infof("dealer %d disqualified as it sent incorrect message", i)
-			return false
+	if !dbg.SkipDealingFutureBroadcast {
+		for k := 0; k < n; k++ {
+			if len(msg.HashEps) != n {
+				log.Infof("dealer %d disqualified as it sent incorrect message", i)
+				return false
+			}
 		}
 	}
 
@@ -63,6 +65,7 @@ func ResolveComplaints(
 	dealingMessages []DealingMessage,
 	verificationMessages []VerificationMessage,
 	resolutionMessages []ResolutionMessage,
+	dbg *PartyDebugParams,
 ) (
 	resolvedSharesS, resolvedSharesR map[TripleIJK]curve25519.Scalar,
 	disqualifiedDealers map[int]bool,
@@ -76,7 +79,7 @@ func ResolveComplaints(
 	disqualifiedDealers = map[int]bool{}
 
 	for i := 0; i < n; i++ {
-		if !CheckDealingMessages(pub, dealingMessages[i], i) {
+		if !CheckDealingMessages(pub, dealingMessages[i], i, dbg) {
 			disqualifiedDealers[i] = true
 			continue
 		}

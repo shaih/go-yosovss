@@ -72,7 +72,7 @@ func CheckDealerCommitmentsWithSeed(
 
 		// First row is a bit different: it is origCom, comS[0][0], ..., comS[n-1][0]
 		if GetBit(r, 0) {
-			if k == 0{
+			if k == 0 {
 				pointsToSum = append(pointsToSum, *origCom)
 			} else {
 				pointsToSum = append(pointsToSum, comS[k-1][0])

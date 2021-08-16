@@ -17,13 +17,14 @@ func PerformRefresh(
 	resolutionMessages []ResolutionMessage,
 	auditingMessages []AuditingMessage,
 	indexNext int, // if >=0, the party is the member number indexNext in the next holding committee
+	dbg *PartyDebugParams,
 ) (
 	[]pedersen.Commitment,
 	*vss.Share,
 	error,
 ) {
 	resolvedSharesS, resolvedSharedR, disqualifiedDealersByComplaints, err := ResolveComplaints(
-		pub, dealingMessages, verificationMessages, resolutionMessages)
+		pub, dealingMessages, verificationMessages, resolutionMessages, dbg)
 	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(
 		pub, auditingMessages, disqualifiedDealersByComplaints)
 	if err != nil {

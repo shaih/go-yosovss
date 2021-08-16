@@ -230,15 +230,18 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	// Disable logging for efficiency
 	originalLogLevel := log.GetLevel()
-	log.SetLevel(log.ErrorLevel)
+	//log.SetLevel(log.ErrorLevel)
 
 	require := require.New(t)
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 10      // threshold of malicious parties
-		n          = 2*tt + 1 // number of parties per committee
-		numParties = n        // total number of parties
+		tt                                     = 128      // threshold of malicious parties
+		n                                      = 2*tt + 1 // number of parties per committee
+		numParties                             = n        // total number of parties
+		skipDealingFutureBroadcastOtherParties = true     // skip generating future broadcast for other parties
+		// (if true: slightly cheating on timing, and definitely cheating on size)
+		// necessary for large n (otherwise way too slow)
 	)
 
 	fmt.Printf("TestResharingProtocolBenchmarkManualParty0: n=%d, t=%d\n", n, tt)
@@ -255,7 +258,12 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 	// =======
 
 	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
-		return PerformDealing(pub, prv)
+		if party == 0 {
+			return PerformDealing(pub, prv, &PartyDebugParams{})
+		} else {
+			return PerformDealing(pub, prv, &PartyDebugParams{
+				SkipDealingFutureBroadcast: skipDealingFutureBroadcastOtherParties})
+		}
 	})
 
 	// Ver
@@ -326,6 +334,7 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 				resolutionMessages,
 				auditingMessages,
 				party,
+				&PartyDebugParams{SkipDealingFutureBroadcast: skipDealingFutureBroadcastOtherParties},
 			)
 			return struct{}{}, nil
 		} else {
@@ -425,7 +434,7 @@ func BenchmarkPerformDealing(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err = PerformDealing(pub, &prvs[0])
+		_, err = PerformDealing(pub, &prvs[0], &PartyDebugParams{})
 		require.NoError(err)
 	}
 

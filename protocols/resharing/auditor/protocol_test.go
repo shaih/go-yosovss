@@ -106,7 +106,7 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			defer wg.Done()
 
 			// Dealing
-			msg, err := PerformDealing(pub, &prvs[0])
+			msg, err := PerformDealing(pub, &prvs[0], &PartyDebugParams{})
 			require.NoError(err)
 			c, err := curve25519.AddPoint(&msg.ComS[0][0], &msg.ComS[0][0]) // make the comS[0][0] incorrect
 			require.NoError(err)
@@ -241,7 +241,13 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 			auditingMessages, err := ReceiveAuditingMessages(prv.BC, pub.Committees.Aud)
 			require.NoError(err)
 
-			_, _, disqualifiedDealers, err := ResolveComplaints(pub, dealingMessages, verificationMessages, resolutionMessages)
+			_, _, disqualifiedDealers, err := ResolveComplaints(
+				pub,
+				dealingMessages,
+				verificationMessages,
+				resolutionMessages,
+				&PartyDebugParams{},
+			)
 			require.NoError(err)
 			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, auditingMessages, disqualifiedDealers)
 			require.NoError(err)

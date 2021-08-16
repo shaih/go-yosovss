@@ -32,6 +32,17 @@ func MultBaseGPointScalar(n *Scalar) (*Point, error) {
 	return &r, nil
 }
 
+// DoubleMultBaseGHPointScalar return ng * BaseG + nh * BaseH
+func DoubleMultBaseGHPointScalar(ng *Scalar, nh *Scalar) (*Point, error) {
+	var r Point
+
+	result := myref10.Crypto_double_scalarmult_ed25519_base_gh(&r[0], &ng[0], &nh[0])
+	if result != 0 {
+		return nil, fmt.Errorf("failed to perform double scalar multiplication: %d", result)
+	}
+	return &r, nil
+}
+
 // AddPoints sums the points given as input using a more customized algorithm
 func AddPoints(pointsToSum []Point) (*Point, error) {
 	r := Point{}
