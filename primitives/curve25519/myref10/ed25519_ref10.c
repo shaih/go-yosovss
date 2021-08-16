@@ -2918,7 +2918,7 @@ void ge25519_scalarmult_base_h(ge25519_p3 *h, const unsigned char *a) {
     ge25519_p1p1_to_p3(h, &r);
 
     for (i = 0; i < 64; i += 2) {
-        ge25519_cmov8_base(&t, i / 2, e[i]);
+        ge25519_cmov8_base_h(&t, i / 2, e[i]);
         ge25519_madd(&r, h, &t);
         ge25519_p1p1_to_p3(h, &r);
     }
