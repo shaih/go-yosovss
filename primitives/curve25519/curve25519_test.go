@@ -12,7 +12,7 @@ func TestIsValidPoint(t *testing.T) {
 	assert.True(t, IsValidPoint(p), "Random point is valid")
 
 	var q Point
-	assert.False(t, IsValidPoint(q), "Zero is not valid")
+	assert.False(t, IsValidPoint(&q), "Zero is not valid")
 }
 
 func TestGetScalar(t *testing.T) {
@@ -20,7 +20,7 @@ func TestGetScalar(t *testing.T) {
 		t,
 		Scalar([32]byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
-		GetScalar(5),
+		*GetScalar(5),
 		"Single byte Scalar is correct",
 	)
 
@@ -28,7 +28,7 @@ func TestGetScalar(t *testing.T) {
 		t,
 		Scalar([32]byte{255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
-		GetScalar(4294967295), // 2^32 - 1
+		*GetScalar(4294967295), // 2^32 - 1
 		"Multiple byte Scalar is correct",
 	)
 }
@@ -36,12 +36,15 @@ func TestGetScalar(t *testing.T) {
 func TestIsEqualPoint(t *testing.T) {
 	p := RandomPoint()
 	q := p
+	q2 := &Point{}
+	*q2 = *p
 
 	r, err := AddPoint(p, q)
 	if err != nil {
 		log.Fatal(err)
 	}
-	assert.True(t, PointEqual(p, q), "Point equality for equal values")
+	assert.True(t, PointEqual(p, q), "Point equality for equal values and pointers")
+	assert.True(t, PointEqual(p, q2), "Point equality for equal values but not pointers")
 	assert.False(t, PointEqual(p, r), "Point equality for different values")
 }
 
@@ -83,8 +86,8 @@ func TestScalarOperations(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	assert.Equal(t, ScalarZero, AddScalar(x, negX), "Negation is correct")
-	assert.Equal(t, ScalarOne, MultScalar(x, invX), "Inverse is correct")
+	assert.Equal(t, ScalarZero, *AddScalar(x, negX), "Negation is correct")
+	assert.Equal(t, ScalarOne, *MultScalar(x, invX), "Inverse is correct")
 }
 
 func TestMultPointScalar(t *testing.T) {
@@ -95,7 +98,7 @@ func TestMultPointScalar(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	r2, err := MultPointScalar(p, ScalarOne)
+	r2, err := MultPointScalar(p, &ScalarOne)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +120,7 @@ func TestMultPointScalar(t *testing.T) {
 func TestPointInfinity(t *testing.T) {
 	//assert.True(t, IsValidPoint(PointInfinity), "Infinity point is valid")
 	p := RandomPoint()
-	r, err := AddPoint(p, PointInfinity)
+	r, err := AddPoint(p, &PointInfinity)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,7 +135,7 @@ func TestPointInfinity(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	assert.Equal(t, PointInfinity, r1, "p + (-p) = infinity")
+	assert.Equal(t, PointInfinity, *r1, "p + (-p) = infinity")
 	//
 	//r2, err := MultPointScalar(p, GetScalar(0))
 	//if err != nil {

@@ -36,14 +36,14 @@ func (m *EntryTypeMatrix) Columns() int {
 
 // At returns the (i,j) coefficient
 // panic is incorrect indexes
-func (m *EntryTypeMatrix) At(i, j int) EntryType {
-	return m.entries[m.indexOf(i, j)]
+func (m *EntryTypeMatrix) At(i, j int) *EntryType {
+	return &m.entries[m.indexOf(i, j)]
 }
 
 // Set sets the (i,j) coefficient to x
 // panic is incorrect indexes
-func (m *EntryTypeMatrix) Set(i, j int, x EntryType) {
-	m.entries[m.indexOf(i, j)] = x
+func (m *EntryTypeMatrix) Set(i, j int, x *EntryType) {
+	m.entries[m.indexOf(i, j)] = *x
 }
 
 // NewEntryTypeMatrix creates a new EntryType matrix
@@ -75,7 +75,7 @@ func EntryTypeMatrixEqual(mat1, mat2 *EntryTypeMatrix) bool {
 		return false
 	}
 	for i := 0; i < mat1.rows*mat1.columns; i++ {
-		if !EntryTypeEqual(mat1.entries[i], mat2.entries[i]) {
+		if !EntryTypeEqual(&mat1.entries[i], &mat2.entries[i]) {
 			return false
 		}
 	}

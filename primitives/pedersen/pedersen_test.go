@@ -9,13 +9,13 @@ import (
 )
 
 func TestPedersenCommitment(t *testing.T) {
-	m := Message(curve25519.RandomScalar())
-	n := Message(curve25519.RandomScalar())
-	s := Decommitment(curve25519.RandomScalar())
+	m := Message(*curve25519.RandomScalar())
+	n := Message(*curve25519.RandomScalar())
+	s := Decommitment(*curve25519.RandomScalar())
 
 	params := GenerateParams()
 
-	c, r, err := GenerateCommitment(params, m)
+	c, r, err := GenerateCommitment(params, &m)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,14 +40,14 @@ func TestPedersenCommitment(t *testing.T) {
 }
 
 func TestPedersenCommitmentFixedR(t *testing.T) {
-	m := Message(curve25519.RandomScalar())
-	n := Message(curve25519.RandomScalar())
-	r := Decommitment(curve25519.RandomScalar())
-	s := Decommitment(curve25519.RandomScalar())
+	m := Message(*curve25519.RandomScalar())
+	n := Message(*curve25519.RandomScalar())
+	r := Decommitment(*curve25519.RandomScalar())
+	s := Decommitment(*curve25519.RandomScalar())
 
 	params := GenerateParams()
 
-	c, err := GenerateCommitmentFixedR(params, m, r)
+	c, err := GenerateCommitmentFixedR(params, &m, &r)
 	if err != nil {
 		log.Fatal(err)
 	}

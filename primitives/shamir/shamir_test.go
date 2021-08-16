@@ -9,7 +9,7 @@ import (
 )
 
 func TestShamirSecretSharing(t *testing.T) {
-	m := Message(curve25519.RandomScalar())
+	m := Message(*curve25519.RandomScalar())
 
 	shares, err := GenerateShares(m, 2, 4)
 	if err != nil {

@@ -76,15 +76,16 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 	origCom, err := pedersen.GenerateCommitmentFixedR(vssParams.PedersenParams, s, r)
 	require.NoError(err)
 
-	_, comS, err := GenerateDealerSharesCommitments(vssParams, &s, &r)
+	_, comS, err := GenerateDealerSharesCommitments(vssParams, s, r)
 
 	seed := [SeedLength]byte{0x01, 0x02}
 	valid, err := CheckDealerCommitmentsWithSeed(vssParams, seed, origCom, comS)
 	assert.True(valid, "valid commitments should pass the test")
 
 	// make the commitments incorrect
-	comS[2][3], err = curve25519.AddPoint(comS[2][3], comS[2][3])
+	c, err := curve25519.AddPoint(&comS[2][3], &comS[2][3])
 	require.NoError(err)
+	comS[2][3] = *c
 
 	// be sure that after 20 times we're sure to find an issue
 	invalid := false

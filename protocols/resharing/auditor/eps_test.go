@@ -51,7 +51,7 @@ func TestReconstructEpsKey(t *testing.T) {
 				// Check reconstruction with some invalid shares
 				for l := 0; l < n-(d+1); l++ {
 					s := curve25519.GetScalar(42) // 42 is not the answer here :-) It's an invalid share
-					shares[l] = &s
+					shares[l] = s
 				}
 				reconsKey, err = ReconstructEpsKey(n, d, shares, hashEps[k])
 				require.NoError(err)

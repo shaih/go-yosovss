@@ -10,9 +10,9 @@ func TestMatrixMul(t *testing.T) {
 		rows:    3,
 		columns: 2,
 		entries: []Scalar{
-			GetScalar(2), GetScalar(3),
-			GetScalar(4), GetScalar(5),
-			GetScalar(10), GetScalar(20),
+			*GetScalar(2), *GetScalar(3),
+			*GetScalar(4), *GetScalar(5),
+			*GetScalar(10), *GetScalar(20),
 		},
 	}
 	mat1Point, err := PointScalarMatrixMul(g, mat1)
@@ -24,8 +24,8 @@ func TestMatrixMul(t *testing.T) {
 		rows:    2,
 		columns: 4,
 		entries: []Scalar{
-			GetScalar(20), GetScalar(31), GetScalar(41), GetScalar(51),
-			GetScalar(10), GetScalar(20), GetScalar(13), GetScalar(14),
+			*GetScalar(20), *GetScalar(31), *GetScalar(41), *GetScalar(51),
+			*GetScalar(10), *GetScalar(20), *GetScalar(13), *GetScalar(14),
 		},
 	}
 
@@ -33,9 +33,9 @@ func TestMatrixMul(t *testing.T) {
 		rows:    3,
 		columns: 4,
 		entries: []Scalar{
-			GetScalar(70), GetScalar(122), GetScalar(121), GetScalar(144),
-			GetScalar(130), GetScalar(224), GetScalar(229), GetScalar(274),
-			GetScalar(400), GetScalar(710), GetScalar(670), GetScalar(790),
+			*GetScalar(70), *GetScalar(122), *GetScalar(121), *GetScalar(144),
+			*GetScalar(130), *GetScalar(224), *GetScalar(229), *GetScalar(274),
+			*GetScalar(400), *GetScalar(710), *GetScalar(670), *GetScalar(790),
 		},
 	}
 	expectedMulPoint, err := PointScalarMatrixMul(g, expectedMul)
@@ -66,9 +66,9 @@ func TestEncodeDecode(t *testing.T) {
 		rows:    3,
 		columns: 2,
 		entries: []Scalar{
-			GetScalar(2), GetScalar(3),
-			GetScalar(4), GetScalar(5),
-			GetScalar(10), GetScalar(20),
+			*GetScalar(2), *GetScalar(3),
+			*GetScalar(4), *GetScalar(5),
+			*GetScalar(10), *GetScalar(20),
 		},
 	}
 

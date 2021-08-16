@@ -32,14 +32,14 @@ func (m *PointMatrix) Columns() int {
 
 // At returns the (i,j) coefficient
 // panic is incorrect indexes
-func (m *PointMatrix) At(i, j int) Point {
-	return m.entries[m.indexOf(i, j)]
+func (m *PointMatrix) At(i, j int) *Point {
+	return &m.entries[m.indexOf(i, j)]
 }
 
 // Set sets the (i,j) coefficient to x
 // panic is incorrect indexes
-func (m *PointMatrix) Set(i, j int, x Point) {
-	m.entries[m.indexOf(i, j)] = x
+func (m *PointMatrix) Set(i, j int, x *Point) {
+	m.entries[m.indexOf(i, j)] = *x
 }
 
 // NewPointMatrix creates a new Point matrix
@@ -71,7 +71,7 @@ func PointMatrixEqual(mat1, mat2 *PointMatrix) bool {
 		return false
 	}
 	for i := 0; i < mat1.rows*mat1.columns; i++ {
-		if !PointEqual(mat1.entries[i], mat2.entries[i]) {
+		if !PointEqual(&mat1.entries[i], &mat2.entries[i]) {
 			return false
 		}
 	}
@@ -106,14 +106,14 @@ func (m *ScalarMatrix) Columns() int {
 
 // At returns the (i,j) coefficient
 // panic is incorrect indexes
-func (m *ScalarMatrix) At(i, j int) Scalar {
-	return m.entries[m.indexOf(i, j)]
+func (m *ScalarMatrix) At(i, j int) *Scalar {
+	return &m.entries[m.indexOf(i, j)]
 }
 
 // Set sets the (i,j) coefficient to x
 // panic is incorrect indexes
-func (m *ScalarMatrix) Set(i, j int, x Scalar) {
-	m.entries[m.indexOf(i, j)] = x
+func (m *ScalarMatrix) Set(i, j int, x *Scalar) {
+	m.entries[m.indexOf(i, j)] = *x
 }
 
 // NewScalarMatrix creates a new Scalar matrix
@@ -145,7 +145,7 @@ func ScalarMatrixEqual(mat1, mat2 *ScalarMatrix) bool {
 		return false
 	}
 	for i := 0; i < mat1.rows*mat1.columns; i++ {
-		if !ScalarEqual(mat1.entries[i], mat2.entries[i]) {
+		if !ScalarEqual(&mat1.entries[i], &mat2.entries[i]) {
 			return false
 		}
 	}

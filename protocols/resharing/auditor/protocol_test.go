@@ -107,7 +107,9 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			// Dealing
 			msg, err := PerformDealing(pub, &prvs[0])
 			require.NoError(err)
-			msg.ComS[0][0], err = curve25519.AddPoint(msg.ComS[0][0], msg.ComS[0][0]) // make the comS[0][0] incorrect
+			c, err := curve25519.AddPoint(&msg.ComS[0][0], &msg.ComS[0][0]) // make the comS[0][0] incorrect
+			require.NoError(err)
+			msg.ComS[0][0] = *c
 			prvs[0].BC.Send(msgpack.Encode(msg))
 			prvs[0].BC.ReceiveRound()
 

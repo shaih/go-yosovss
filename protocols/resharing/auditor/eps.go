@@ -59,7 +59,7 @@ func GenerateEpsKeyShares(n int, d int) (epsKey curve25519.Key, epsShares []curv
 	}
 
 	// Generate the shares of epsKey
-	shares, err := shamir.GenerateShares(shamir.Message(eps), d+1, n)
+	shares, err := shamir.GenerateShares(shamir.Message(*eps), d+1, n)
 	if err != nil {
 		return [32]byte{}, nil, err
 	}
@@ -75,7 +75,7 @@ func GenerateEpsKeyShares(n int, d int) (epsKey curve25519.Key, epsShares []curv
 
 // SymmetricKeyFromEps converts the eps scalar that is shared into the symmetric key
 // that is used to encrypt ciphertexts of M[k] for future broadcast
-func SymmetricKeyFromEps(eps curve25519.Scalar) (epsKey curve25519.Key, err error) {
+func SymmetricKeyFromEps(eps *curve25519.Scalar) (epsKey curve25519.Key, err error) {
 	// TODO: normally we want some hardcoded salt there
 	hkdf := hkdf.New(sha256.New, eps[:], nil, nil)
 
@@ -110,7 +110,7 @@ func ReconstructEpsKey(
 			// valid share
 			validShares = append(validShares, shamir.Share{
 				Index:       i + 1,
-				IndexScalar: curve25519.GetScalar(uint64(i + 1)),
+				IndexScalar: *curve25519.GetScalar(uint64(i + 1)),
 				S:           *epsShares[i],
 			})
 		}
@@ -128,7 +128,7 @@ func ReconstructEpsKey(
 		return [32]byte{}, fmt.Errorf("reconstruction of eps key failed when shamir reconstructing: %w", err)
 	}
 
-	epsKey, err = SymmetricKeyFromEps(curve25519.Scalar(*eps))
+	epsKey, err = SymmetricKeyFromEps((*curve25519.Scalar)(eps))
 	if err != nil {
 		return [32]byte{}, fmt.Errorf(
 			"reconstruction of eps key failed when deriving symmetric key from eps: %w", err)

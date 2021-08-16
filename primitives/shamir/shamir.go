@@ -29,18 +29,19 @@ func GenerateShares(m Message, t int, n int) ([]Share, error) {
 
 	// Generate random values for remaining coefficients
 	for i := 1; i < t; i++ {
-		f.Coefficients[i] = curve25519.RandomScalar()
+		f.Coefficients[i] = *curve25519.RandomScalar()
 	}
 
 	// Perform Shamir secret sharing on the generated polynomials to construct shares
-	evalPoint := curve25519.ScalarZero
+	evalPoint := &curve25519.Scalar{}
+	*evalPoint = curve25519.ScalarZero
 	for i := 1; i <= n; i++ {
-		evalPoint = curve25519.AddScalar(evalPoint, curve25519.ScalarOne)
+		evalPoint = curve25519.AddScalar(evalPoint, &curve25519.ScalarOne)
 
 		shares = append(shares, Share{
 			Index:       i,
-			IndexScalar: evalPoint,
-			S:           f.Evaluate(evalPoint),
+			IndexScalar: *evalPoint,
+			S:           *f.Evaluate(evalPoint),
 		}) // The share of participant i is s_i = f(i)
 	}
 
@@ -52,23 +53,23 @@ func GenerateShares(m Message, t int, n int) ([]Share, error) {
 func Reconstruct(shares []Share) (*Message, error) {
 
 	// Polynomial interpolation evaluated at 0
-	var sum curve25519.Scalar
+	sum := &curve25519.Scalar{}
+	*sum = curve25519.ScalarZero
 	for i := 0; i < len(shares); i++ {
-
-		term := shares[i].S
+		term := &curve25519.Scalar{}
+		*term = shares[i].S
 		for j := 0; j < len(shares); j++ {
 			if i != j {
 				denom, err := curve25519.InvertScalar(
-					curve25519.SubScalar(shares[j].IndexScalar, shares[i].IndexScalar))
+					curve25519.SubScalar(&shares[j].IndexScalar, &shares[i].IndexScalar))
 				if err != nil {
 					return nil, fmt.Errorf("error in polynomial interpolation")
 				}
-				term = curve25519.MultScalar(term, curve25519.MultScalar(shares[j].IndexScalar, denom))
+				term = curve25519.MultScalar(term, curve25519.MultScalar(&shares[j].IndexScalar, denom))
 			}
 		}
 		sum = curve25519.AddScalar(sum, term)
 	}
 
-	m := Message(sum)
-	return &m, nil
+	return (*Message)(sum), nil
 }

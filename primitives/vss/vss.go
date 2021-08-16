@@ -118,18 +118,20 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 	}
 
 	// Reconstruct message via pol interpolation at 0
-	s := curve25519.ScalarZero
+	s := &curve25519.Scalar{}
+	*s = curve25519.ScalarZero
 	for i := 0; i < t; i++ {
-		s = curve25519.AddScalar(s, curve25519.MultScalar(validShares[i].S, lambdas[i]))
+		s = curve25519.AddScalar(s, curve25519.MultScalar(&validShares[i].S, &lambdas[i]))
 	}
 
 	// Reconstruct randomness/decommitment
-	r := curve25519.ScalarZero
+	r := &curve25519.Scalar{}
+	*r = curve25519.ScalarZero
 	for i := 0; i < t; i++ {
-		r = curve25519.AddScalar(r, curve25519.MultScalar(validShares[i].R, lambdas[i]))
+		r = curve25519.AddScalar(r, curve25519.MultScalar(&validShares[i].R, &lambdas[i]))
 	}
 
-	return &s, &r, nil
+	return s, r, nil
 }
 
 // FixedRShare performs the initial dealer's step for a Pedersen VSS on the secret s
@@ -139,7 +141,7 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 // commitments has length n+1
 // commitments[0] is the Pedersen commitment of the secret s with randomness r
 // commitments[i] for i > 1 is the Pedersen commitment of the share of index i, that is shares[i-1]
-func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) (
+func FixedRShare(params *Params, s, r *curve25519.Scalar) (
 	shares []Share, commitments []pedersen.Commitment, err error) {
 
 	n := params.N
@@ -169,40 +171,41 @@ func FixedRShare(params *Params, s curve25519.Scalar, r curve25519.Scalar) (
 	// Get commitment to the secret
 	commitment, err := pedersen.GenerateCommitmentFixedR(
 		params.PedersenParams,
-		pedersen.Message(s),
-		pedersen.Decommitment(r),
+		s,
+		r,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error generating message commitment: %w", err)
 	}
-	f.Coefficients[0] = s
-	g.Coefficients[0] = r
+	f.Coefficients[0] = *s
+	g.Coefficients[0] = *r
 	commitments[0] = *commitment
 
 	// Generate random values for remaining coefficients
 	for i := 1; i < t; i++ {
-		f.Coefficients[i] = curve25519.RandomScalar()
-		g.Coefficients[i] = curve25519.RandomScalar()
+		f.Coefficients[i] = *curve25519.RandomScalar()
+		g.Coefficients[i] = *curve25519.RandomScalar()
 	}
 
 	// Perform Shamir secret sharing on the generated polynomials to construct shares
-	evalPoint := curve25519.ScalarZero
+	evalPoint := &curve25519.Scalar{}
+	*evalPoint = curve25519.ScalarZero
 	for i := 1; i <= n; i++ {
 		// NOTE: Expensive step, consider changing in the future
-		evalPoint = curve25519.AddScalar(evalPoint, curve25519.ScalarOne)
+		evalPoint = curve25519.AddScalar(evalPoint, &curve25519.ScalarOne)
 
 		shares[i-1] = Share{
 			Index:       i,
-			IndexScalar: evalPoint,
-			S:           f.Evaluate(evalPoint),
-			R:           g.Evaluate(evalPoint),
+			IndexScalar: *evalPoint,
+			S:           *f.Evaluate(evalPoint),
+			R:           *g.Evaluate(evalPoint),
 		} // The share of participant i is (sigma_i, rho_i) = (f(i), g(i))
 
 		// Compute the commitment to the share using randomness rho_i
 		commitment, err = pedersen.GenerateCommitmentFixedR(
 			params.PedersenParams,
-			pedersen.Message(shares[i-1].S),
-			pedersen.Decommitment(shares[i-1].R),
+			&shares[i-1].S,
+			&shares[i-1].R,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating commitment of share %d: %w", i, err)
@@ -254,7 +257,7 @@ func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool,
 	// Checking that the vector y is zero
 	zero := true
 	for j := 0; j < n-d; j++ {
-		if !curve25519.PointEqual(curve25519.PointInfinity, y.At(0, j)) {
+		if !curve25519.PointEqual(&curve25519.PointInfinity, y.At(0, j)) {
 			zero = false
 			break
 		}
@@ -295,5 +298,5 @@ func VerifyCommitmentsRandomized(params *Params, commitments []pedersen.Commitme
 		return false, err
 	}
 
-	return curve25519.PointEqual(curve25519.PointInfinity, y.At(0, 0)), nil
+	return curve25519.PointEqual(&curve25519.PointInfinity, y.At(0, 0)), nil
 }

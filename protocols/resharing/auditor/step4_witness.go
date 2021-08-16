@@ -79,11 +79,13 @@ func CheckDealerCommitmentsWithSeed(
 	for j := 0; j < n; j++ {
 		if GetBit(r, j+1) { // row (j+1) is selected
 			for k := 0; k < n+1; k++ {
-				comSprime[k], err = curve25519.AddPoint(comSprime[k], comS[j][k])
+				sum, err := curve25519.AddPoint(&comSprime[k], &comS[j][k])
 				if err != nil {
 					return false, fmt.Errorf("error adding points checking seed: %w", err)
 				}
+				comSprime[k] = *sum
 			}
+
 		}
 	}
 

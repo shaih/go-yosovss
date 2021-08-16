@@ -55,29 +55,31 @@ func TestVSS(t *testing.T) {
 			// Checking that reconstruction works with the t first shares
 			recS, err := Reconstruct(params, shares[0:tc.t], commitments)
 			require.NoError(err)
-			require.True(curve25519.ScalarEqual(s, *recS), "reconstruction works with t first shares")
+			require.True(curve25519.ScalarEqual(s, recS), "reconstruction works with t first shares")
 
 			// Checking that reconstruction works with all the shares
 			recS, err = Reconstruct(params, shares[0:tc.t], commitments)
 			require.NoError(err)
-			require.True(curve25519.ScalarEqual(s, *recS), "reconstruction works with all the shares")
+			require.True(curve25519.ScalarEqual(s, recS), "reconstruction works with all the shares")
 
 			// Check that reconstruction works when making first share invalid
 			if tc.t < tc.n {
 				sharesWith0Invalid := make([]Share, tc.n)
 				copy(sharesWith0Invalid, shares)
 				// force first share to be invalid
-				sharesWith0Invalid[0].R = curve25519.AddScalar(sharesWith0Invalid[0].R, curve25519.ScalarOne)
+				r := curve25519.AddScalar(&sharesWith0Invalid[0].R, &curve25519.ScalarOne)
+				sharesWith0Invalid[0].R = *r
 
 				recS, err = Reconstruct(params, sharesWith0Invalid, commitments)
 				require.NoError(err)
-				require.True(curve25519.ScalarEqual(s, *recS), "reconstruction works with one incorrect share")
+				require.True(curve25519.ScalarEqual(s, recS), "reconstruction works with one incorrect share")
 			}
 
 			// Checking that verify commitments fail with first invalid commitment
 			commitmentsWith0Invalid := make([]pedersen.Commitment, tc.n+1)
 			copy(commitmentsWith0Invalid, commitments)
-			commitmentsWith0Invalid[0], err = curve25519.MultPointScalar(commitmentsWith0Invalid[0], curve25519.GetScalar(2))
+			c, err := curve25519.MultPointScalar(&commitmentsWith0Invalid[0], curve25519.GetScalar(2))
+			commitmentsWith0Invalid[0] = *c
 			require.NoError(err)
 			valid, err = VerifyCommitments(params, commitmentsWith0Invalid)
 			require.NoError(err)
@@ -91,7 +93,8 @@ func TestVSS(t *testing.T) {
 			// Checking that verify commitments fail with first invalid commitment
 			commitmentsWithLastInvalid := make([]pedersen.Commitment, tc.n+1)
 			copy(commitmentsWithLastInvalid, commitments)
-			commitmentsWithLastInvalid[tc.n-1], err = curve25519.MultPointScalar(commitmentsWithLastInvalid[tc.n-1], curve25519.GetScalar(3))
+			c, err = curve25519.MultPointScalar(&commitmentsWithLastInvalid[tc.n-1], curve25519.GetScalar(3))
+			commitmentsWithLastInvalid[tc.n-1] = *c
 			require.NoError(err)
 			valid, err = VerifyCommitments(params, commitmentsWithLastInvalid)
 			require.NoError(err)

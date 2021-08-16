@@ -33,10 +33,10 @@ func TestEvaluation(t *testing.T) {
 }
 
 func TestLagrangeCoeffs(t *testing.T) {
-	coords := []Scalar{GetScalar(6), GetScalar(8), GetScalar(12)}
+	coords := []Scalar{*GetScalar(6), *GetScalar(8), *GetScalar(12)}
 
 	// Expected Lagrange coefficients are the vector (16, -27, 12)
-	expectedLambdas := []Scalar{GetScalar(16), SubScalar(ScalarZero, GetScalar(27)), GetScalar(12)}
+	expectedLambdas := []Scalar{*GetScalar(16), *SubScalar(&ScalarZero, GetScalar(27)), *GetScalar(12)}
 	lambdas, err := LagrangeCoeffs(coords, GetScalar(24))
 	if err != nil {
 		log.Fatal(err)

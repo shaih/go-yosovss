@@ -14,7 +14,7 @@ func generatorMatrix(n, t int) *curve25519.ScalarMatrix {
 	for j := 0; j <= n; j++ {
 		jScalar := curve25519.GetScalar(uint64(j))
 		// first row is just 1
-		gen.Set(0, j, curve25519.ScalarOne)
+		gen.Set(0, j, &curve25519.ScalarOne)
 		// other columns are product of previous row with j
 		for i := 1; i < t; i++ {
 			gen.Set(i, j, curve25519.MultScalar(gen.At(i-1, j), jScalar))
@@ -35,7 +35,7 @@ func TestComputeParityMatrix1x1(t *testing.T) {
 	assert.True(
 		curve25519.ScalarEqual(
 			curve25519.AddScalar(m.At(0, 0), m.At(1, 0)),
-			curve25519.ScalarZero,
+			&curve25519.ScalarZero,
 		),
 	)
 }
@@ -69,7 +69,7 @@ func TestComputeParityMatrix(t *testing.T) {
 
 			// Test that incorrect code words are rejected
 			// just add 1 to (0,0) in gen (not ideal but should catch most issues)
-			gen.Set(0, 0, curve25519.AddScalar(gen.At(0, 0), curve25519.ScalarOne))
+			gen.Set(0, 0, curve25519.AddScalar(gen.At(0, 0), &curve25519.ScalarOne))
 			prod, err = curve25519.ScalarMatrixMul(gen, m)
 			require.NoError(err)
 			assert.False(prod.IsZero(),

@@ -53,7 +53,7 @@ func ComputeQualifiedDealers(
 		}
 		if isDealerQualified(pub.N, i, auditingMessages) {
 			qualifiedDealers[ii] = i
-			qualifiedDealersScalars[ii] = curve25519.GetScalar(uint64(i + 1))
+			qualifiedDealersScalars[ii] = *curve25519.GetScalar(uint64(i + 1))
 			ii++
 		}
 	}
@@ -87,10 +87,15 @@ func ComputeRefreshedShare(
 
 	share = &vss.Share{
 		Index:       j + 1,
-		IndexScalar: curve25519.GetScalar(uint64(j + 1)),
+		IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
 		S:           curve25519.ScalarZero,
 		R:           curve25519.ScalarZero,
 	}
+
+	sumS := &curve25519.Scalar{}
+	sumR := &curve25519.Scalar{}
+	*sumS = curve25519.ScalarZero
+	*sumR = curve25519.ScalarZero
 
 	for ii, i := range qualifiedDealers {
 		sIJK, rIJK, err := ComputeShareIJ(pub, i, j, verSentShares, dealingMessages, resolvedSharesS, resolvedSharesR)
@@ -98,12 +103,15 @@ func ComputeRefreshedShare(
 			return nil, err
 		}
 
-		s := curve25519.MultScalar(*sIJK, lagrangeCoeffs[ii])
-		r := curve25519.MultScalar(*rIJK, lagrangeCoeffs[ii])
+		s := curve25519.MultScalar(sIJK, &lagrangeCoeffs[ii])
+		r := curve25519.MultScalar(rIJK, &lagrangeCoeffs[ii])
 
-		share.S = curve25519.AddScalar(share.S, s)
-		share.R = curve25519.AddScalar(share.R, r)
+		sumS = curve25519.AddScalar(sumS, s)
+		sumR = curve25519.AddScalar(sumR, r)
 	}
+
+	share.S = *sumS
+	share.R = *sumR
 
 	return share, nil
 }
@@ -128,7 +136,7 @@ func ComputeShareIJ(
 
 			sharesIJ = append(sharesIJ, vss.Share{
 				Index:       k + 1,
-				IndexScalar: curve25519.GetScalar(uint64(k + 1)),
+				IndexScalar: *curve25519.GetScalar(uint64(k + 1)),
 				S:           resolvedSharesS[TripleIJK{i, j, k}],
 				R:           resolvedSharesR[TripleIJK{i, j, k}],
 			})
@@ -138,7 +146,7 @@ func ComputeShareIJ(
 
 			sharesIJ = append(sharesIJ, vss.Share{
 				Index:       k + 1,
-				IndexScalar: curve25519.GetScalar(uint64(k + 1)),
+				IndexScalar: *curve25519.GetScalar(uint64(k + 1)),
 				S:           *verSentShares[k].S[i],
 				R:           *verSentShares[k].R[i],
 			})
@@ -203,18 +211,20 @@ func ComputeRefreshedCommitments(
 		// Computing commitments[j+1] for the new holding committee member j
 		// This is the Lagrange reconsturction
 		// of all the original commitments S_ij for qualified dealers i
-		commitments[j+1] = curve25519.PointInfinity
+		com := &curve25519.Point{}
+		*com = curve25519.PointInfinity
 		for ii, i := range qualifiedDealers {
-			cc, err := curve25519.MultPointScalar(dealingMessages[i].ComS[j][0], lagrangeCoeffs[ii])
+			cc, err := curve25519.MultPointScalar(&dealingMessages[i].ComS[j][0], &lagrangeCoeffs[ii])
 			if err != nil {
 				return nil, fmt.Errorf("error point multiplication: %w", err)
 			}
 
-			commitments[j+1], err = curve25519.AddPoint(commitments[j+1], cc)
+			com, err = curve25519.AddPoint(com, cc)
 			if err != nil {
 				return nil, fmt.Errorf("error adding points: %w", err)
 			}
 		}
+		commitments[j+1] = *com
 	}
 
 	return commitments, nil

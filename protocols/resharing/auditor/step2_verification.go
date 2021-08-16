@@ -85,7 +85,7 @@ func PerformVerification(
 				&pub.VSSParams,
 				&vss.Share{
 					Index:       shareIndex,
-					IndexScalar: shareIndexScalar,
+					IndexScalar: *shareIndexScalar,
 					S:           mk.S[j],
 					R:           mk.R[j],
 				},

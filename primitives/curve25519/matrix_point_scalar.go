@@ -13,8 +13,9 @@ func PointMatrixScalarMatrixMul(mat1 *PointMatrix, mat2 *ScalarMatrix) (*PointMa
 
 	for i := 0; i < res.rows; i++ {
 		for j := 0; j < res.columns; j++ {
-			var sum, x Point
-			sum = PointInfinity
+			var x *Point
+			sum := &Point{}
+			*sum = PointInfinity
 			for k := 0; k < mat1.columns; k++ {
 				x, err = MultPointScalar(mat1.At(i, k), mat2.At(k, j))
 				if err != nil {
@@ -33,7 +34,7 @@ func PointMatrixScalarMatrixMul(mat1 *PointMatrix, mat2 *ScalarMatrix) (*PointMa
 }
 
 // PointScalarMatrixMul multiplies a scalar matrix by a single point
-func PointScalarMatrixMul(g Point, mat *ScalarMatrix) (*PointMatrix, error) {
+func PointScalarMatrixMul(g *Point, mat *ScalarMatrix) (*PointMatrix, error) {
 	res := NewPointMatrix(mat.rows, mat.columns)
 
 	for i := 0; i < res.rows; i++ {

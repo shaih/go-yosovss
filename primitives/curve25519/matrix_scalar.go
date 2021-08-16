@@ -36,7 +36,7 @@ func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, err
 	for i := 0; i < res.rows; i++ {
 		for j := 0; j < res.columns; j++ {
 			for k := 0; k < mat1.columns; k++ {
-				var x Scalar
+				var x *Scalar
 				x = MultScalar(mat1.At(i, k), mat2.At(k, j))
 				x = AddScalar(res.At(i, j), x)
 				res.Set(i, j, x)
@@ -49,7 +49,7 @@ func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, err
 
 func (m *ScalarMatrix) IsZero() bool {
 	for i := 0; i < m.rows*m.columns; i++ {
-		if !ScalarEqual(ScalarZero, m.entries[i]) {
+		if !ScalarEqual(&ScalarZero, &m.entries[i]) {
 			return false
 		}
 	}

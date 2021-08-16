@@ -50,7 +50,7 @@ func GenerateDealerSharesCommitments(
 	// First-level sharing
 	// commitments are not needed as they're recomputed anyway by second level
 	// TODO this is not optimal
-	shares0, _, err := vss.FixedRShare(vssParams, *s, *r)
+	shares0, _, err := vss.FixedRShare(vssParams, s, r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,7 +58,7 @@ func GenerateDealerSharesCommitments(
 	// Second-level sharing
 	shares = make([][]vss.Share, vssParams.N)
 	for j := 0; j < vssParams.N; j++ {
-		shares[j], comS[j], err = vss.FixedRShare(vssParams, shares0[j].S, shares0[j].R)
+		shares[j], comS[j], err = vss.FixedRShare(vssParams, &shares0[j].S, &shares0[j].R)
 		if err != nil {
 			return nil, nil, err
 		}

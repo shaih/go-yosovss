@@ -20,8 +20,8 @@ func setupResharingSeq(
 	pub *PublicInput,
 	prvs []PrivateInput,
 	o fake.Orchestrator,
-	secret curve25519.Scalar,
-	rnd curve25519.Scalar,
+	secret *curve25519.Scalar,
+	rnd *curve25519.Scalar,
 ) {
 	return setupResharing(t, n, tt, n*numCommittees, seqCommittees(n))
 }
@@ -37,8 +37,8 @@ func setupResharingSame(
 	pub *PublicInput,
 	prvs []PrivateInput,
 	o fake.Orchestrator,
-	secret curve25519.Scalar,
-	rnd curve25519.Scalar,
+	secret *curve25519.Scalar,
+	rnd *curve25519.Scalar,
 ) {
 	return setupResharing(t, n, tt, n, sameCommittees(n))
 }
@@ -55,8 +55,8 @@ func setupResharing(
 	pub *PublicInput,
 	prvs []PrivateInput,
 	o fake.Orchestrator,
-	secret curve25519.Scalar,
-	rnd curve25519.Scalar,
+	secret *curve25519.Scalar,
+	rnd *curve25519.Scalar,
 ) {
 	require := require.New(t)
 
@@ -128,8 +128,8 @@ func setupResharing(
 func checkProtocolResults(
 	t *testing.T,
 	pub *PublicInput,
-	secret curve25519.Scalar,
-	rnd curve25519.Scalar,
+	secret *curve25519.Scalar,
+	rnd *curve25519.Scalar,
 	outputCommitments [][]pedersen.Commitment,
 	outputShares []*vss.Share,
 ) {
@@ -148,7 +148,7 @@ func checkProtocolResults(
 	}
 
 	// Check nextCommitments[0] is commitments[0]
-	assert.True(curve25519.PointEqual(nextCommitments[0], commitments[0]),
+	assert.True(curve25519.PointEqual(&nextCommitments[0], &commitments[0]),
 		"next commitment of secret should be the same as original one")
 
 	// Check that original commitments are still valid
@@ -182,8 +182,8 @@ func checkProtocolResults(
 	// Check the reconstructed secret is valid
 	reconsSecret, reconsRnd, err := vss.ReconstructWithR(vssParams, nextShares, nextCommitments)
 	require.NoError(err)
-	assert.Equal(&secret, reconsSecret)
-	assert.Equal(&rnd, reconsRnd)
+	assert.Equal(*secret, *reconsSecret)
+	assert.Equal(*rnd, *reconsRnd)
 
 	// Check that the new commitment to the secret is the expected one
 	valid, err = pedersen.VerifyCommitment(vssParams.PedersenParams, &commitments[0], reconsSecret, reconsRnd)

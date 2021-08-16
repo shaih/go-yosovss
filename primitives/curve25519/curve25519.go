@@ -13,7 +13,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"unsafe"
 )
 
 func init() {
@@ -45,125 +44,129 @@ var ScalarOne Scalar = Scalar([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
 // IsValidPoint returns true if a point is on the ed25519 curve, non-zero,
 // on the main subgroup, and of small order
-func IsValidPoint(p Point) bool {
+func IsValidPoint(p *Point) bool {
 	result := C.crypto_core_ed25519_is_valid_point((*C.uchar)(&p[0]))
 	return result == 1
 }
 
 // PointEqual returns true if two points are equal
-func PointEqual(p, q Point) bool {
-	return C.sodium_memcmp(unsafe.Pointer(&p[0]), unsafe.Pointer(&q[0]), 32) == 0
+func PointEqual(p, q *Point) bool {
+	return *p == *q
+	// return C.sodium_memcmp(unsafe.Pointer(&p[0]), unsafe.Pointer(&q[0]), 32) == 0 // we don't do constant time
 }
 
 // ScalarEqual returns true if two scalars are equal
-func ScalarEqual(x, y Scalar) bool {
-	return C.sodium_memcmp(unsafe.Pointer(&x[0]), unsafe.Pointer(&y[0]), 32) == 0
+func ScalarEqual(x, y *Scalar) bool {
+	return *x == *y
+	// return C.sodium_memcmp(unsafe.Pointer(&x[0]), unsafe.Pointer(&y[0]), 32) == 0
 }
 
 // RandomPoint returns a random group element
-func RandomPoint() Point {
+func RandomPoint() *Point {
 	var p Point
 
 	C.crypto_core_ed25519_random((*C.uchar)(&p[0]))
-	return p
+	return &p
 }
 
 // GetScalar returns a scalar representation of an unsigned 64-bit integer
-func GetScalar(x uint64) Scalar {
+func GetScalar(x uint64) *Scalar {
 	b := make([]byte, 8)
-	var s [32]byte
+	var s Scalar
 	binary.LittleEndian.PutUint64(b, x)
 	copy(s[:], b)
-	return Scalar(s)
+	return &s
 }
 
 // RandomScalar returns a random scalar value in the range [0, L), where L is the order
 // of the main subgroup
-func RandomScalar() Scalar {
+func RandomScalar() *Scalar {
 	var r Scalar
 
 	C.crypto_core_ed25519_scalar_random((*C.uchar)(&r[0]))
-	return r
+	return &r
 }
 
 // AddPoint computes the sum of two elliptic curve points
-func AddPoint(p, q Point) (Point, error) {
+func AddPoint(p, q *Point) (*Point, error) {
 	var r Point
 
 	result := C.crypto_core_ed25519_add((*C.uchar)(&r[0]), (*C.uchar)(&p[0]), (*C.uchar)(&q[0]))
 	if result != 0 {
-		return r, fmt.Errorf("failed to perform point addition: %d", result)
+		return nil, fmt.Errorf("failed to perform point addition: %d", result)
 	}
-	return r, nil
+	return &r, nil
 }
 
 // SubPoint computes the difference between two elliptic curve points
-func SubPoint(p, q Point) (Point, error) {
+func SubPoint(p, q *Point) (*Point, error) {
 	var r Point
 
 	result := C.crypto_core_ed25519_sub((*C.uchar)(&r[0]), (*C.uchar)(&p[0]), (*C.uchar)(&q[0]))
 	if result != 0 {
-		return r, fmt.Errorf("failed to perform point subtraction: %d", result)
+		return nil, fmt.Errorf("failed to perform point subtraction: %d", result)
 	}
-	return r, nil
+	return &r, nil
 }
 
 // InvertScalar computes the multiplicative inverse of a scalar mod L, where L is the order
 // of the main subgroup
-func InvertScalar(s Scalar) (Scalar, error) {
+func InvertScalar(s *Scalar) (*Scalar, error) {
 	var r Scalar
 
 	result := C.crypto_core_ed25519_scalar_invert((*C.uchar)(&r[0]), (*C.uchar)(&s[0]))
 	if result != 0 {
-		return r, fmt.Errorf("failed to perform scalar inversion: %d", result)
+		return nil, fmt.Errorf("failed to perform scalar inversion: %d", result)
 	}
-	return r, nil
+	return &r, nil
 }
 
 // NegateScalar computes the additive inverse of a scalar mod L, where L is the order
 // of the main subgroup
-func NegateScalar(s Scalar) Scalar {
+func NegateScalar(s *Scalar) *Scalar {
 	var r Scalar
 
 	C.crypto_core_ed25519_scalar_negate((*C.uchar)(&r[0]), (*C.uchar)(&s[0]))
-	return r
+	return &r
 }
 
 // AddScalar computes the sum of two scalars mod L
-func AddScalar(x, y Scalar) Scalar {
+func AddScalar(x, y *Scalar) *Scalar {
 	var z Scalar
 
 	C.crypto_core_ed25519_scalar_add((*C.uchar)(&z[0]), (*C.uchar)(&x[0]), (*C.uchar)(&y[0]))
-	return z
+	return &z
 }
 
 // SubScalar computes the difference of two scalars mod L
-func SubScalar(x, y Scalar) Scalar {
+func SubScalar(x, y *Scalar) *Scalar {
 	var z Scalar
 
 	C.crypto_core_ed25519_scalar_sub((*C.uchar)(&z[0]), (*C.uchar)(&x[0]), (*C.uchar)(&y[0]))
-	return z
+	return &z
 }
 
 // MultScalar computes the product of two scalars mod L
-func MultScalar(x, y Scalar) Scalar {
+func MultScalar(x, y *Scalar) *Scalar {
 	var z Scalar
 
 	C.crypto_core_ed25519_scalar_mul((*C.uchar)(&z[0]), (*C.uchar)(&x[0]), (*C.uchar)(&y[0]))
-	return z
+	return &z
 }
 
 // MultPointScalar computes the product of a scalar with a point
-func MultPointScalar(p Point, n Scalar) (Point, error) {
+func MultPointScalar(p *Point, n *Scalar) (*Point, error) {
 	var r Point
 
-	if n == ScalarZero {
-		return PointInfinity, nil
+	if *n == ScalarZero {
+		r = PointInfinity
+		return &r, nil
 	}
 
 	result := C.crypto_scalarmult_ed25519_noclamp((*C.uchar)(&r[0]), (*C.uchar)(&n[0]), (*C.uchar)(&p[0]))
 	if result != 0 {
-		return r, fmt.Errorf("failed to perform scalar multiplication: %d", result)
+		return nil, fmt.Errorf("failed to perform scalar multiplication: %d", result)
+		// FIXME WARNING: If p is point at infinity you may have an error there
 	}
-	return r, nil
+	return &r, nil
 }
