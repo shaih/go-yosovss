@@ -132,6 +132,8 @@ func checkProtocolResults(
 	rnd *curve25519.Scalar,
 	outputCommitments [][]pedersen.Commitment,
 	outputShares []*vss.Share,
+	allowMissingShares bool, // allow for shares to be missing, e.g., not all new holding committee parties are simulated
+	// remaining shares must be shares of new holding parties 0,1,... in this order (but last ones may be missing)
 ) {
 	var err error
 
@@ -161,32 +163,50 @@ func checkProtocolResults(
 	require.NoError(err)
 	assert.True(valid, "next commitments must be valid")
 
+	if !allowMissingShares {
+		require.GreaterOrEqual(len(outputShares), pub.N)
+	}
+
 	// Check only next committee members, aka numParties-n, ... numParties-1
 	// have non-empty shares and extract the n above shares
-	nextShares := make([]vss.Share, pub.N)
+	firstActualShare := max(len(outputShares)-pub.N, 0)
+	nextShares := make([]vss.Share, len(outputShares)-firstActualShare)
 	for party := 0; party < len(outputShares)-pub.N; party++ {
 		assert.Nil(outputShares[party], "non next-holder committee must output nil shares")
 	}
-	for party := len(outputShares) - pub.N; party < len(outputShares); party++ {
+	for party := firstActualShare; party < len(outputShares); party++ {
 		assert.NotNil(outputShares[party])
-		nextShares[party-(len(outputShares)-pub.N)] = *outputShares[party]
+		nextShares[party-firstActualShare] = *outputShares[party]
+	}
+
+	if !allowMissingShares {
+		require.Equal(len(nextShares), pub.N)
 	}
 
 	// Check that all nextShares are valid
-	for j := 0; j < pub.N; j++ {
+	for j := 0; j < len(nextShares); j++ {
 		valid, err := vss.VerifyShare(vssParams, &nextShares[j], nextCommitments)
 		require.NoError(err)
 		assert.True(valid)
 	}
 
-	// Check the reconstructed secret is valid
-	reconsSecret, reconsRnd, err := vss.ReconstructWithR(vssParams, nextShares, nextCommitments)
-	require.NoError(err)
-	assert.Equal(*secret, *reconsSecret)
-	assert.Equal(*rnd, *reconsRnd)
+	if len(outputShares) > pub.T+1 {
+		// Check the reconstructed secret is valid
+		reconsSecret, reconsRnd, err := vss.ReconstructWithR(vssParams, nextShares, nextCommitments)
+		require.NoError(err)
+		assert.Equal(*secret, *reconsSecret)
+		assert.Equal(*rnd, *reconsRnd)
 
-	// Check that the new commitment to the secret is the expected one
-	valid, err = pedersen.VerifyCommitment(vssParams.PedersenParams, &commitments[0], reconsSecret, reconsRnd)
-	require.NoError(err)
-	assert.True(valid)
+		// Check that the new commitment to the secret is the expected one
+		valid, err = pedersen.VerifyCommitment(vssParams.PedersenParams, &commitments[0], reconsSecret, reconsRnd)
+		require.NoError(err)
+		assert.True(valid)
+	}
+}
+
+func max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
 }

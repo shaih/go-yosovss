@@ -2,7 +2,7 @@ package auditor
 
 import (
 	"fmt"
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +31,7 @@ type VerificationMessage struct {
 func PerformVerification(
 	pub *PublicInput, prv *PrivateInput, k int,
 	dealingMessages []DealingMessage,
+	dbg *PartyDebugParams,
 ) (
 	*VerificationMessage, error,
 ) {
@@ -81,24 +82,26 @@ func PerformVerification(
 
 		// Verify shares
 		for j := 0; j < pub.N; j++ {
-			valid, err := vss.VerifyShare(
-				&pub.VSSParams,
-				&vss.Share{
-					Index:       shareIndex,
-					IndexScalar: *shareIndexScalar,
-					S:           mk.S[j],
-					R:           mk.R[j],
-				},
-				dealingMessages[i].ComS[j],
-			)
-			if err != nil {
-				return nil, fmt.Errorf("verify share failed: %w", err)
-			}
-			if !valid {
-				// invalid dealer
-				msg.Complaints[i] = true
-				myLog.Infof("complain against dealer %d: R or S of incorrect length", i)
-				break
+			if !dbg.SkipVerificationVerifyShare {
+				valid, err := vss.VerifyShare(
+					&pub.VSSParams,
+					&vss.Share{
+						Index:       shareIndex,
+						IndexScalar: *shareIndexScalar,
+						S:           mk.S[j],
+						R:           mk.R[j],
+					},
+					dealingMessages[i].ComS[j],
+				)
+				if err != nil {
+					return nil, fmt.Errorf("verify share failed: %w", err)
+				}
+				if !valid {
+					// invalid dealer
+					msg.Complaints[i] = true
+					myLog.Infof("complain against dealer %d: R or S of incorrect length", i)
+					break
+				}
 			}
 
 			// Propagate the correct shares

@@ -3,7 +3,7 @@ module github.com/shaih/go-yosovss
 go 1.15
 
 require (
-	github.com/algorand/go-algorand-sdk v1.5.1
+	github.com/algorand/go-algorand-sdk v1.5.1 // indirect
 	github.com/cheekybits/genny v1.0.0
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect

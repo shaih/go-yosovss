@@ -3,14 +3,20 @@ package auditor
 import "C"
 import (
 	"fmt"
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
-	log "github.com/sirupsen/logrus"
 )
 
 // WARNING TODO FIXME
 // Work still in progress, mostly incorrect code (old code)
+
+// PartyDebugParams is used to have some control on the way the code of the party is executed
+type PartyDebugParams struct {
+	SkipWitness                 bool // generate an empty witness
+	SkipRefreshing              bool // skip the refreshing part and return empty nextShares/nextCommitments
+	SkipVerificationVerifyShare bool // skip verification of VSS shares in verification
+}
 
 // StartCommitteeParty initiates the protocol for a party participating in a t-of-n Pedersen VSS protocol using
 // the new protocol with auditors
@@ -19,6 +25,7 @@ import (
 func StartCommitteeParty(
 	pub *PublicInput,
 	prv *PrivateInput,
+	dbg *PartyDebugParams,
 ) (
 	nextShare *vss.Share,
 	nextCommitments []pedersen.Commitment,
@@ -28,12 +35,6 @@ func StartCommitteeParty(
 	// instead the protocol should continue and treat the party as malicious
 	// but for debugging it is so much simpler not to add this, so we did not yet
 	// However, a real implementation must add all these tests and handle things properly
-
-	myLog := log.WithFields(log.Fields{
-		"id": prv.Id,
-		"n":  pub.N,
-		"t":  pub.T,
-	})
 
 	err = checkInputs(pub, prv)
 	if err != nil {
@@ -69,7 +70,7 @@ func StartCommitteeParty(
 	// ============
 
 	if indices.Ver >= 0 {
-		msg, err := PerformVerification(pub, prv, indices.Ver, dealingMessages)
+		msg, err := PerformVerification(pub, prv, indices.Ver, dealingMessages, dbg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("party %d failed to perform verification: %w", prv.Id, err)
 		}
@@ -107,11 +108,18 @@ func StartCommitteeParty(
 	// =======
 
 	if indices.Wit >= 0 {
-		msg, err := PerformWitness(pub, dealingMessages)
-		if err != nil {
-			return nil, nil, fmt.Errorf("party %d failed to perform witness: %w", prv.Id, err)
+		if !dbg.SkipWitness {
+			msg, err := PerformWitness(pub, dealingMessages)
+			if err != nil {
+				return nil, nil, fmt.Errorf("party %d failed to perform witness: %w", prv.Id, err)
+			}
+			prv.BC.Send(msgpack.Encode(msg))
+		} else {
+			// This is for debug only when all parties are honest, no need to perform this step
+			prv.BC.Send(msgpack.Encode(WitnessMessage{
+				WitnessSeeds: make([]*[SeedLength]byte, pub.N),
+			}))
 		}
-		prv.BC.Send(msgpack.Encode(msg))
 	} else { // Do nothing if not part of the witness committee
 		prv.BC.Send([]byte{})
 	}
@@ -147,22 +155,15 @@ func StartCommitteeParty(
 	// Last phase where everybody computes the commitments of the refreshed shares
 	// and parties in the new holding committee compute their refreshed shares
 
-	resolvedSharesS, resolvedSharedR, disqualifiedDealersByComplaints, err := ResolveComplaints(
-		pub, dealingMessages, verificationMessages, resolutionMessages)
-	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(
-		pub, auditingMessages, disqualifiedDealersByComplaints)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to compute qualified dealers: %w", err)
-	}
-	myLog.Infof("qualified dealers: %v", qualifiedDealers)
-	nextCommitments, err = ComputeRefreshedCommitments(pub, dealingMessages, qualifiedDealers, lagrangeCoefs)
-	if indices.Next >= 0 {
-		// We're in the next committee
-		nextShare, err = ComputeRefreshedShare(
-			pub, prv, indices.Next,
-			dealingMessages, verificationMessages,
-			qualifiedDealers, lagrangeCoefs,
-			resolvedSharesS, resolvedSharedR,
+	if !dbg.SkipRefreshing {
+		nextCommitments, nextShare, err = PerformRefresh(
+			pub,
+			prv,
+			dealingMessages,
+			verificationMessages,
+			resolutionMessages,
+			auditingMessages,
+			indices.Next,
 		)
 		if err != nil {
 			return nil, nil, err

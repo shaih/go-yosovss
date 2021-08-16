@@ -2,12 +2,50 @@ package auditor
 
 import (
 	"fmt"
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
 )
+
+func PerformRefresh(
+	pub *PublicInput,
+	prv *PrivateInput,
+	dealingMessages []DealingMessage,
+	verificationMessages []VerificationMessage,
+	resolutionMessages []ResolutionMessage,
+	auditingMessages []AuditingMessage,
+	indexNext int, // if >=0, the party is the member number indexNext in the next holding committee
+) (
+	[]pedersen.Commitment,
+	*vss.Share,
+	error,
+) {
+	resolvedSharesS, resolvedSharedR, disqualifiedDealersByComplaints, err := ResolveComplaints(
+		pub, dealingMessages, verificationMessages, resolutionMessages)
+	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(
+		pub, auditingMessages, disqualifiedDealersByComplaints)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to compute qualified dealers: %w", err)
+	}
+	log.WithField("indexNext", indexNext).WithField("party", prv.Id).Infof("qualified dealers: %v", qualifiedDealers)
+	nextCommitments, err := ComputeRefreshedCommitments(pub, dealingMessages, qualifiedDealers, lagrangeCoefs)
+	var nextShare *vss.Share
+	if indexNext >= 0 {
+		// We're in the next committee
+		nextShare, err = ComputeRefreshedShare(
+			pub, prv, indexNext,
+			dealingMessages, verificationMessages,
+			qualifiedDealers, lagrangeCoefs,
+			resolvedSharesS, resolvedSharedR,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return nextCommitments, nextShare, nil
+}
 
 // isDealerQualified checks wheter dealer i is qualified according to auditing messages
 // i.e., more than n/2 auditors marked them as qualified

@@ -7,8 +7,8 @@ package auditor
 import (
 	"fmt"
 
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/shaih/go-yosovss/communication"
+	"github.com/shaih/go-yosovss/msgpack"
 )
 
 // This file is a template generating gen-matrix_generic.go

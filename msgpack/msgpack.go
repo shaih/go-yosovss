@@ -1,9 +1,14 @@
 package msgpack
 
+// From Algorand go-algorand
+// github.com/algorand/go-algorand-sdk/encoding/msgpack but using plain go-codec
+// as we don't need canonical
+// but we need codecgen for performance!
+
 import (
 	"io"
 
-	"github.com/algorand/go-codec/codec"
+	"github.com/ugorji/go/codec"
 )
 
 // CodecHandle is used to instantiate msgpack encoders and decoders

@@ -2,6 +2,8 @@ package auditor
 
 import (
 	"fmt"
+	"github.com/shaih/go-yosovss/communication/fake"
+	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
@@ -50,7 +52,7 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -85,6 +87,7 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 		rnd,
 		outputCommitments,
 		outputShares,
+		true,
 	)
 
 	// Reset log level
@@ -106,7 +109,7 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 32       // threshold of malicious parties
+		tt         = 10      // threshold of malicious parties
 		n          = 2*tt + 1 // number of parties per committee
 		numParties = n        // total number of parties
 	)
@@ -115,9 +118,9 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 
 	pub, prvs, o, secret, rnd := setupResharingSame(t, n, tt)
 
-	// Output of all parties
-	outputCommitments := make([][]pedersen.Commitment, numParties)
-	outputShares := make([]*vss.Share, numParties)
+	// Output of party 0
+	outputCommitments := make([][]pedersen.Commitment, 1)
+	outputShares := make([]*vss.Share, 1)
 
 	var wg sync.WaitGroup
 
@@ -130,7 +133,7 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 			party0done <- true
 		}(party, &wg)
@@ -147,7 +150,15 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			_, _, err = StartCommitteeParty(
+				pub,
+				&prvs[party],
+				&PartyDebugParams{
+					SkipWitness:                 true,
+					SkipRefreshing:              true,
+					SkipVerificationVerifyShare: true,
+				},
+			)
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -200,8 +211,195 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 		rnd,
 		outputCommitments,
 		outputShares,
+		true,
 	)
 
 	// Reset log level
 	log.SetLevel(originalLogLevel)
+}
+
+func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
+	// Test resharing protocol when everybody is honest
+	// with some benchmarking
+	// This test makes sure party 0 is run first and benchmark it individually
+	// to get a better timing for a single party
+	// Compared to TestResharingProtocolBenchmarkParty0, it avoids significant
+	// cost in msgpack decoding by doing it only once
+
+	var err error
+
+	// Disable logging for efficiency
+	originalLogLevel := log.GetLevel()
+	log.SetLevel(log.ErrorLevel)
+
+	require := require.New(t)
+
+	const (
+		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
+		tt         = 10       // threshold of malicious parties
+		n          = 2*tt + 1 // number of parties per committee
+		numParties = n        // total number of parties
+	)
+
+	fmt.Printf("TestResharingProtocolBenchmarkManualParty0: n=%d, t=%d\n", n, tt)
+
+	pub, prvs, o, secret, rnd := setupResharingSame(t, n, tt)
+
+	// Output of party 0
+	outputCommitments := make([][]pedersen.Commitment, 1)
+	outputShares := make([]*vss.Share, 1)
+
+	lastTime := time.Now()
+
+	// Dealing
+	// =======
+
+	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
+		return PerformDealing(pub, prv)
+	})
+
+	// Ver
+	// ===
+
+	// Remark we only decode dealing messages once here
+	// that means we don't have any copy
+	// The decoding time is counted in party 0 time which is fair
+	dealingMessages, err := ReceiveDealingMessages(prvs[0].BC, pub.Committees.Hold)
+	require.NoError(err)
+
+	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
+		return PerformVerification(pub, prv, party, dealingMessages, &PartyDebugParams{
+			SkipVerificationVerifyShare: party != 0,
+		})
+	})
+
+	// Res
+	// ===
+
+	verificationMessages, err := ReceiveVerificationMessages(prvs[0].BC, pub.Committees.Ver)
+	require.NoError(err)
+
+	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
+		return PerformResolution(pub, prv, party, dealingMessages, verificationMessages)
+	})
+
+	// Wit
+	// ===
+
+	resolutionMessages, err := ReceiveResolutionMessages(prvs[0].BC, pub.Committees.Res)
+	require.NoError(err)
+
+	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
+		if party == 0 {
+			return PerformWitness(pub, dealingMessages)
+		} else {
+			// we skip witness for party non-zero
+			return &WitnessMessage{
+				WitnessSeeds: make([]*[SeedLength]byte, pub.N),
+			}, nil
+		}
+	})
+
+	// Aud
+	// ===
+
+	witnessMessages, err := ReceiveWitnessMessages(prvs[0].BC, pub.Committees.Wit)
+	require.NoError(err)
+
+	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
+		return PerformAuditing(pub, dealingMessages, witnessMessages)
+	})
+
+	// Refreshing
+	// ==========
+
+	auditingMessages, err := ReceiveAuditingMessages(prvs[0].BC, pub.Committees.Aud)
+	require.NoError(err)
+
+	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
+		if party == 0 {
+			outputCommitments[0], outputShares[0], err = PerformRefresh(
+				pub,
+				prv,
+				dealingMessages,
+				verificationMessages,
+				resolutionMessages,
+				auditingMessages,
+				party,
+			)
+			return struct{}{}, nil
+		} else {
+			// we skip witness for party non-zero
+			return struct{}{}, nil
+		}
+	})
+
+	// Check the results
+	checkProtocolResults(
+		t,
+		pub,
+		secret,
+		rnd,
+		outputCommitments,
+		outputShares,
+		true,
+	)
+
+	// Reset log level
+	log.SetLevel(originalLogLevel)
+}
+
+type roundFunc func(prv *PrivateInput, party int) (interface{}, error)
+
+func runManualRound(t *testing.T, n int, o *fake.Orchestrator, lastTime *time.Time, prvs []PrivateInput, f roundFunc) {
+	require := require.New(t)
+
+	// Party 0
+
+	{
+		party := 0
+		prv := &prvs[party]
+		msg, err := f(prv, party)
+		require.NoError(err)
+		prv.BC.Send(msgpack.Encode(msg))
+	}
+
+	d := time.Since(*lastTime)
+	fmt.Printf("Round %d (%-12s) took %fs for party 0\n", o.Round, RoundNames[o.Round], d.Seconds())
+	*lastTime = time.Now()
+
+	// Other parties
+
+	{
+		var wg sync.WaitGroup
+		for party := 1; party < n; party++ {
+			wg.Add(1)
+			go func(party int, wg *sync.WaitGroup) {
+				defer wg.Done()
+				prv := &prvs[party]
+				msg, err := f(prv, party)
+				require.NoError(err)
+				prv.BC.Send(msgpack.Encode(msg))
+			}(party, &wg)
+		}
+		wg.Wait()
+	}
+
+	nextManualRound(t, o, lastTime)
+}
+
+func nextManualRound(t *testing.T, o *fake.Orchestrator, lastTime *time.Time) {
+	require := require.New(t)
+	var err error
+
+	err = o.ReceiveMessages()
+	require.NoError(err)
+	err = o.SendMessageChannels([]int{0}) // only send to party 0, the others don't need it
+	require.NoError(err)
+
+	d := time.Since(*lastTime)
+	fmt.Printf("Round %d (%-12s) took %fs for the other parties\n", o.Round, RoundNames[o.Round], d.Seconds())
+	*lastTime = time.Now()
+
+	o.Round++
 }

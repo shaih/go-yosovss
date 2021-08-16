@@ -1,7 +1,7 @@
 package auditor
 
 import (
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
@@ -36,7 +36,7 @@ func TestResharingProtocol(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -62,6 +62,7 @@ func TestResharingProtocol(t *testing.T) {
 		rnd,
 		outputCommitments,
 		outputShares,
+		false,
 	)
 }
 
@@ -93,7 +94,7 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -159,12 +160,15 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 		rnd,
 		outputCommitments[1:], // ignore dealer 0
 		outputShares[1:],      // ignore dealer 0
+		false,
 	)
 }
 
 func TestResharingProtocolVerifiedComplain(t *testing.T) {
 	// Make the verification member k=0 cheating and complaining about dealer 0
 	// so that future broadcast needs to be used
+	// Other parties are restricted to minimal work so party 0 can work properly
+	// This is to allow testing on a single compuer
 
 	var err error
 
@@ -194,7 +198,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party])
+			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -272,5 +276,6 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 		rnd,
 		outputCommitments,
 		outputShares,
+		false,
 	)
 }

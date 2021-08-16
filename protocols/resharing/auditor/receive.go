@@ -4,9 +4,9 @@ package auditor
 
 import (
 	"fmt"
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/cheekybits/genny/generic"
 	"github.com/shaih/go-yosovss/communication"
+	"github.com/shaih/go-yosovss/msgpack"
 )
 
 //go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "MessageType=DealingMessage,VerificationMessage,WitnessMessage,AuditingMessage,ResolutionMessage"

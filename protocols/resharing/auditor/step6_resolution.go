@@ -1,7 +1,7 @@
 package auditor
 
 import (
-	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	log "github.com/sirupsen/logrus"

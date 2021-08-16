@@ -158,7 +158,8 @@ func MultScalar(x, y *Scalar) *Scalar {
 func MultPointScalar(p *Point, n *Scalar) (*Point, error) {
 	var r Point
 
-	if *n == ScalarZero {
+	// High-level libsodium forbids result to be 0
+	if *n == ScalarZero || *p == PointInfinity {
 		r = PointInfinity
 		return &r, nil
 	}
@@ -166,7 +167,22 @@ func MultPointScalar(p *Point, n *Scalar) (*Point, error) {
 	result := C.crypto_scalarmult_ed25519_noclamp((*C.uchar)(&r[0]), (*C.uchar)(&n[0]), (*C.uchar)(&p[0]))
 	if result != 0 {
 		return nil, fmt.Errorf("failed to perform scalar multiplication: %d", result)
-		// FIXME WARNING: If p is point at infinity you may have an error there
+	}
+	return &r, nil
+}
+
+// MultPointScalar computes the product of a scalar with the base point
+func MultBasePointScalar(n *Scalar) (*Point, error) {
+	var r Point
+
+	// High-level libsodium forbids result to be 0
+	if *n == ScalarZero {
+		r = PointInfinity
+		return &r, nil
+	}
+	result := C.crypto_scalarmult_ed25519_base_noclamp((*C.uchar)(&r[0]), (*C.uchar)(&n[0]))
+	if result != 0 {
+		return nil, fmt.Errorf("failed to perform scalar multiplication: %d", result)
 	}
 	return &r, nil
 }
