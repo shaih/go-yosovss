@@ -9,4 +9,8 @@ int
 crypto_scalarmult_ed25519_base_h(unsigned char *q,
                                  const unsigned char *n);
 
+int
+crypto_scalarmult_ed25519_base_g(unsigned char *q,
+                                 const unsigned char *n);
+
 #endif //MYREF10_MYREF10_H

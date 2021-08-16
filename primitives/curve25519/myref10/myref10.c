@@ -23,3 +23,18 @@ int crypto_scalarmult_ed25519_base_h(unsigned char *q, const unsigned char *n) {
     ge25519_p3_tobytes(q, &Q);
     return 0;
 }
+
+int crypto_scalarmult_ed25519_base_g(unsigned char *q, const unsigned char *n) {
+    unsigned char *t = q;
+    ge25519_p3 Q;
+    unsigned int i;
+
+    for (i = 0; i < 32; ++i) {
+        t[i] = n[i];
+    }
+    t[31] &= 127;
+
+    ge25519_scalarmult_base(&Q, t);
+    ge25519_p3_tobytes(q, &Q);
+    return 0;
+}
