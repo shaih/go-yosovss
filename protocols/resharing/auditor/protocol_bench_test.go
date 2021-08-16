@@ -236,7 +236,7 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 256      // threshold of malicious parties
+		tt         = 10      // threshold of malicious parties
 		n          = 2*tt + 1 // number of parties per committee
 		numParties = n        // total number of parties
 	)

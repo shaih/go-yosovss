@@ -1,11 +1,11 @@
 package curve25519
 
 import (
-	"github.com/stretchr/testify/require"
 	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsValidPoint(t *testing.T) {
