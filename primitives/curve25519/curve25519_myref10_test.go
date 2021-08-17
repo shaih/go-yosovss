@@ -133,3 +133,19 @@ func TestDoubleMultBaseGHPointScalarZero(t *testing.T) {
 	require.NoError(err)
 	assert.Equal(BaseH, *y)
 }
+
+func TestEvaluationAgainstNaive(t *testing.T) {
+	assert := assert.New(t)
+
+	degree := 5
+	f := Polynomial{Coefficients: make([]Scalar, degree+1)}
+	for i := 0; i <= degree; i++ {
+		f.Coefficients[i] = *RandomScalar()
+	}
+	x := RandomScalar()
+
+	y1 := f.EvaluateNaive(x)
+	y2 := f.Evaluate(x)
+
+	assert.Equal(*y1, *y2)
+}

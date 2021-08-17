@@ -16,8 +16,9 @@ func (p *Polynomial) Degree() int {
 	return i
 }
 
-// Evaluate evaluates the polynomial p at a point x
-func (p *Polynomial) Evaluate(x *Scalar) *Scalar {
+// EvaluateNaive evaluates the polynomial p at a point x
+// Use Evaluate which is faster
+func (p *Polynomial) EvaluateNaive(x *Scalar) *Scalar {
 	degree := p.Degree()
 	evaluation := &Scalar{}
 	*evaluation = p.Coefficients[degree]

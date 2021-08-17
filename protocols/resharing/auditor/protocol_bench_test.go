@@ -230,13 +230,13 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	// Disable logging for efficiency
 	originalLogLevel := log.GetLevel()
-	//log.SetLevel(log.ErrorLevel)
+	log.SetLevel(log.ErrorLevel)
 
 	require := require.New(t)
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt                                     = 128      // threshold of malicious parties
+		tt                                     = 10      // threshold of malicious parties
 		n                                      = 2*tt + 1 // number of parties per committee
 		numParties                             = n        // total number of parties
 		skipDealingFutureBroadcastOtherParties = true     // skip generating future broadcast for other parties

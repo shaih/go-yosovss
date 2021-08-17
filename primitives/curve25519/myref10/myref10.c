@@ -94,3 +94,16 @@ int crypto_ed25519_add_points(unsigned char *r, unsigned char *p, int nb) {
 
     return 0;
 }
+
+void crypto_ed25519_muladd_scalar(unsigned char *r, unsigned char *a, unsigned char *b, unsigned char *c) {
+    sc25519_muladd(r, a, b, c);
+}
+
+void crypto_ed25519_polynomial_evaluation(unsigned char *r, unsigned char *poly, int degree, unsigned char *x) {
+    // Horner evaluation
+
+    memcpy(r, &poly[degree*32], 32);
+    for (int i = degree - 1; i >= 0; i--) {
+        sc25519_muladd(r, r, x, &poly[i*32]);
+    }
+}

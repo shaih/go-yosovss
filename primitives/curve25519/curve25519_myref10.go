@@ -54,3 +54,11 @@ func AddPoints(pointsToSum []Point) (*Point, error) {
 
 	return &r, nil
 }
+
+// Evaluate evaluates the polynomial p at a point x using a customized algorithm
+func (p *Polynomial) Evaluate(x *Scalar) *Scalar {
+	r := Scalar{}
+	// TODO WARNING: using pointsToSum[0][0] assumes that the slice is contiguous
+	myref10.Crypto_ed25519_polynomial_evaluation(&r[0], &p.Coefficients[0][0], len(p.Coefficients)-1, &x[0])
+	return &r
+}
