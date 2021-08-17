@@ -5,3 +5,5 @@
 %}
 
 %include "myref10.h"
+%include <stdint.i>
+

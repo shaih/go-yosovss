@@ -17,9 +17,9 @@ type Share struct {
 type Message curve25519.Scalar
 
 // GenerateShares creates shares of t-of-n Shamir secret sharing for some secret m
-func GenerateShares(m Message, t int, n int) ([]Share, error) {
+func GenerateShares(m Message, t int, n int) (shares []Share, err error) {
 	// The shares to be distributed to participants
-	var shares []Share
+	shares = make([]Share, n)
 
 	f := curve25519.Polynomial{
 		Coefficients: make([]curve25519.Scalar, t),
@@ -28,21 +28,20 @@ func GenerateShares(m Message, t int, n int) ([]Share, error) {
 	f.Coefficients[0] = curve25519.Scalar(m)
 
 	// Generate random values for remaining coefficients
+	chacha20Key, err := curve25519.RandomChacha20Key()
+	if err != nil {
+		return nil, err
+	}
 	for i := 1; i < t; i++ {
-		f.Coefficients[i] = *curve25519.RandomScalar()
+		curve25519.RandomScalarChacha20C(&f.Coefficients[i], &chacha20Key, uint64(i))
 	}
 
 	// Perform Shamir secret sharing on the generated polynomials to construct shares
-	evalPoint := &curve25519.Scalar{}
-	*evalPoint = curve25519.ScalarZero
 	for i := 1; i <= n; i++ {
-		evalPoint = curve25519.AddScalar(evalPoint, &curve25519.ScalarOne)
-
-		shares = append(shares, Share{
-			Index:       i,
-			IndexScalar: *evalPoint,
-			S:           *f.Evaluate(evalPoint),
-		}) // The share of participant i is s_i = f(i)
+		// The share of participant i is s_i = f(i)
+		shares[i-1].Index = i
+		curve25519.GetScalarC(&shares[i-1].IndexScalar, uint64(i))
+		f.EvaluateC(&shares[i-1].S, &shares[i-1].IndexScalar)
 	}
 
 	return shares, nil

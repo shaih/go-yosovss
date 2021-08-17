@@ -5,6 +5,8 @@
 #ifndef MYREF10_MYREF10_H
 #define MYREF10_MYREF10_H
 
+#include <stdint.h>
+
 int
 crypto_scalarmult_ed25519_base_h(unsigned char *q,
                                  const unsigned char *n);
@@ -47,5 +49,15 @@ crypto_ed25519_muladd_scalar(unsigned char *r, unsigned char *a, unsigned char *
  */
 void
 crypto_ed25519_polynomial_evaluation(unsigned char *r, unsigned char *poly, int degree, unsigned char *c);
+
+/**
+ * Generate a random scalar from a chacha20 key and nonce
+ * Much faster than crypto_core_ed25519_scalar_random because faster randomness generator
+ * @param s
+ * @param chacha_key 32 bytes
+ * @param chacha_nonce 8 bytes
+ */
+void
+crypto_core_ed25519_scalar_random_chacha20(unsigned char *s, unsigned char *chacha_key, uint64_t chacha_nonce);
 
 #endif //MYREF10_MYREF10_H

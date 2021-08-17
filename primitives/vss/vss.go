@@ -182,24 +182,22 @@ func FixedRShare(params *Params, s, r *curve25519.Scalar) (
 	commitments[0] = *commitment
 
 	// Generate random values for remaining coefficients
+	chacha20Key, err := curve25519.RandomChacha20Key()
+	if err != nil {
+		return nil, nil, err
+	}
 	for i := 1; i < t; i++ {
-		f.Coefficients[i] = *curve25519.RandomScalar()
-		g.Coefficients[i] = *curve25519.RandomScalar()
+		curve25519.RandomScalarChacha20C(&f.Coefficients[i], &chacha20Key, uint64(2*i))
+		curve25519.RandomScalarChacha20C(&g.Coefficients[i], &chacha20Key, uint64(2*i+1))
 	}
 
 	// Perform Shamir secret sharing on the generated polynomials to construct shares
-	evalPoint := &curve25519.Scalar{}
-	*evalPoint = curve25519.ScalarZero
 	for i := 1; i <= n; i++ {
-		// NOTE: Expensive step, consider changing in the future
-		evalPoint = curve25519.AddScalar(evalPoint, &curve25519.ScalarOne)
-
-		shares[i-1] = Share{
-			Index:       i,
-			IndexScalar: *evalPoint,
-			S:           *f.Evaluate(evalPoint),
-			R:           *g.Evaluate(evalPoint),
-		} // The share of participant i is (sigma_i, rho_i) = (f(i), g(i))
+		// The share of participant i is (sigma_i, rho_i) = (f(i), g(i))
+		shares[i-1].Index = i
+		curve25519.GetScalarC(&shares[i-1].IndexScalar, uint64(i))
+		f.EvaluateC(&shares[i-1].S, &shares[i-1].IndexScalar)
+		g.EvaluateC(&shares[i-1].R, &shares[i-1].IndexScalar)
 
 		// Compute the commitment to the share using randomness rho_i
 		commitment, err = pedersen.GenerateCommitmentFixedR(

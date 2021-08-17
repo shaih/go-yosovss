@@ -149,3 +149,19 @@ func TestEvaluationAgainstNaive(t *testing.T) {
 
 	assert.Equal(*y1, *y2)
 }
+
+func TestRandomScalarChacha20C(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	k, err := RandomChacha20Key()
+	require.NoError(err)
+
+	var x1, x1b, x2 Scalar
+	RandomScalarChacha20C(&x1, &k, 0)
+	RandomScalarChacha20C(&x1b, &k, 0)
+	assert.Equal(x1, x1b)
+	RandomScalarChacha20C(&x2, &k, 1)
+	assert.NotEqual(x1, x2)
+
+}

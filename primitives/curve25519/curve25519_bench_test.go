@@ -54,6 +54,16 @@ func BenchmarkMultBaseHPointScalar(b *testing.B) {
 	}
 }
 
+func BenchmarkDoubleMultBaseGHPointScalar(b *testing.B) {
+	ng := RandomScalar()
+	nh := RandomScalar()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = DoubleMultBaseGHPointScalar(ng, nh)
+	}
+}
+
 func BenchmarkAddPoint(b *testing.B) {
 	p := RandomPoint()
 	q := RandomPoint()

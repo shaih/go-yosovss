@@ -28,8 +28,18 @@ func GenerateAllEps(n int, t int) (epsKeys []curve25519.Key, epsL []EpsL, hashEp
 		epsL[l].Eps = make([]curve25519.Scalar, n)
 	}
 
+	chacha20Key, err := curve25519.RandomChacha20Key()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	eps := curve25519.Scalar{}
+
 	for k := 0; k < n; k++ {
-		epsKey, epsShares, err := GenerateEpsKeyShares(n, t)
+		// Generate random secret seed eps for Vk
+		curve25519.RandomScalarChacha20C(&eps, &chacha20Key, uint64(k))
+
+		// Secret share it and derive the symmetric encryption key epsKey
+		epsKey, epsShares, err := GenerateEpsKeyShares(n, t, &eps)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to generate eps keys for k=%d: %w", k, err)
 		}
@@ -45,13 +55,18 @@ func GenerateAllEps(n int, t int) (epsKeys []curve25519.Key, epsL []EpsL, hashEp
 }
 
 // GenerateEpsKeyShares generates a fresh key for resolution/future broadcast as follows:
-// generate random scalar eps and secret share it into epsShares
+// secret share its input eps (that is supposed to be uniformly random) into epsShares
 // and make the key epsKey be HKDF(eps) using KeyFromEps function
 // d is the degree of Shamir's polynomial
-func GenerateEpsKeyShares(n int, d int) (epsKey curve25519.Key, epsShares []curve25519.Scalar, err error) {
-	// Generate a random scalar secret
-	eps := curve25519.RandomScalar()
-
+func GenerateEpsKeyShares(
+	n int,
+	d int,
+	eps *curve25519.Scalar,
+) (
+	epsKey curve25519.Key,
+	epsShares []curve25519.Scalar,
+	err error,
+) {
 	// Derive the symmetric encryption key from it
 	epsKey, err = SymmetricKeyFromEps(eps)
 	if err != nil {

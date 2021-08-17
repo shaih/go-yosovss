@@ -2,6 +2,8 @@
 // Created by Fabrice Benhamouda on 8/16/21.
 //
 
+#include <sodium/crypto_stream_chacha20.h>
+#include <sodium/crypto_core_ed25519.h>
 #include "private/ed25519_ref10.h"
 #include "myref10.h"
 
@@ -102,8 +104,26 @@ void crypto_ed25519_muladd_scalar(unsigned char *r, unsigned char *a, unsigned c
 void crypto_ed25519_polynomial_evaluation(unsigned char *r, unsigned char *poly, int degree, unsigned char *x) {
     // Horner evaluation
 
-    memcpy(r, &poly[degree*32], 32);
+    memcpy(r, &poly[degree * 32], 32);
     for (int i = degree - 1; i >= 0; i--) {
-        sc25519_muladd(r, r, x, &poly[i*32]);
+        sc25519_muladd(r, r, x, &poly[i * 32]);
     }
+}
+
+void crypto_core_ed25519_scalar_random_chacha20(unsigned char *s, unsigned char *chacha_key, uint64_t chacha_nonce) {
+    // From crypto_core_ed25519_scalar_random
+
+    // The full nonce is the concatenation of the nonce in argument
+    // and of a 32-bit counter_nonce
+    unsigned char full_nonce[12];
+    uint32_t counter_nonce = 0;
+    memcpy(full_nonce, &chacha_nonce, sizeof chacha_nonce);
+
+    do {
+        counter_nonce++;
+        memcpy(&full_nonce[8], &counter_nonce, sizeof counter_nonce);
+        crypto_stream_chacha20_ietf(s, 32, full_nonce, chacha_key);
+        s[crypto_core_ed25519_SCALARBYTES - 1] &= 0x1f;
+    } while (sc25519_is_canonical(s) == 0 ||
+             sodium_is_zero(s, crypto_core_ed25519_SCALARBYTES));
 }

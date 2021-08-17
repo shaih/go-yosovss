@@ -72,11 +72,14 @@ func RandomPoint() *Point {
 
 // GetScalar returns a scalar representation of an unsigned 64-bit integer
 func GetScalar(x uint64) *Scalar {
-	b := make([]byte, 8)
 	var s Scalar
-	binary.LittleEndian.PutUint64(b, x)
-	copy(s[:], b)
+	GetScalarC(&s, x)
 	return &s
+}
+
+// GetScalarC is the same as GetScalar but with the return value as a first pointer
+func GetScalarC(out *Scalar, x uint64) {
+	binary.LittleEndian.PutUint64(out[:], x)
 }
 
 // RandomScalar returns a random scalar value in the range [0, L), where L is the order
