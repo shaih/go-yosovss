@@ -13,6 +13,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"unsafe"
 )
 
 func init() {
@@ -84,6 +85,14 @@ func RandomScalar() *Scalar {
 	var r Scalar
 
 	C.crypto_core_ed25519_scalar_random((*C.uchar)(&r[0]))
+	return &r
+}
+
+// Just used for benchmarking
+func sodium32RandomBytes() *[32]byte {
+	var r [32]byte
+
+	C.randombytes_buf(unsafe.Pointer(&r[0]), 32)
 	return &r
 }
 
