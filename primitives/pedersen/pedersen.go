@@ -16,7 +16,7 @@ type Message = curve25519.Scalar
 
 // Commitment consists of elliptic curve point that serves as a
 // commitment to a message
-type Commitment = curve25519.Point
+type Commitment = curve25519.PointXY
 
 // Decommitment is the random value r used in a Pedersen commitment
 type Decommitment = curve25519.Scalar
@@ -43,7 +43,7 @@ func GenerateCommitment(params *Params, m *Message) (*Commitment, *Decommitment,
 
 	r := curve25519.RandomScalar()
 
-	c, err := curve25519.DoubleMultBaseGHPointScalar(m, r) // Compute g^m * h^r
+	c, err := curve25519.DoubleMultBaseGHPointXYScalar(m, r) // Compute g^m * h^r
 	if err != nil {
 		return nil, nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
@@ -54,7 +54,7 @@ func GenerateCommitment(params *Params, m *Message) (*Commitment, *Decommitment,
 // GenerateCommitmentFixedR creates a commitment for some value m with a fixed decommitment r
 func GenerateCommitmentFixedR(params *Params, m *Message, r *Decommitment) (*Commitment, error) {
 
-	c, err := curve25519.DoubleMultBaseGHPointScalar(m, r) // Compute g^m * h^r
+	c, err := curve25519.DoubleMultBaseGHPointXYScalar(m, r) // Compute g^m * h^r
 	if err != nil {
 		return nil, fmt.Errorf("commitment generation failed: %v", err)
 	}
@@ -66,10 +66,10 @@ func GenerateCommitmentFixedR(params *Params, m *Message, r *Decommitment) (*Com
 // decommitment r
 func VerifyCommitment(params *Params, commitment *Commitment, m *Message, r *Decommitment) (bool, error) {
 
-	c, err := curve25519.DoubleMultBaseGHPointScalar(m, r) // Compute g^m * h^r
+	c, err := curve25519.DoubleMultBaseGHPointXYScalar(m, r) // Compute g^m * h^r
 	if err != nil {
 		return false, fmt.Errorf("verification failed: %v", err)
 	}
 
-	return curve25519.PointEqual(commitment, c), nil
+	return curve25519.PointXYEqual(commitment, c), nil
 }

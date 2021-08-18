@@ -246,8 +246,8 @@ func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool,
 		return false, err
 	}
 
-	comVector := curve25519.PointMatrixFromEntries(1, n+1, commitments)
-	y, err := curve25519.PointMatrixScalarMatrixMul(comVector, &params.ParityMatrix)
+	comVector := curve25519.PointXYMatrixFromEntries(1, n+1, commitments)
+	y, err := curve25519.PointXYMatrixScalarMatrixMul(comVector, &params.ParityMatrix)
 	if err != nil {
 		return false, err
 	}
@@ -255,7 +255,7 @@ func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool,
 	// Checking that the vector y is zero
 	zero := true
 	for j := 0; j < n-d; j++ {
-		if !curve25519.PointEqual(&curve25519.PointInfinity, y.At(0, j)) {
+		if !curve25519.PointXYEqual(&curve25519.PointXYInfinity, y.At(0, j)) {
 			zero = false
 			break
 		}
@@ -276,7 +276,7 @@ func VerifyCommitmentsRandomized(params *Params, commitments []pedersen.Commitme
 		return false, err
 	}
 
-	comVector := curve25519.PointMatrixFromEntries(1, n+1, commitments)
+	comVector := curve25519.PointXYMatrixFromEntries(1, n+1, commitments)
 
 	// Generate a random vector u
 	uVector := curve25519.NewScalarMatrix(n-d, 1)
@@ -291,10 +291,10 @@ func VerifyCommitmentsRandomized(params *Params, commitments []pedersen.Commitme
 	}
 
 	// Multiply comVector by v
-	y, err := curve25519.PointMatrixScalarMatrixMul(comVector, vVector)
+	y, err := curve25519.PointXYMatrixScalarMatrixMul(comVector, vVector)
 	if err != nil {
 		return false, err
 	}
 
-	return curve25519.PointEqual(&curve25519.PointInfinity, y.At(0, 0)), nil
+	return curve25519.PointXYEqual(&curve25519.PointXYInfinity, y.At(0, 0)), nil
 }

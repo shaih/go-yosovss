@@ -78,7 +78,7 @@ func TestVSS(t *testing.T) {
 			// Checking that verify commitments fail with first invalid commitment
 			commitmentsWith0Invalid := make([]pedersen.Commitment, tc.n+1)
 			copy(commitmentsWith0Invalid, commitments)
-			c, err := curve25519.MultPointScalar(&commitmentsWith0Invalid[0], curve25519.GetScalar(2))
+			c, err := curve25519.MultPointXYScalar(&commitmentsWith0Invalid[0], curve25519.GetScalar(2))
 			commitmentsWith0Invalid[0] = *c
 			require.NoError(err)
 			valid, err = VerifyCommitments(params, commitmentsWith0Invalid)
@@ -93,7 +93,7 @@ func TestVSS(t *testing.T) {
 			// Checking that verify commitments fail with first invalid commitment
 			commitmentsWithLastInvalid := make([]pedersen.Commitment, tc.n+1)
 			copy(commitmentsWithLastInvalid, commitments)
-			c, err = curve25519.MultPointScalar(&commitmentsWithLastInvalid[tc.n-1], curve25519.GetScalar(3))
+			c, err = curve25519.MultPointXYScalar(&commitmentsWithLastInvalid[tc.n-1], curve25519.GetScalar(3))
 			commitmentsWithLastInvalid[tc.n-1] = *c
 			require.NoError(err)
 			valid, err = VerifyCommitments(params, commitmentsWithLastInvalid)

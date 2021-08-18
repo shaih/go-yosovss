@@ -250,15 +250,15 @@ func ComputeRefreshedCommitments(
 		// Computing commitments[j+1] for the new holding committee member j
 		// This is the Lagrange reconsturction
 		// of all the original commitments S_ij for qualified dealers i
-		com := &curve25519.Point{}
-		*com = curve25519.PointInfinity
+		com := &curve25519.PointXY{}
+		*com = curve25519.PointXYInfinity
 		for ii, i := range qualifiedDealers {
-			cc, err := curve25519.MultPointScalar(&dealingMessages[i].ComS[j][0], &lagrangeCoeffs[ii])
+			cc, err := curve25519.MultPointXYScalar(&dealingMessages[i].ComS[j][0], &lagrangeCoeffs[ii])
 			if err != nil {
 				return nil, fmt.Errorf("error point multiplication: %w", err)
 			}
 
-			com, err = curve25519.AddPoint(com, cc)
+			com, err = curve25519.AddPointXY(com, cc)
 			if err != nil {
 				return nil, fmt.Errorf("error adding points: %w", err)
 			}

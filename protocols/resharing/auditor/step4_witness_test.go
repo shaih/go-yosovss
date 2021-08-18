@@ -84,7 +84,7 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 	assert.True(valid, "valid commitments should pass the test")
 
 	// make the commitments incorrect
-	c, err := curve25519.AddPoint(&comS[2][3], &comS[2][3])
+	c, err := curve25519.AddPointXY(&comS[2][3], &comS[2][3])
 	require.NoError(err)
 	comS[2][3] = *c
 

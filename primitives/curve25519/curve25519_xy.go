@@ -33,7 +33,7 @@ func IsOnCurveXY(p *PointXY) bool {
 
 // PointXYEqual returns true if two points are equal
 // Non-constant time!
-func PointXYEqual(p, q *Point) bool {
+func PointXYEqual(p, q *PointXY) bool {
 	return *p == *q
 }
 

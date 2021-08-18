@@ -68,7 +68,7 @@ func CheckDealerCommitmentsWithSeed(
 	//}
 
 	for k := 0; k < n+1; k++ {
-		pointsToSum := make([]curve25519.Point, 0, n+1)
+		pointsToSum := make([]curve25519.PointXY, 0, n+1)
 
 		// First row is a bit different: it is origCom, comS[0][0], ..., comS[n-1][0]
 		if GetBit(r, 0) {
@@ -87,7 +87,9 @@ func CheckDealerCommitmentsWithSeed(
 		}
 
 		// Sum all the selected points
-		c, err := curve25519.AddPoints(pointsToSum)
+		// Importantly, we need to check the points are on curve
+		// TODO: Figure out if it's really needed!
+		c, err := curve25519.AddPointsXYCheckOnCurve(pointsToSum)
 		if err != nil {
 			return false, fmt.Errorf("error while adding points for k=%d: %w", k, err)
 		}

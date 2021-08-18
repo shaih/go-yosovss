@@ -80,6 +80,80 @@ func PointMatrixEqual(mat1, mat2 *PointMatrix) bool {
 
 // This file is a template generating gen-matrix_generic.go
 
+// PointXYMatrix is a matrix of curve25519 points
+type PointXYMatrix struct {
+	rows    int       // number of rows
+	columns int       // number of columns
+	entries []PointXY // row-major
+}
+
+func (m *PointXYMatrix) indexOf(i, j int) int {
+	if i < 0 || i >= m.rows || j < 0 || j >= m.columns {
+		panic("indexes out of bound")
+	}
+	return i*m.columns + j
+}
+
+// Rows returns the number of rows of the matrix
+func (m *PointXYMatrix) Rows() int {
+	return m.rows
+}
+
+// Columns returns the number of columns of the matrix
+func (m *PointXYMatrix) Columns() int {
+	return m.columns
+}
+
+// At returns the (i,j) coefficient
+// panic is incorrect indexes
+func (m *PointXYMatrix) At(i, j int) *PointXY {
+	return &m.entries[m.indexOf(i, j)]
+}
+
+// Set sets the (i,j) coefficient to x
+// panic is incorrect indexes
+func (m *PointXYMatrix) Set(i, j int, x *PointXY) {
+	m.entries[m.indexOf(i, j)] = *x
+}
+
+// NewPointXYMatrix creates a new PointXY matrix
+func NewPointXYMatrix(rows, columns int) *PointXYMatrix {
+	return &PointXYMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: make([]PointXY, rows*columns),
+	}
+}
+
+// PointXYMatrixFromEntries create a new EntrypeType matrix
+// with the given entries in row-major order
+// entries are *not* copied
+// panic if length is inconsistent
+func PointXYMatrixFromEntries(rows, columns int, entries []PointXY) *PointXYMatrix {
+	if rows*columns != len(entries) {
+		panic("incorrect size of entries")
+	}
+	return &PointXYMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
+	}
+}
+
+func PointXYMatrixEqual(mat1, mat2 *PointXYMatrix) bool {
+	if mat1.rows != mat2.rows || mat1.columns != mat2.columns {
+		return false
+	}
+	for i := 0; i < mat1.rows*mat1.columns; i++ {
+		if !PointXYEqual(&mat1.entries[i], &mat2.entries[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// This file is a template generating gen-matrix_generic.go
+
 // ScalarMatrix is a matrix of curve25519 points
 type ScalarMatrix struct {
 	rows    int      // number of rows

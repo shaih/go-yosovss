@@ -6,7 +6,7 @@ import (
 	"github.com/cheekybits/genny/generic"
 )
 
-//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "EntryType=Point,Scalar"
+//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "EntryType=Point,PointXY,Scalar"
 
 type EntryType generic.Type
 

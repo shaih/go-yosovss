@@ -150,7 +150,7 @@ func checkProtocolResults(
 	}
 
 	// Check nextCommitments[0] is commitments[0]
-	assert.True(curve25519.PointEqual(&nextCommitments[0], &commitments[0]),
+	assert.True(curve25519.PointXYEqual(&nextCommitments[0], &commitments[0]),
 		"next commitment of secret should be the same as original one")
 
 	// Check that original commitments are still valid
