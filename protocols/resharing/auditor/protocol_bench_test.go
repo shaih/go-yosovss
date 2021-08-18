@@ -8,6 +8,7 @@ import (
 	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -365,32 +366,53 @@ func runManualRound(t *testing.T, n int, o *fake.Orchestrator, lastTime *time.Ti
 
 	// Party 0
 
+	msgSizeParty0 := 0
+
 	{
 		party := 0
 		prv := &prvs[party]
 		msg, err := f(prv, party)
 		require.NoError(err)
-		prv.BC.Send(msgpack.Encode(msg))
+		msgBytes := msgpack.Encode(msg)
+		msgSizeParty0 = len(msgBytes)
+		prv.BC.Send(msgBytes)
 	}
 
 	d := time.Since(*lastTime)
-	fmt.Printf("Round %d (%-12s) took %fs for party 0\n", o.Round, RoundNames[o.Round], d.Seconds())
+	fmt.Printf("Round %d (%-12s) took %fs for party 0 (message size = %d)\n",
+		o.Round, RoundNames[o.Round], d.Seconds(), msgSizeParty0)
 	*lastTime = time.Now()
 
 	// Other parties
 
 	{
+		// We're sending the list of parties to run to this channel
+		partyToRun := make(chan int)
+
 		var wg sync.WaitGroup
-		for party := 1; party < n; party++ {
+
+		// Use as many go routine as CPU cores
+		// for optimization, and not more than n-1 obviously
+		for core := 0; core < runtime.NumCPU() && core < n-1; core++ {
 			wg.Add(1)
-			go func(party int, wg *sync.WaitGroup) {
+			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
-				prv := &prvs[party]
-				msg, err := f(prv, party)
-				require.NoError(err)
-				prv.BC.Send(msgpack.Encode(msg))
-			}(party, &wg)
+				for party := range partyToRun {
+					prv := &prvs[party]
+					msg, err := f(prv, party)
+					require.NoError(err)
+					prv.BC.Send(msgpack.Encode(msg))
+				}
+			}(&wg)
 		}
+
+		for party := 1; party < n; party++ {
+			partyToRun <- party
+		}
+
+		close(partyToRun)
+
+		// Wait until all go routines finish
 		wg.Wait()
 	}
 
@@ -401,13 +423,18 @@ func nextManualRound(t *testing.T, o *fake.Orchestrator, lastTime *time.Time) {
 	require := require.New(t)
 	var err error
 
+	d := time.Since(*lastTime)
+	fmt.Printf("Round %d (%-12s) took %fs for the other parties\n", o.Round, RoundNames[o.Round], d.Seconds())
+	*lastTime = time.Now()
+
 	err = o.ReceiveMessages()
 	require.NoError(err)
 	err = o.SendMessageChannels([]int{0}) // only send to party 0, the others don't need it
 	require.NoError(err)
 
-	d := time.Since(*lastTime)
-	fmt.Printf("Round %d (%-12s) took %fs for the other parties\n", o.Round, RoundNames[o.Round], d.Seconds())
+	d = time.Since(*lastTime)
+	fmt.Printf("Round %d (%-12s) took %fs to send the messages to party 0\n",
+		o.Round, RoundNames[o.Round], d.Seconds())
 	*lastTime = time.Now()
 
 	o.Round++

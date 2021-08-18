@@ -113,7 +113,7 @@ func BenchmarkCheckDealerCommitmentsWithSeed(b *testing.B) {
 
 	// Don't forget to switch back to a small n
 	const (
-		tt = 64
+		tt = 128
 		n  = 2*tt + 1
 	)
 
