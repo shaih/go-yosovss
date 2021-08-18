@@ -77,9 +77,12 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 	require.NoError(err)
 
 	_, comS, err := GenerateDealerSharesCommitments(vssParams, s, r)
+	require.NoError(err)
 
 	seed := [SeedLength]byte{0x01, 0x02}
-	valid, err := CheckDealerCommitmentsWithSeed(vssParams, seed, origCom, comS)
+	vectorV, err := vss.GenerateVectorV(vssParams)
+	require.NoError(err)
+	valid, err := CheckDealerCommitmentsWithSeedAndVectorV(vssParams, seed, origCom, comS, vectorV)
 	require.NoError(err)
 	assert.True(valid, "valid commitments should pass the test")
 
@@ -96,7 +99,9 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 		require.NoError(err)
 
 		// make the test
-		valid, err = CheckDealerCommitmentsWithSeed(vssParams, seed, origCom, comS)
+		vectorV, err := vss.GenerateVectorV(vssParams)
+		require.NoError(err)
+		valid, err := CheckDealerCommitmentsWithSeedAndVectorV(vssParams, seed, origCom, comS, vectorV)
 		require.NoError(err)
 
 		if !valid {
@@ -107,7 +112,7 @@ func TestCheckDealerCommitmentsWithSeed(t *testing.T) {
 	assert.True(invalid, "commitments should have been detected as invalid at least once over 20 tries")
 }
 
-func BenchmarkCheckDealerCommitmentsWithSeed(b *testing.B) {
+func BenchmarkCheckDealerCommitmentsWithSeedAndVectorV(b *testing.B) {
 	assert := assert.New(b)
 	require := require.New(b)
 
@@ -130,11 +135,13 @@ func BenchmarkCheckDealerCommitmentsWithSeed(b *testing.B) {
 	_, comS, err := GenerateDealerSharesCommitments(vssParams, s, r)
 
 	seed := [SeedLength]byte{0x01, 0x02}
+	vectorV, err := vss.GenerateVectorV(vssParams)
+	require.NoError(err)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		valid, err := CheckDealerCommitmentsWithSeed(vssParams, seed, origCom, comS)
+		valid, err := CheckDealerCommitmentsWithSeedAndVectorV(vssParams, seed, origCom, comS, vectorV)
 		require.NoError(err)
 		assert.True(valid, "valid commitments should pass the test")
 	}

@@ -123,4 +123,14 @@ crypto_core_ed25519_scalar_random_chacha20(unsigned char *s, unsigned char *chac
 int
 crypto_core_ed25519_is_on_curve(unsigned char *xy);
 
+/**
+ * Compute matrix a*b
+ * @param c result matrix (n x l)
+ * @param a first (n x m) matrix written in row-major
+ * @param b second (m x l) matrix in row-major
+ */
+void
+crypto_core_ed25519_scalar_matrix_mul(unsigned char *c, unsigned char *a, unsigned char *b, int n, int m, int l);
+
+
 #endif //MYREF10_MYREF10_H

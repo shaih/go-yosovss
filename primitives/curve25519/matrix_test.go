@@ -43,6 +43,14 @@ func TestMatrixMul(t *testing.T) {
 		t.Error(err)
 	}
 
+	actualMulNaive, err := ScalarMatrixMulNaive(mat1, mat2)
+	if err != nil {
+		t.Error(err)
+	}
+	if !ScalarMatrixEqual(expectedMul, actualMulNaive) {
+		t.Errorf("incorrect scalar x scalar multiplication result")
+	}
+
 	actualMul, err := ScalarMatrixMul(mat1, mat2)
 	if err != nil {
 		t.Error(err)

@@ -2,6 +2,7 @@ package auditor
 
 import (
 	"crypto/rand"
+	"github.com/shaih/go-yosovss/primitives/vss"
 	"math/big"
 )
 
@@ -39,6 +40,11 @@ func PerformAuditing(
 
 	invalidWit := make(map[int]struct{}) // set of invalid wit committee member
 	qualifiedDealers := make([]bool, pub.N)
+
+	vectorV, err := vss.GenerateVectorV(&pub.VSSParams)
+	if err != nil {
+		return nil, err
+	}
 
 	for i := 0; i < pub.N; i++ {
 		witnesses := make([]FullWitness, 0, pub.N) // list of witnesses
@@ -97,11 +103,12 @@ func PerformAuditing(
 			nbWitnesses--
 
 			// check if valid
-			valid, err := CheckDealerCommitmentsWithSeed(
+			valid, err := CheckDealerCommitmentsWithSeedAndVectorV(
 				&pub.VSSParams,
 				w.Seed,
 				&pub.Commitments[i+1],
 				dealingMessages[i].ComS,
+				vectorV,
 			)
 			if err != nil {
 				return nil, err

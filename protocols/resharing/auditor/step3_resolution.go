@@ -40,25 +40,33 @@ func PerformResolution(
 		EpsShares: map[PairIK]curve25519.Scalar{},
 	}
 
-	for i := 0; i < n; i++ {
-		var epsL *EpsL = nil
+	epsLI := make([]*EpsL, n) // epsLI[i] is non-nil when decrypted once
 
-		for k := 0; k < n; k++ {
-			if len(verificationMessages[k].Complaints) == n && verificationMessages[k].Complaints[i] {
+	// We order the loops this way to optimize memory
+	// accessing verificationMessages[k] by order of k
+	// It is unclear that it matters though...
+	// Most likely the decoding of the messages cost already much more...
+	for k := 0; k < n; k++ {
+		if len(verificationMessages[k].Complaints) != n {
+			// the verifier k is invalid
+			continue
+		}
+		for i := 0; i < n; i++ {
+			if verificationMessages[k].Complaints[i] {
 				// Vk complained against dealer i
 				myLog.Infof("verification committee member k=%d complaints against dealer %d", k, i)
 
 				// Decrypt and decode epsL if not yet decrypted
-				if epsL == nil {
-					epsL = DecryptEpsL(pub, prv, l, dealingMessages, i, myLog)
+				if epsLI[i] == nil {
+					epsLI[i] = DecryptEpsL(pub, prv, l, dealingMessages, i, myLog)
 					// If it fails, stops with this dealer
-					if epsL == nil {
+					if epsLI[i] == nil {
 						break
 					}
 				}
 
 				// Broadcast eps_{k+1,l+1}
-				msg.EpsShares[PairIK{i, k}] = epsL.Eps[k]
+				msg.EpsShares[PairIK{i, k}] = epsLI[i].Eps[k]
 			}
 		}
 	}

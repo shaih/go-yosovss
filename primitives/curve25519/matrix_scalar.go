@@ -1,6 +1,9 @@
 package curve25519
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/shaih/go-yosovss/primitives/curve25519/myref10"
+)
 
 // Encode encodes a Scalar matrix into a byte string of
 // 32*rows*columns bytes. Scalars are encoded one-by-one
@@ -25,7 +28,7 @@ func (m *ScalarMatrix) Decode(b []byte) error {
 	return nil
 }
 
-func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, error) {
+func ScalarMatrixMulNaive(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, error) {
 	err := MatricesMulCompatible(mat1, mat2)
 	if err != nil {
 		return nil, err
@@ -45,6 +48,40 @@ func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, err
 	}
 
 	return res, nil
+}
+
+// ScalarMatrixMul is much faster than ScalarMatrixMulNaive
+func ScalarMatrixMul(mat1 *ScalarMatrix, mat2 *ScalarMatrix) (*ScalarMatrix, error) {
+	err := MatricesMulCompatible(mat1, mat2)
+	if err != nil {
+		return nil, err
+	}
+
+	res := NewScalarMatrix(mat1.rows, mat2.columns)
+
+	myref10.Crypto_core_ed25519_scalar_matrix_mul(
+		&res.entries[0][0],
+		&mat1.entries[0][0],
+		&mat2.entries[0][0],
+		mat1.rows,
+		mat1.columns,
+		mat2.columns,
+	)
+
+	return res, nil
+}
+
+func (m *ScalarMatrix) Random() error {
+	key, err := RandomChacha20Key()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(m.entries); i++ {
+		RandomScalarChacha20C(&m.entries[i], &key, uint64(i))
+	}
+
+	return nil
 }
 
 func (m *ScalarMatrix) IsZero() bool {

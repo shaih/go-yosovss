@@ -265,36 +265,67 @@ func VerifyCommitments(params *Params, commitments []pedersen.Commitment) (bool,
 
 // VerifyCommitmentsRandomized is similar to VerifyCommitments
 // except it uses a randomized test
-// it picks a random vector in the image of the parity matrix
+// it picks a random vector v in the image of the parity matrix
 // probability of failure = 1/p which is negligible
+// It is the combination of GenerateVectorV and VerifyCommitmentsWithVectorV
 func VerifyCommitmentsRandomized(params *Params, commitments []pedersen.Commitment) (bool, error) {
+	vectorV, err := GenerateVectorV(params)
+	if err != nil {
+		return false, err
+	}
+
+	return VerifyCommitmentsWithVectorV(params, commitments, vectorV)
+}
+
+// VerifyCommitmentsWithVectorV verifies commitments using a vector v in the image of the parity matrix
+// See VerifyCommitmentsRandomized
+func VerifyCommitmentsWithVectorV(
+	params *Params,
+	commitments []pedersen.Commitment,
+	vectorV *curve25519.ScalarMatrix,
+) (bool, error) {
 	n := params.N
-	d := params.D
 
 	err := checkCommitmentsLength(params, commitments)
 	if err != nil {
 		return false, err
 	}
 
+	if vectorV.Columns() != 1 || vectorV.Rows() != n+1 {
+		return false, fmt.Errorf("VerifyCommitmentsWithVectorV: wrong size of vector v")
+	}
+
 	comVector := curve25519.PointXYMatrixFromEntries(1, n+1, commitments)
 
-	// Generate a random vector u
-	uVector := curve25519.NewScalarMatrix(n-d, 1)
-	for i := 0; i < n-d; i++ {
-		uVector.Set(i, 0, curve25519.RandomScalar())
-	}
-
-	// Multiply the parity matrix by the vector u to get a random vector v in the image of the parity matrix
-	vVector, err := curve25519.ScalarMatrixMul(&params.ParityMatrix, uVector)
-	if err != nil {
-		return false, err
-	}
-
 	// Multiply comVector by v
-	y, err := curve25519.PointXYMatrixScalarMatrixMul(comVector, vVector)
+	y, err := curve25519.PointXYMatrixScalarMatrixMul(comVector, vectorV)
 	if err != nil {
 		return false, err
 	}
 
 	return curve25519.PointXYEqual(&curve25519.PointXYInfinity, y.At(0, 0)), nil
+}
+
+// GenerateVectorV generates a random vector v in the image of the parity matrix
+// See VerifyCommitmentsRandomized
+func GenerateVectorV(
+	params *Params,
+) (
+	vectorV *curve25519.ScalarMatrix,
+	err error,
+) {
+	n := params.N
+	d := params.D
+
+	// Generate a random vector u
+	uVector := curve25519.NewScalarMatrix(n-d, 1)
+	uVector.Random()
+
+	// Multiply the parity matrix by the vector u to get a random vector v in the image of the parity matrix
+	vectorV, err = curve25519.ScalarMatrixMul(&params.ParityMatrix, uVector)
+	if err != nil {
+		return nil, err
+	}
+
+	return vectorV, nil
 }

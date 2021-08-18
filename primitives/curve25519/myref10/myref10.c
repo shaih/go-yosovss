@@ -22,7 +22,7 @@ ge25519_msub(ge25519_p1p1 *r, const ge25519_p3 *p, const ge25519_precomp *q);
 
 int
 crypto_scalarmult_ed25519(unsigned char *q, const unsigned char *n,
-                             const unsigned char *p) {
+                          const unsigned char *p) {
     unsigned char *t = q;
     ge25519_p3 Q;
     ge25519_p3 P;
@@ -365,4 +365,36 @@ crypto_core_ed25519_is_on_curve(unsigned char *xy) {
     ge25519_xy p_xy;
     ge25519_xy_fromxybytes(&p_xy, xy);
     return ge25519_xy_is_on_curve(&p_xy);
+}
+
+// return the coordinate for row-major of (i,j) for a matrix with m columns
+// of scalars
+inline int sc_row_major_coord(int i, int j, int m) {
+    return (i * m + j) * 32;
+}
+
+void crypto_core_ed25519_scalar_matrix_mul(unsigned char *c,
+                                           unsigned char *a,
+                                           unsigned char *b,
+                                           int n, int m, int l) {
+
+    for (int i = 0; i < n; i++) {
+        for (int k = 0; k < l; k++) {
+            sc25519_mul(
+                    c + sc_row_major_coord(i, k, l),
+                    a + sc_row_major_coord(i, 0, m),
+                    b + sc_row_major_coord(0, k, l)
+            );
+
+            for (int j = 1; j < m; j++) {
+                sc25519_muladd(
+                        c + sc_row_major_coord(i, k, l),
+                        a + sc_row_major_coord(i, j, m),
+                        b + sc_row_major_coord(j, k, l),
+                        c + sc_row_major_coord(i, k, l)
+                );
+            }
+        }
+    }
+
 }

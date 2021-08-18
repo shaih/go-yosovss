@@ -38,14 +38,16 @@ func GetBit(b []byte, i int) bool {
 	return (b[i/8] & (1 << (i % 8))) != 0
 }
 
-// CheckDealerCommitmentsWithSeed checks if a dealer's commitments passes the test against the seed
+// CheckDealerCommitmentsWithSeedAndVectorV checks if a dealer's commitments passes the test against the seed
 // origCom is the original commitment of the dealer i (i.e., S_i = S_{i,0,0})
 // comS is the array of commitments published by the dealer i
 // (i.e., comS[j][k] = S_{i,j+1,k}, where j in {0,...,n-1} and k in {0,...,n}
+// vectorV should be a random vector in the image of the parity matrix of the VSS (see vss.VerifyCommitmentsWithVectorV)
 // see DealingMessage
-func CheckDealerCommitmentsWithSeed(
+func CheckDealerCommitmentsWithSeedAndVectorV(
 	vssParams *vss.Params, seed [SeedLength]byte,
 	origCom *pedersen.Commitment, comS [][]pedersen.Commitment,
+	vectorV *curve25519.ScalarMatrix,
 ) (
 	valid bool,
 	err error,
@@ -97,7 +99,7 @@ func CheckDealerCommitmentsWithSeed(
 	}
 
 	// Check comS' is ok
-	return vss.VerifyCommitmentsRandomized(vssParams, comSprime)
+	return vss.VerifyCommitmentsWithVectorV(vssParams, comSprime, vectorV)
 }
 
 // PerformWitness executes what a witness committee member does in the dealing round
@@ -116,6 +118,12 @@ func PerformWitness(
 
 	witnessSeeds := make([]*[SeedLength]byte, pub.N)
 
+	// Generate vectorV
+	vectorV, err := vss.GenerateVectorV(&pub.VSSParams)
+	if err != nil {
+		return nil, err
+	}
+
 	for i := 0; i < pub.N; i++ {
 		// Pick a new seed
 		witnessSeeds[i] = &[SeedLength]byte{}
@@ -124,8 +132,8 @@ func PerformWitness(
 			return nil, err
 		}
 
-		valid, err := CheckDealerCommitmentsWithSeed(
-			&pub.VSSParams, *witnessSeeds[i], &pub.Commitments[i+1], dealingMessages[i].ComS,
+		valid, err := CheckDealerCommitmentsWithSeedAndVectorV(
+			&pub.VSSParams, *witnessSeeds[i], &pub.Commitments[i+1], dealingMessages[i].ComS, vectorV,
 		)
 		if err != nil {
 			return nil, err
