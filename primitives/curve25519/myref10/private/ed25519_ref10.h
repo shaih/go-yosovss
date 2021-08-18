@@ -73,6 +73,28 @@ typedef struct {
     fe25519 T2d;
 } ge25519_cached;
 
+typedef struct {
+    fe25519 x;
+    fe25519 y;
+} ge25519_xy; // normal (x,y) point
+
+
+// New xy functions
+// xybytes = 64 bytes: 32-byte x followed by 32-byte y
+
+// WARNING: none of the functions except ge25519_xy_is_on_curve
+//          check that the point is on the curve
+//          using points out of the curve may lead to undefined behaviour
+
+void ge25519_xy_toxybytes(unsigned char *s, const ge25519_xy *p);
+void ge25519_xy_fromxybytes(ge25519_xy *p, const unsigned char *s);
+int ge25519_xy_is_on_curve(ge25519_xy *p);
+void ge25519_xy_to_p3(ge25519_p3 *r, ge25519_xy *p);
+void ge25519_xy_to_precomp(ge25519_precomp *r, ge25519_xy *p);
+void ge25519_p3_to_xy(ge25519_xy *r, ge25519_p3 *p);
+
+//
+
 void ge25519_tobytes(unsigned char *s, const ge25519_p2 *h);
 
 void ge25519_p3_tobytes(unsigned char *s, const ge25519_p3 *h);

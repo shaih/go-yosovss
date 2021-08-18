@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(myref10 C)
 
 set(CMAKE_C_STANDARD 11)
-add_compile_options(-Wall -Wextra -pedantic)
+add_compile_options(-Wall -Wextra -pedantic -Wno-unused-function)
 
 # Add directories for extra cmake files, e.g. to find NTK and other libraries
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")

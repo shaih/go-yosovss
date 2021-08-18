@@ -88,6 +88,11 @@ func BenchmarkAddPointsNaive256(b *testing.B) {
 	testCases := []struct {
 		n int
 	}{
+		{4},
+		{8},
+		{16},
+		{32},
+		{64},
 		{128},
 		{256},
 		{512},
@@ -115,6 +120,11 @@ func BenchmarkAddPoints256(b *testing.B) {
 	testCases := []struct {
 		n int
 	}{
+		{4},
+		{8},
+		{16},
+		{32},
+		{64},
 		{128},
 		{256},
 		{512},

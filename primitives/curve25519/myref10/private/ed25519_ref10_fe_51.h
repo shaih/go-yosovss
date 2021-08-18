@@ -45,6 +45,18 @@ fe25519_add(fe25519 h, const fe25519 f, const fe25519 g)
     h[4] = h4;
 }
 
+// can overlap h with f
+
+static inline void
+fe25519_add_one(fe25519 h, const fe25519 f)
+{
+    h[0] = f[0] + 1;
+    h[1] = f[1];
+    h[2] = f[2];
+    h[3] = f[3];
+    h[4] = f[4];
+}
+
 /*
  h = f - g
  */

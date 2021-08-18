@@ -45,6 +45,8 @@ var ScalarOne Scalar = Scalar([32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
 // IsValidPoint returns true if a point is on the ed25519 curve, non-zero,
 // on the main subgroup, and of small order
+// WARNING: VERY SLOW OPERATIONS: all other operations in this fail anyway if the point is not on the curve
+//          but the point may not be on the correct order (which in general is not an issue)
 func IsValidPoint(p *Point) bool {
 	result := C.crypto_core_ed25519_is_valid_point((*C.uchar)(&p[0]))
 	return result == 1
@@ -164,23 +166,6 @@ func MultScalar(x, y *Scalar) *Scalar {
 
 	C.crypto_core_ed25519_scalar_mul((*C.uchar)(&z[0]), (*C.uchar)(&x[0]), (*C.uchar)(&y[0]))
 	return &z
-}
-
-// MultPointScalar computes the product of a scalar with a point
-func MultPointScalar(p *Point, n *Scalar) (*Point, error) {
-	var r Point
-
-	// High-level libsodium forbids result to be 0
-	if *n == ScalarZero || *p == PointInfinity {
-		r = PointInfinity
-		return &r, nil
-	}
-
-	result := C.crypto_scalarmult_ed25519_noclamp((*C.uchar)(&r[0]), (*C.uchar)(&n[0]), (*C.uchar)(&p[0]))
-	if result != 0 {
-		return nil, fmt.Errorf("failed to perform scalar multiplication: %d", result)
-	}
-	return &r, nil
 }
 
 // multBaseGPointScalar computes the product of a scalar with the base point G

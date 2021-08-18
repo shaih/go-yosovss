@@ -7,6 +7,23 @@
 
 #include <stdint.h>
 
+// WARNING: all the xy functions assumes that the points are on the curve
+// If it's not the case, behaviour is undefined
+// (except for the is_on_curve function)
+
+// Furthermore way too much copy-pasting!
+
+// WARNING: Very dirty naming as done very quickly before deadline
+
+int
+crypto_scalarmult_ed25519(unsigned char *q, const unsigned char *n,
+                             const unsigned char *p);
+// compared to libsodium one, it does not do any check, so faster!
+
+int
+crypto_scalarmult_ed25519_xy(unsigned char *q, const unsigned char *n,
+                             const unsigned char *p);
+
 int
 crypto_scalarmult_ed25519_base_h(unsigned char *q,
                                  const unsigned char *n);
@@ -16,9 +33,26 @@ crypto_scalarmult_ed25519_base_g(unsigned char *q,
                                  const unsigned char *n);
 
 int
+crypto_scalarmult_ed25519_base_g_xy(unsigned char *q,
+                                 const unsigned char *n);
+
+int
+crypto_scalarmult_ed25519_base_h_xy(unsigned char *q,
+                                    const unsigned char *n);
+
+int
 crypto_double_scalarmult_ed25519_base_gh(unsigned char *q,
                                          const unsigned char *ng,
                                          const unsigned char *nh);
+
+int
+crypto_double_scalarmult_ed25519_base_gh_xy(unsigned char *q,
+                                         const unsigned char *ng,
+                                         const unsigned char *nh);
+
+int
+crypto_ed25519_compressed_to_xy(unsigned char *xy,
+                                            const unsigned char *compressed);
 
 /**
  * Sum all the points in p and store the result in r
@@ -29,6 +63,32 @@ crypto_double_scalarmult_ed25519_base_gh(unsigned char *q,
  */
 int
 crypto_ed25519_add_points(unsigned char *r, unsigned char *p, int nb);
+
+/**
+ * Sum all the points in p and store the result in r
+ * @param r result array of 32 bytes
+ * @param p array of 32*nb bytes, points are one after the other
+ * @param nb
+ * @return 0 if successful
+ */
+int
+crypto_ed25519_add_points_xy(unsigned char *r, unsigned char *p, int nb);
+
+/**
+ * Sum all the points in p and store the result in r
+ * AND check if the points are on the curve
+ * @param r result array of 32 bytes
+ * @param p array of 32*nb bytes, points are one after the other
+ * @param nb
+ * @return 0 if successful
+ */
+int
+crypto_ed25519_add_points_check_on_curve_xy(unsigned char *r, unsigned char *p, int nb);
+
+int
+crypto_ed25519_add_xy(unsigned char *r, unsigned char *p, unsigned char *q);
+int
+crypto_ed25519_sub_xy(unsigned char *r, unsigned char *p, unsigned char *q);
 
 /**
  *
@@ -59,5 +119,8 @@ crypto_ed25519_polynomial_evaluation(unsigned char *r, unsigned char *poly, int 
  */
 void
 crypto_core_ed25519_scalar_random_chacha20(unsigned char *s, unsigned char *chacha_key, uint64_t chacha_nonce);
+
+int
+crypto_core_ed25519_is_on_curve(unsigned char *xy);
 
 #endif //MYREF10_MYREF10_H

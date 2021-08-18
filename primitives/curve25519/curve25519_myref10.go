@@ -97,3 +97,15 @@ func RandomChacha20Key() (k Chacha20Key, err error) {
 	}
 	return
 }
+
+// MultPointScalar computes the product of a scalar with a point
+func MultPointScalar(p *Point, n *Scalar) (*Point, error) {
+	var r Point
+
+	// Use myref10 because libsodium do too many additional checks, like testing the point is on main group
+	result := myref10.Crypto_scalarmult_ed25519(&r[0], &n[0], &p[0])
+	if result != 0 {
+		return nil, fmt.Errorf("failed to perform scalar multiplication: %d", result)
+	}
+	return &r, nil
+}
