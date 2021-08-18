@@ -2,6 +2,7 @@ package curve25519
 
 import (
 	"fmt"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519/myref10"
 )
 

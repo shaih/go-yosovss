@@ -319,7 +319,10 @@ func GenerateVectorV(
 
 	// Generate a random vector u
 	uVector := curve25519.NewScalarMatrix(n-d, 1)
-	uVector.Random()
+	err = uVector.Random()
+	if err != nil {
+		return nil, err
+	}
 
 	// Multiply the parity matrix by the vector u to get a random vector v in the image of the parity matrix
 	vectorV, err = curve25519.ScalarMatrixMul(&params.ParityMatrix, uVector)
