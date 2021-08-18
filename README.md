@@ -125,3 +125,9 @@ act
 Note the file `.actrc` that make us use manually the real image instead of the default one.
 There are 2 reasons: https://github.com/nektos/act/issues/269 and the fact that `gcc` is not included in the default image (and is needed by `cgo`)
 See https://github.com/nektos/act#configuration
+
+
+### On rsync-callisto*
+
+These scripts are used to sync the folder with a VM names callisto/callisto2.
+Useful for benchmarking.
