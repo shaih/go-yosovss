@@ -3,11 +3,10 @@
 generate:
 	go generate ./...
 	# The following is to prevent gosec to complain about gen-codecgen.go
+	# It replaces the second line (if empty) by `// #nosec`
 	# Current version of gosec does not allow to exclude generated files
-	sed -i'.original' '1s%^%// #nosec\n%' protocols/resharing/auditor/gen-codecgen.go
+	sed -i'.original' '2s%^ *$$%// #nosec%' protocols/resharing/auditor/gen-codecgen.go
 	rm protocols/resharing/auditor/gen-codecgen.go.original
-	# Trying to debug github actions for macOS
-	head protocols/resharing/auditor/gen-codecgen.go
 
 test: generate
 	go test ./...
