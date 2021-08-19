@@ -4,7 +4,8 @@ generate:
 	go generate ./...
 	# The following is to prevent gosec to complain about gen-codecgen.go
 	# Current version of gosec does not allow to exclude generated files
-	sed -i'' -e '1s%^%// #nosec\n%' protocols/resharing/auditor/gen-codecgen.go
+	sed -i'.original' '1s%^%// #nosec\n%' protocols/resharing/auditor/gen-codecgen.go
+	rm protocols/resharing/auditor/gen-codecgen.go.original
 
 test: generate
 	go test ./...
