@@ -14,6 +14,8 @@ ge25519_p2_dbl(ge25519_p1p1 *r, const ge25519_p2 *p);
 void
 ge25519_madd(ge25519_p1p1 *r, const ge25519_p3 *p, const ge25519_precomp *q);
 
+void test_crypto_multi_scalarmult_ed25519_vartime_xy();
+
 void generateBaseH();
 
 void smallBenchmark();
@@ -24,10 +26,35 @@ int main() {
         return -1;
     }
 
-    generateBaseH();
-    smallBenchmark();
+    // generateBaseH();
+    test_crypto_multi_scalarmult_ed25519_vartime_xy();
+    // smallBenchmark();
 
     return 0;
+}
+
+void test_crypto_multi_scalarmult_ed25519_vartime_xy() {
+    unsigned char base_h[64] = {0x00, 0x88, 0x1a, 0xda, 0x54, 0x70, 0x0f, 0x83, 0x04, 0xf3, 0xbb, 0xd1, 0x1a, 0x88, 0xb6, 0xda, 0x29, 0x98, 0x4c, 0x59, 0x49, 0x6e, 0xb3, 0x03, 0xd4, 0xd3, 0x72, 0xc2, 0x8d, 0xd6, 0x09, 0x63, 0xdd, 0x9e, 0x4f, 0x62, 0x21, 0xd1, 0xde, 0xcb, 0x4f, 0x1e, 0x7e, 0x2c, 0x6e, 0xc8, 0xc4, 0x96, 0xe6, 0x64, 0x58, 0x32, 0xdb, 0xf6, 0x61, 0x87, 0x2c, 0xc7, 0xbb, 0xf4, 0x60, 0xf5, 0x4a, 0x16};
+    unsigned char s[32];
+    unsigned char res1[64], res2[64];
+
+    printf("\n\ntest_crypto_multi_scalarmult_ed25519_vartime_xy\n");
+
+    // crypto_core_ed25519_scalar_random(s);
+    sodium_memzero(s, 32);
+    s[0] = 100;
+
+    crypto_multi_scalarmult_ed25519_vartime_xy(res1, s, base_h, 1);
+    crypto_scalarmult_ed25519_base_h_xy(res2, s);
+
+    if (memcmp(res1, res2, 64)) {
+        printf("ERROR!\n");
+    } else {
+        printf("OK\n");
+    }
+
+    printf("\n\n");
+
 }
 
 // from https://stackoverflow.com/a/36095407

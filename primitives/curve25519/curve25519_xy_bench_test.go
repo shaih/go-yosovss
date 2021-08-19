@@ -2,6 +2,7 @@ package curve25519
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -153,6 +154,44 @@ func BenchmarkAddPointsXYCheckOnCurve(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				_, _ = AddPointsXYCheckOnCurve(pts)
+			}
+		})
+	}
+}
+
+func BenchmarkMultiMultPointXYScalarVarTime(b *testing.B) {
+	testCases := []struct {
+		n int
+	}{
+		{1},
+		{2},
+		{4},
+		{8},
+		{16},
+		{32},
+		{64},
+		{128},
+		{256},
+		{512},
+		{768},
+		{1024},
+	}
+
+	for _, tc := range testCases {
+		b.Run(fmt.Sprintf("n=%d", tc.n), func(b *testing.B) {
+			require := require.New(b)
+			n := tc.n
+			pts := make([]PointXY, n)
+			scs := make([]Scalar, n)
+			for i := 0; i < n; i++ {
+				pts[i] = *RandomPointXY()
+				scs[i] = *RandomScalar()
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, err := MultiMultPointXYScalarVarTime(pts, scs)
+				require.NoError(err)
 			}
 		})
 	}

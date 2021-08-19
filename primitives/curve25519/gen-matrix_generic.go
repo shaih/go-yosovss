@@ -25,6 +25,11 @@ func (m *PointMatrix) Rows() int {
 	return m.rows
 }
 
+// Entries returns the entries of the matrix in row-major order
+func (m *PointMatrix) Entries() []Point {
+	return m.entries
+}
+
 // Columns returns the number of columns of the matrix
 func (m *PointMatrix) Columns() int {
 	return m.columns
@@ -99,6 +104,11 @@ func (m *PointXYMatrix) Rows() int {
 	return m.rows
 }
 
+// Entries returns the entries of the matrix in row-major order
+func (m *PointXYMatrix) Entries() []PointXY {
+	return m.entries
+}
+
 // Columns returns the number of columns of the matrix
 func (m *PointXYMatrix) Columns() int {
 	return m.columns
@@ -171,6 +181,11 @@ func (m *ScalarMatrix) indexOf(i, j int) int {
 // Rows returns the number of rows of the matrix
 func (m *ScalarMatrix) Rows() int {
 	return m.rows
+}
+
+// Entries returns the entries of the matrix in row-major order
+func (m *ScalarMatrix) Entries() []Scalar {
+	return m.entries
 }
 
 // Columns returns the number of columns of the matrix

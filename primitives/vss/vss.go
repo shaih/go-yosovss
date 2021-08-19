@@ -295,15 +295,23 @@ func VerifyCommitmentsWithVectorV(
 		return false, fmt.Errorf("VerifyCommitmentsWithVectorV: wrong size of vector v")
 	}
 
-	comVector := curve25519.PointXYMatrixFromEntries(1, n+1, commitments)
-
-	// Multiply comVector by v
-	y, err := curve25519.PointXYMatrixScalarMatrixMul(comVector, vectorV)
+	// Multiply commitments by v
+	y, err := curve25519.MultiMultPointXYScalarVarTime(commitments, vectorV.Entries())
 	if err != nil {
 		return false, err
 	}
 
-	return curve25519.PointXYEqual(&curve25519.PointXYInfinity, y.At(0, 0)), nil
+	return curve25519.PointXYEqual(&curve25519.PointXYInfinity, y), nil
+
+	//comVector := curve25519.PointXYMatrixFromEntries(1, n+1, commitments)
+	//
+	//// Multiply comVector by v
+	//y, err := curve25519.PointXYMatrixScalarMatrixMul(comVector, vectorV)
+	//if err != nil {
+	//	return false, err
+	//}
+	//
+	//return curve25519.PointXYEqual(&curve25519.PointXYInfinity, y.At(0, 0)), nil
 }
 
 // GenerateVectorV generates a random vector v in the image of the parity matrix

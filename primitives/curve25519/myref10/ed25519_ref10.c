@@ -41,8 +41,10 @@ load_4(const unsigned char *in) {
  */
 
 #ifdef HAVE_TI_MODE
+
 # include "ref10/fe_51/constants.h"
 # include "ref10/fe_51/fe.h"
+
 #else
 
 # include "ref10/fe_25_5/constants.h"
@@ -606,7 +608,9 @@ static void
 ge25519_cmov8_base(ge25519_precomp *t, const int pos, const signed char b) {
     static const ge25519_precomp base[32][8] = { /* base[i][j] = (j+1)*256^i*B */
 #ifdef HAVE_TI_MODE
+
 # include "ref10/fe_51/base.h"
+
 #else
 
 # include "ref10/fe_25_5/base.h"
@@ -700,7 +704,9 @@ ge25519_double_scalarmult_vartime(ge25519_p2 *r, const unsigned char *a,
                                   const ge25519_p3 *A, const unsigned char *b) {
     static const ge25519_precomp Bi[8] = {
 #ifdef HAVE_TI_MODE
+
 # include "ref10/fe_51/base2.h"
+
 #else
 
 # include "ref10/fe_25_5/base2.h"
@@ -2833,7 +2839,9 @@ static void
 ge25519_cmov8_base_h(ge25519_precomp *t, const int pos, const signed char b) {
     static const ge25519_precomp base[32][8] = { /* base[i][j] = (j+1)*256^i*B */
 #ifdef HAVE_TI_MODE
+
 # include "ref10/fe_51/base_h.h"
+
 #else
 
 # include "ref10/fe_25_5/base_h.h"
@@ -2974,12 +2982,14 @@ void ge25519_double_scalarmult_base_gh(ge25519_p3 *h, const unsigned char *a, co
 
 void ge25519_xy_toxybytes(unsigned char *s, const ge25519_xy *p) {
     fe25519_tobytes(s, p->x);
-    fe25519_tobytes(s+32, p->y);
+    fe25519_tobytes(s + 32, p->y);
 }
+
 void ge25519_xy_fromxybytes(ge25519_xy *p, const unsigned char *s) {
     fe25519_frombytes(p->x, s);
-    fe25519_frombytes(p->y, s+32);
+    fe25519_frombytes(p->y, s + 32);
 }
+
 int ge25519_xy_is_on_curve(ge25519_xy *p) {
     fe25519 x2;
     fe25519 y2;
@@ -2997,12 +3007,14 @@ int ge25519_xy_is_on_curve(ge25519_xy *p) {
 
     return fe25519_iszero(t0);
 }
+
 void ge25519_xy_to_p3(ge25519_p3 *r, ge25519_xy *p) {
     fe25519_copy(r->X, p->x);
     fe25519_copy(r->Y, p->y);
     fe25519_1(r->Z);
     fe25519_mul(r->T, r->X, r->Y);
 }
+
 void ge25519_xy_to_precomp(ge25519_precomp *r, ge25519_xy *p) {
     fe25519 xy;
     fe25519_add(r->yplusx, p->y, p->x);
@@ -3019,3 +3031,132 @@ void ge25519_p3_to_xy(ge25519_xy *r, ge25519_p3 *p) {
     fe25519_mul(r->y, p->Y, recip);
 }
 
+
+/**
+ *
+ * @param r
+ * @param p array of n points p1,...,pn
+ * @param a array of n scalars
+ * @param n
+ */
+void
+ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge25519_p3 *pts, int n) {
+    signed char *e; // length = 64 * n
+    ge25519_cached *pi; // length = 8 * n
+
+    signed char carry;
+    ge25519_p1p1 r;
+    ge25519_p2 s;
+    ge25519_p1p1 t2, t3, t4, t5, t6, t7, t8;
+    ge25519_p3 p2, p3, p4, p5, p6, p7, p8;
+    int i, j;
+
+    // Generate pi
+    // pi[i+8*j] = (i+1)*p[j]
+    pi = malloc(n * 8 * sizeof(ge25519_cached));
+    for (j = 0; j < n; j++) {
+        ge25519_cached *pij = &pi[8 * j];
+        const ge25519_p3 *p = &pts[j];
+        ge25519_p3_to_cached(&pij[1 - 1], p);   /* p */
+
+        ge25519_p3_dbl(&t2, p);
+        ge25519_p1p1_to_p3(&p2, &t2);
+        ge25519_p3_to_cached(&pij[2 - 1], &p2); /* 2p = 2*p */
+
+        ge25519_add(&t3, p, &pij[2 - 1]);
+        ge25519_p1p1_to_p3(&p3, &t3);
+        ge25519_p3_to_cached(&pij[3 - 1], &p3); /* 3p = 2p+p */
+
+        ge25519_p3_dbl(&t4, &p2);
+        ge25519_p1p1_to_p3(&p4, &t4);
+        ge25519_p3_to_cached(&pij[4 - 1], &p4); /* 4p = 2*2p */
+
+        ge25519_add(&t5, p, &pij[4 - 1]);
+        ge25519_p1p1_to_p3(&p5, &t5);
+        ge25519_p3_to_cached(&pij[5 - 1], &p5); /* 5p = 4p+p */
+
+        ge25519_p3_dbl(&t6, &p3);
+        ge25519_p1p1_to_p3(&p6, &t6);
+        ge25519_p3_to_cached(&pij[6 - 1], &p6); /* 6p = 2*3p */
+
+        ge25519_add(&t7, p, &pij[6 - 1]);
+        ge25519_p1p1_to_p3(&p7, &t7);
+        ge25519_p3_to_cached(&pij[7 - 1], &p7); /* 7p = 6p+p */
+
+        ge25519_p3_dbl(&t8, &p4);
+        ge25519_p1p1_to_p3(&p8, &t8);
+        ge25519_p3_to_cached(&pij[8 - 1], &p8); /* 8p = 2*4p */
+    }
+
+    // Generate pi
+    // e[i+64*j] = ...
+    e = malloc(n * 64 * sizeof(signed char));
+    for (j = 0; j < n; j++) {
+        signed char *ej = &e[64 * j];
+        for (i = 0; i < 32; ++i) {
+            ej[2 * i + 0] = (a[i+32*j] >> 0) & 15;
+            ej[2 * i + 1] = (a[i+32*j] >> 4) & 15;
+        }
+        /* each e[i] is between 0 and 15 */
+        /* e[63] is between 0 and 7 */
+
+        carry = 0;
+        for (i = 0; i < 63; ++i) {
+            ej[i] += carry;
+            carry = ej[i] + 8;
+            carry >>= 4;
+            ej[i] -= carry * ((signed char) 1 << 4);
+        }
+        ej[63] += carry;
+        /* each ej[i] is between -8 and 8 */
+    }
+
+    ge25519_p3_0(h);
+
+    // WAY TOO MUCH COPY-PASTING
+    for (i = 63; i != 0; i--) {
+        for (j = 0; j < n; j++) {
+            signed char ee = e[64*j + i];
+            if (ee > 0) {
+                ge25519_add(&r, h, &pi[8*j + ee - 1]);
+            } else if (ee < 0) {
+                ge25519_sub(&r, h, &pi[8*j - ee - 1]);
+            }
+            if (j < n-1) {
+                if (ee != 0) {
+                    ge25519_p1p1_to_p3(h, &r);
+                }
+            } else {
+                // last iteration for j
+                if (ee != 0) {
+                    ge25519_p1p1_to_p2(&s, &r);
+                    ge25519_p2_dbl(&r, &s);
+                } else {
+                    ge25519_p3_dbl(&r, h);
+                }
+            }
+        }
+
+        ge25519_p1p1_to_p2(&s, &r);
+        ge25519_p2_dbl(&r, &s);
+        ge25519_p1p1_to_p2(&s, &r);
+        ge25519_p2_dbl(&r, &s);
+        ge25519_p1p1_to_p2(&s, &r);
+        ge25519_p2_dbl(&r, &s);
+
+        ge25519_p1p1_to_p3(h, &r);  /* *16 */
+    }
+    for (j = 0; j < n; j++) {
+        signed char ee = e[64*j + i];
+        if (e[64*j + i] > 0) {
+            ge25519_add(&r, h, &pi[8*j + ee - 1]);
+            ge25519_p1p1_to_p3(h, &r);
+        } else if (e[64*j + i] < 0) {
+            ge25519_sub(&r, h, &pi[8*j - ee - 1]);
+            ge25519_p1p1_to_p3(h, &r);
+        }
+    }
+
+    free(pi);
+    free(e);
+}

@@ -29,6 +29,11 @@ func (m *EntryTypeMatrix) Rows() int {
 	return m.rows
 }
 
+// Entries returns the entries of the matrix in row-major order
+func (m *EntryTypeMatrix) Entries() []EntryType {
+	return m.entries
+}
+
 // Columns returns the number of columns of the matrix
 func (m *EntryTypeMatrix) Columns() int {
 	return m.columns

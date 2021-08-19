@@ -137,12 +137,6 @@ func AddPointsXYNaive(pointsToSum []PointXY) (*PointXY, error) {
 func MultPointXYScalar(p *PointXY, n *Scalar) (*PointXY, error) {
 	var r PointXY
 
-	// High-level libsodium forbids result to be 0
-	if *n == ScalarZero || *p == PointXYInfinity {
-		r = PointXYInfinity
-		return &r, nil
-	}
-
 	result := myref10.Crypto_scalarmult_ed25519_xy(&r[0], &n[0], &p[0])
 	if result != 0 {
 		return nil, fmt.Errorf("failed to perform scalar multiplication: %d", result)
@@ -178,5 +172,23 @@ func DoubleMultBaseGHPointXYScalar(ng *Scalar, nh *Scalar) (*PointXY, error) {
 	if result != 0 {
 		return nil, fmt.Errorf("failed to perform double scalar multiplication: %d", result)
 	}
+	return &r, nil
+}
+
+// MultiMultPointXYScalarVarTime computes the scalar product of k scalars with k points
+// WARNING: Not constant-time! Use only with public exponents
+func MultiMultPointXYScalarVarTime(p []PointXY, n []Scalar) (*PointXY, error) {
+	var r PointXY
+
+	if len(p) != len(n) {
+		return nil, fmt.Errorf("number of points must be equal to number of scalars")
+	}
+
+	if len(p) == 0 {
+		r = PointXYInfinity
+		return &r, nil
+	}
+
+	myref10.Crypto_multi_scalarmult_ed25519_vartime_xy(&r[0], &n[0][0], &p[0][0], len(p))
 	return &r, nil
 }

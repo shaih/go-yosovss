@@ -1,3 +1,5 @@
+#include <printf.h>
+
 /*
  Ignores top bit of h.
  */
@@ -105,6 +107,7 @@ fe25519_tobytes(unsigned char *s, const fe25519 h)
     uint64_t t0, t1, t2, t3;
 
     fe25519_reduce(t, h);
+
     t0 = t[0] | (t[1] << 51);
     t1 = (t[1] >> 13) | (t[2] << 38);
     t2 = (t[2] >> 26) | (t[3] << 25);

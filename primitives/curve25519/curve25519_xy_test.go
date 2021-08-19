@@ -268,3 +268,41 @@ func TestAddPointsXYNaive(t *testing.T) {
 	require.NoError(err)
 	assert.Equal(*r2, *r)
 }
+
+func TestMultiMultPointXYScalarVarTime(t *testing.T) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	p := RandomPointXY()
+	s1 := RandomScalar()
+	s2 := RandomScalar()
+
+	r, err := MultiMultPointXYScalarVarTime([]PointXY{PointXYInfinity}, []Scalar{ScalarOne})
+	require.NoError(err)
+	assert.Equal(PointXYInfinity, *r)
+
+	r, err = MultiMultPointXYScalarVarTime([]PointXY{BaseXYG}, []Scalar{ScalarOne})
+	require.NoError(err)
+	assert.Equal(BaseXYG, *r)
+
+	r, err = MultiMultPointXYScalarVarTime([]PointXY{*p}, []Scalar{*s1})
+	require.NoError(err)
+	r2, err := MultPointXYScalar(p, s1)
+	require.NoError(err)
+	assert.Equal(*r2, *r)
+
+	r, err = MultiMultPointXYScalarVarTime([]PointXY{BaseXYG, BaseXYH}, []Scalar{*s1, *s2})
+	require.NoError(err)
+	r2, err = DoubleMultBaseGHPointXYScalar(s1, s2)
+	require.NoError(err)
+	assert.Equal(*r2, *r)
+
+	r, err = MultiMultPointXYScalarVarTime(
+		[]PointXY{BaseXYG, BaseXYH, BaseXYG, BaseXYH},
+		[]Scalar{*s1, ScalarZero, ScalarZero, *s2},
+	)
+	require.NoError(err)
+	r2, err = DoubleMultBaseGHPointXYScalar(s1, s2)
+	require.NoError(err)
+	assert.Equal(*r2, *r)
+}

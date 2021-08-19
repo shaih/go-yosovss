@@ -133,4 +133,8 @@ void
 crypto_core_ed25519_scalar_matrix_mul(unsigned char *c, unsigned char *a, unsigned char *b, int n, int m, int l);
 
 
+void
+crypto_multi_scalarmult_ed25519_vartime_xy(unsigned char *q, const unsigned char *a,
+                             const unsigned char *p, int n);
+
 #endif //MYREF10_MYREF10_H
