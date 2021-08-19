@@ -246,22 +246,34 @@ func ComputeRefreshedCommitments(
 	// and commitments[j+1] is the commitment to the new share held by party j
 	commitments = make([]pedersen.Commitment, pub.N+1)
 	commitments[0] = pub.Commitments[0]
+	comSJ := make([]curve25519.PointXY, pub.T+1)
 	for j := 0; j < pub.N; j++ {
 		// Computing commitments[j+1] for the new holding committee member j
 		// This is the Lagrange reconsturction
 		// of all the original commitments S_ij for qualified dealers i
-		com := &curve25519.PointXY{}
-		*com = curve25519.PointXYInfinity
-		for ii, i := range qualifiedDealers {
-			cc, err := curve25519.MultPointXYScalar(&dealingMessages[i].ComS[j][0], &lagrangeCoeffs[ii])
-			if err != nil {
-				return nil, fmt.Errorf("error point multiplication: %w", err)
-			}
 
-			com, err = curve25519.AddPointXY(com, cc)
-			if err != nil {
-				return nil, fmt.Errorf("error adding points: %w", err)
-			}
+		// Old slow code
+		//com := &curve25519.PointXY{}
+		//*com = curve25519.PointXYInfinity
+		//for ii, i := range qualifiedDealers {
+		//	cc, err := curve25519.MultPointXYScalar(&dealingMessages[i].ComS[j][0], &lagrangeCoeffs[ii])
+		//	if err != nil {
+		//		return nil, fmt.Errorf("error point multiplication: %w", err)
+		//	}
+		//
+		//	com, err = curve25519.AddPointXY(com, cc)
+		//	if err != nil {
+		//		return nil, fmt.Errorf("error adding points: %w", err)
+		//	}
+		//}
+
+		// Faster code
+		for ii, i := range qualifiedDealers {
+			comSJ[ii] = dealingMessages[i].ComS[j][0]
+		}
+		com, err := curve25519.MultiMultPointXYScalarVarTime(comSJ, lagrangeCoeffs)
+		if err != nil {
+			return nil, fmt.Errorf("error refresh commitments: %w", err)
 		}
 		commitments[j+1] = *com
 	}

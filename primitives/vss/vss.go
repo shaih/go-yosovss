@@ -19,10 +19,12 @@ type Share struct {
 }
 
 type Params struct {
-	PedersenParams *pedersen.Params
-	N              int                     // number of shares
-	D              int                     // degree of the polynomial (reconstruction threshold t = d+1)
-	ParityMatrix   curve25519.ScalarMatrix // paritycpp-check matrix size = (n+1) * (n+1-t)
+	PedersenParams     *pedersen.Params
+	N                  int                     // number of shares
+	D                  int                     // degree of the polynomial (reconstruction threshold t = d+1)
+	ParityMatrix       curve25519.ScalarMatrix // paritycpp-check matrix size = (n+1) * (n+1-t)
+	LagrangeCoefsFirst []curve25519.Scalar     // Lagrange coefficients for 1,...,d+1. Used for a dirty optimization when
+	// the first d+1 shares are valid
 }
 
 func NewVSSParams(pedersenParams *pedersen.Params, n, d int) (*Params, error) {
@@ -30,11 +32,22 @@ func NewVSSParams(pedersenParams *pedersen.Params, n, d int) (*Params, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	firstIndices := make([]curve25519.Scalar, d+1)
+	for i := 0; i < d+1; i++ {
+		curve25519.GetScalarC(&firstIndices[i], uint64(i+1))
+	}
+	lagrangeCoefsFirst, err := curve25519.LagrangeCoeffs(firstIndices, &curve25519.ScalarZero)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Params{
-		PedersenParams: pedersenParams,
-		N:              n,
-		D:              d,
-		ParityMatrix:   *pm,
+		PedersenParams:     pedersenParams,
+		N:                  n,
+		D:                  d,
+		ParityMatrix:       *pm,
+		LagrangeCoefsFirst: lagrangeCoefsFirst,
 	}, nil
 }
 
@@ -77,6 +90,9 @@ func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitme
 }
 
 // ReconstructWithR is like Reconstruct except it also reconstructs the randomness/decommitment r
+// Optimized when the shares are in order of indices and the first d+1 shares are all valid
+// because it has the Lagrange coefs precomputed in that case.
+// FIXME: It's a bit dirty...
 func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Commitment) (
 	*pedersen.Message, *pedersen.Decommitment, error) {
 	n := params.N
@@ -109,12 +125,21 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 
 	// Polynomial interpolation evaluated at 0
 	validShareValues := make([]curve25519.Scalar, t)
+	areFirstIndices := true // is true iff the valid indices are 1,...,t in this order
 	for i := 0; i < t; i++ {
 		validShareValues[i] = validShares[i].IndexScalar
+		if i + 1 != validShares[i].Index {
+			areFirstIndices = false
+		}
 	}
-	lambdas, err := curve25519.LagrangeCoeffs(validShareValues, curve25519.GetScalar(uint64(0)))
-	if err != nil {
-		return nil, nil, fmt.Errorf("error in polynomial interpolation")
+	var lambdas []curve25519.Scalar
+	if areFirstIndices {
+		lambdas = params.LagrangeCoefsFirst
+	} else {
+		lambdas, err = curve25519.LagrangeCoeffs(validShareValues, curve25519.GetScalar(uint64(0)))
+		if err != nil {
+			return nil, nil, fmt.Errorf("error in polynomial interpolation")
+		}
 	}
 
 	// Reconstruct message via pol interpolation at 0
