@@ -19,9 +19,9 @@ type ResolutionMessage struct {
 	EpsShares map[PairIK]curve25519.Scalar `codec:"E"` // EpsShares[(i,k)] = eps_{k+1,l+1} for dealer i if there was a complaint from
 }
 
-// PerformResolution executes what a resolution committee member l does in the resolution round
-// and returns the message it should broadcast
-// l is the index of the party in the verification committee
+// PerformResolution implements the role of party ell in the resolution (future
+// broadcast) committee, and returns the message that it should broadcast.
+// ell is the index of the party in the resolution committee
 func PerformResolution(
 	pub *PublicInput, prv *PrivateInput, l int,
 	dealingMessages []DealingMessage, verificationMessages []VerificationMessage,
@@ -46,14 +46,15 @@ func PerformResolution(
 	// accessing verificationMessages[k] by order of k
 	// It is unclear that it matters though...
 	// Most likely the decoding of the messages cost already much more...
-	for k := 0; k < n; k++ {
+
+	for k := 0; k < n; k++ { // message sent by party k in verification cmte
 		if len(verificationMessages[k].Complaints) != n {
 			// the verifier k is invalid
 			continue
 		}
 		for i := 0; i < n; i++ {
 			if verificationMessages[k].Complaints[i] {
-				// Vk complained against dealer i
+				// Verifier k complained against dealer i
 				myLog.Infof("verification committee member k=%d complaints against dealer %d", k, i)
 
 				// Decrypt and decode epsL if not yet decrypted
@@ -65,7 +66,7 @@ func PerformResolution(
 					}
 				}
 
-				// Broadcast eps_{k+1,l+1}
+				// Broadcast i'th share according to k (eps_{k+1,l+1})
 				msg.EpsShares[PairIK{i, k}] = epsLI[i].Eps[k]
 			}
 		}

@@ -3,6 +3,7 @@ package auditor
 import "C"
 import (
 	"fmt"
+
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
@@ -41,31 +42,32 @@ func StartCommitteeParty(
 	// but for debugging it is so much simpler not to add this, so we did not yet
 	// However, a real implementation must add all these tests and handle things properly
 
-	err = checkInputs(pub, prv)
+	err = checkInputs(pub, prv) // sanity checks, T<=N, len(pub)=N+1,...
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Compute the indices of the party in the various initial committees (-1 if not a part of a committee)
+	// Compute the indices of this party in the various initial committees (holding, verfication, ...)
+	// indices.XYZ == -1 means that this party is not a part of the XYZ committee
 	indices := pub.Committees.Indices(prv.Id)
 
 	// Dealing
 	// =======
 
-	// Participate in the holding committee when a dealer
-	// The holding committee performs the two level sharing and sends shares
-	// to the verification committee.
+	// If this party is part of the holding committee (i.e., holds a share),
+	// then it plays the role of a dealer for its share in the 2-level
+	// sharing and sends  shares to the verification committee.
 	if indices.Hold >= 0 {
-		msg, err := PerformDealing(pub, prv, dbg)
+		msg, err := PerformDealing(pub, prv, dbg) // compute msg to be bcast by dealer
 		if err != nil {
 			return nil, nil, fmt.Errorf("party %d failed to perform dealing: %w", prv.Id, err)
 		}
-		prv.BC.Send(msgpack.Encode(msg))
+		prv.BC.Send(msgpack.Encode(msg)) // breoadcast this msg
 	} else { // Do nothing if not part of the holding committee
-		prv.BC.Send([]byte{})
+		prv.BC.Send([]byte{}) // an empty message
 	}
 
-	// Receive dealing messages
+	// Receive the broadcast messages from all the dealers, returns an array of messages
 	dealingMessages, err := ReceiveDealingMessages(prv.BC, pub.Committees.Hold)
 	if err != nil {
 		return nil, nil, fmt.Errorf("party %d failed receiving dealing messages: %w", prv.Id, err)
@@ -74,17 +76,21 @@ func StartCommitteeParty(
 	// Verification
 	// ============
 
+	// If this party is a member of the verification committee then verify all
+	// the messages that were broadcast by dealer from the holding committe.
 	if indices.Ver >= 0 {
+		// For each dealer, either forward its shares to the next holding
+		// committee or broadcast a complaint about it.
 		msg, err := PerformVerification(pub, prv, indices.Ver, dealingMessages, dbg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("party %d failed to perform verification: %w", prv.Id, err)
 		}
-		prv.BC.Send(msgpack.Encode(msg))
+		prv.BC.Send(msgpack.Encode(msg)) // broadcast the message
 	} else { // Do nothing if not part of the verification committee
-		prv.BC.Send([]byte{})
+		prv.BC.Send([]byte{}) // an empty message
 	}
 
-	// Receive verification messages
+	// Receive broadcast messages from the verification committee
 	verificationMessages, err := ReceiveVerificationMessages(prv.BC, pub.Committees.Ver)
 	if err != nil {
 		return nil, nil, fmt.Errorf("party %d failed receiving verification messages: %w", prv.Id, err)
@@ -93,17 +99,20 @@ func StartCommitteeParty(
 	// Resolution (= Future Broadcast)
 	// ===============================
 
+	// If this party is a member of the resolution (future broadcast) committee,
+	// then for every complaint (k complain about i) it publishes everything
+	// that the dealer i sent to verifier k
 	if indices.Res >= 0 {
 		msg, err := PerformResolution(pub, prv, indices.Res, dealingMessages, verificationMessages)
 		if err != nil {
 			return nil, nil, fmt.Errorf("party %d failed to perform resolution: %w", prv.Id, err)
 		}
 		prv.BC.Send(msgpack.Encode(msg))
-	} else { // Do nothing if not part of the verification committee
+	} else { // Do nothing if not part of the resolution committee
 		prv.BC.Send([]byte{})
 	}
 
-	// Receive resolution messages
+	// Receive broadcast messages from the resolution committee
 	resolutionMessages, err := ReceiveResolutionMessages(prv.BC, pub.Committees.Res)
 	if err != nil {
 		return nil, nil, fmt.Errorf("party %d failed receiving resolution messages: %w", prv.Id, err)

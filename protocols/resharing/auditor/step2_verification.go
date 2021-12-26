@@ -2,6 +2,7 @@ package auditor
 
 import (
 	"fmt"
+
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/vss"
@@ -26,8 +27,10 @@ type VerificationMessage struct {
 }
 
 // PerformVerification executes what a verification committee member k does in the dealing round
-// and returns the message it should broadcast
-// k is the index of the party in the verification committee
+// and returns the messages/complaints that it should broadcast. It decrypts all the shares sent
+// to its index (i.e. k), and checks them.
+// If the check succeeds then the verifier forwards the shares-of-shares to the next holding
+// ommittee. Else is zeros-out the shares from that dealer and adds a complaint about it.
 func PerformVerification(
 	pub *PublicInput, prv *PrivateInput, k int,
 	dealingMessages []DealingMessage,

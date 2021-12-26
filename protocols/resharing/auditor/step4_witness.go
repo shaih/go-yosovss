@@ -4,12 +4,13 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"io"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/hkdf"
-	"io"
 )
 
 const (
@@ -38,12 +39,13 @@ func GetBit(b []byte, i int) bool {
 	return (b[i/8] & (1 << (i % 8))) != 0
 }
 
-// CheckDealerCommitmentsWithSeedAndVectorV checks if a dealer's commitments passes the test against the seed
-// origCom is the original commitment of the dealer i (i.e., S_i = S_{i,0,0})
-// comS is the array of commitments published by the dealer i
-// (i.e., comS[j][k] = S_{i,j+1,k}, where j in {0,...,n-1} and k in {0,...,n}
-// vectorV should be a random vector in the image of the parity matrix of the VSS (see vss.VerifyCommitmentsWithVectorV)
-// see DealingMessage
+// CheckDealerCommitmentsWithSeedAndVectorV checks if a dealer's commitments
+// passes the test against the seed origCom is the original commitment of
+// the dealer i (i.e., S_i = S_{i,0,0})
+// comS is the array of commitments published by the dealer i (i.e.,
+// comS[j][k] = S_{i,j+1,k}, where j in {0,...,n-1} and k in {0,...,n}
+// vectorV should be a random vector in the image of the parity matrix
+// of the VSS (see vss.VerifyCommitmentsWithVectorV) see DealingMessage
 func CheckDealerCommitmentsWithSeedAndVectorV(
 	vssParams *vss.Params, seed [SeedLength]byte,
 	origCom *pedersen.Commitment, comS [][]pedersen.Commitment,
