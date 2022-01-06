@@ -1,23 +1,25 @@
-.PHONY: generate test lint fix-lint vendor
+.PHONY: generate test lint fix-lint vendor gosec
 
 generate:
 	go generate ./...
 	# The following is to prevent gosec to complain about gen-codecgen.go
-	# It replaces the second line (if empty) by `// #nosec`
+	# It adds a first line `// #nosec`
 	# Current version of gosec does not allow to exclude generated files
-	sed -i'.original' '2s%^ *$$%// #nosec%' protocols/resharing/auditor/gen-codecgen.go
+	sed -i'.original' '1 i\// #nosec%' protocols/resharing/auditor/gen-codecgen.go
 	rm protocols/resharing/auditor/gen-codecgen.go.original
 
 test: generate
 	go test ./...
 
-lint: generate
+lint: generate gosec
 	golangci-lint run
 
-lint-fix: generate
+gosec: generate
+	gosec ./...
+
+lint-fix: generate gosec
 	go fmt ./...
 	golangci-lint run --fix
-	gosec ./...
 
 vendor: generate
 	go mod vendor

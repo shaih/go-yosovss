@@ -128,7 +128,7 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 	areFirstIndices := true // is true iff the valid indices are 1,...,t in this order
 	for i := 0; i < t; i++ {
 		validShareValues[i] = validShares[i].IndexScalar
-		if i + 1 != validShares[i].Index {
+		if i+1 != validShares[i].Index {
 			areFirstIndices = false
 		}
 	}
