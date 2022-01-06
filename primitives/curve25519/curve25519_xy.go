@@ -50,6 +50,19 @@ func PointToPointXY(p *Point) (*PointXY, error) {
 	return &pxy, nil
 }
 
+// PointXYToPoint converts a PointXY to a Point
+// WARNING: Slow, not optimized
+func PointXYToPoint(pxy *PointXY) (*Point, error) {
+	var p Point
+
+	result := myref10.Crypto_ed25519_xy_to_compressed(&p[0], &pxy[0])
+	if result != 0 {
+		return nil, fmt.Errorf("error converting point to compressed")
+	}
+
+	return &p, nil
+}
+
 // RandomPointXY returns a random group element
 // WARNING: Slow, not optimized!
 func RandomPointXY() *PointXY {

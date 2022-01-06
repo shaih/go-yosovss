@@ -19,6 +19,43 @@ func TestIsOnCurve(t *testing.T) {
 	assert.False(IsOnCurveXY(p))
 }
 
+func TestPointToPointXYBaseG(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	pxy, err := PointToPointXY(&BaseG)
+	require.NoError(err)
+	assert.Equal(BaseXYG, *pxy)
+}
+
+func TestPointXYToPointBaseG(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	p, err := PointXYToPoint(&BaseXYG)
+	require.NoError(err)
+	assert.Equal(BaseG, *p)
+}
+
+func TestPointToPointXYRandomAndBack(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	p := RandomPoint()
+
+	pxy, err := PointToPointXY(p)
+	require.NoError(err)
+
+	p2, err := PointXYToPoint(pxy)
+	require.NoError(err)
+
+	pxy2, err := PointToPointXY(p2)
+	require.NoError(err)
+
+	assert.Equal(p, p2)
+	assert.Equal(pxy, pxy2)
+}
+
 func TestAddSubPointsXY(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)

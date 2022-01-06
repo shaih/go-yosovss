@@ -369,6 +369,22 @@ crypto_ed25519_compressed_to_xy(unsigned char *xy,
 }
 
 int
+crypto_ed25519_xy_to_compressed(unsigned char *compressed,
+                                const unsigned char *xy) {
+    // WARNING: NOT OPTIMZED
+
+    ge25519_p3 p_p3;
+    ge25519_xy p_xy;
+
+    ge25519_xy_fromxybytes(&p_xy, xy);
+
+    ge25519_xy_to_p3(&p_p3, &p_xy);
+    ge25519_p3_tobytes(compressed, &p_p3);
+
+    return 0;
+}
+
+int
 crypto_core_ed25519_is_on_curve(unsigned char *xy) {
     ge25519_xy p_xy;
     ge25519_xy_fromxybytes(&p_xy, xy);

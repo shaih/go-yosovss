@@ -30,7 +30,7 @@ func PerformRefresh(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to compute qualified dealers: %w", err)
 	}
-	log.WithField("indexNext", indexNext).WithField("party", prv.Id).Infof("qualified dealers: %v", qualifiedDealers)
+	log.WithField("indexNext", indexNext).WithField("party", prv.ID).Infof("qualified dealers: %v", qualifiedDealers)
 	nextCommitments, err := ComputeRefreshedCommitments(pub, dealingMessages, qualifiedDealers, lagrangeCoefs)
 	var nextShare *vss.Share
 	if indexNext >= 0 {
@@ -213,7 +213,7 @@ func DecryptVerSentShares(
 			continue
 		}
 
-		m, err := curve25519.Decrypt(pub.EncPKs[prv.Id], prv.EncSK, verificationMessages[k].EncShares[j])
+		m, err := curve25519.Decrypt(pub.EncPKs[prv.ID], prv.EncSK, verificationMessages[k].EncShares[j])
 		if err != nil {
 			// when we cannot decrypt, we continue and consider the verification committee member to be malicious
 			log.Infof("could not decrypt verificationMessages[%d].EncShares[%d]", k, j)

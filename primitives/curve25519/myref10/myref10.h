@@ -54,6 +54,10 @@ int
 crypto_ed25519_compressed_to_xy(unsigned char *xy,
                                 const unsigned char *compressed);
 
+int
+crypto_ed25519_xy_to_compressed(unsigned char *compressed,
+                                const unsigned char *xy);
+
 /**
  * Sum all the points in p and store the result in r
  * @param r result array of 32 bytes

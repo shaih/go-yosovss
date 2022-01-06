@@ -49,7 +49,7 @@ func StartCommitteeParty(
 
 	// Compute the indices of this party in the various initial committees (holding, verfication, ...)
 	// indices.XYZ == -1 means that this party is not a part of the XYZ committee
-	indices := pub.Committees.Indices(prv.Id)
+	indices := pub.Committees.Indices(prv.ID)
 
 	// Dealing
 	// =======
@@ -60,7 +60,7 @@ func StartCommitteeParty(
 	if indices.Hold >= 0 {
 		msg, err := PerformDealing(pub, prv, dbg) // compute msg to be bcast by dealer
 		if err != nil {
-			return nil, nil, fmt.Errorf("party %d failed to perform dealing: %w", prv.Id, err)
+			return nil, nil, fmt.Errorf("party %d failed to perform dealing: %w", prv.ID, err)
 		}
 		prv.BC.Send(msgpack.Encode(msg)) // breoadcast this msg
 	} else { // Do nothing if not part of the holding committee
@@ -70,7 +70,7 @@ func StartCommitteeParty(
 	// Receive the broadcast messages from all the dealers, returns an array of messages
 	dealingMessages, err := ReceiveDealingMessages(prv.BC, pub.Committees.Hold)
 	if err != nil {
-		return nil, nil, fmt.Errorf("party %d failed receiving dealing messages: %w", prv.Id, err)
+		return nil, nil, fmt.Errorf("party %d failed receiving dealing messages: %w", prv.ID, err)
 	}
 
 	// Verification
@@ -83,7 +83,7 @@ func StartCommitteeParty(
 		// committee or broadcast a complaint about it.
 		msg, err := PerformVerification(pub, prv, indices.Ver, dealingMessages, dbg)
 		if err != nil {
-			return nil, nil, fmt.Errorf("party %d failed to perform verification: %w", prv.Id, err)
+			return nil, nil, fmt.Errorf("party %d failed to perform verification: %w", prv.ID, err)
 		}
 		prv.BC.Send(msgpack.Encode(msg)) // broadcast the message
 	} else { // Do nothing if not part of the verification committee
@@ -93,7 +93,7 @@ func StartCommitteeParty(
 	// Receive broadcast messages from the verification committee
 	verificationMessages, err := ReceiveVerificationMessages(prv.BC, pub.Committees.Ver)
 	if err != nil {
-		return nil, nil, fmt.Errorf("party %d failed receiving verification messages: %w", prv.Id, err)
+		return nil, nil, fmt.Errorf("party %d failed receiving verification messages: %w", prv.ID, err)
 	}
 
 	// Resolution (= Future Broadcast)
@@ -105,7 +105,7 @@ func StartCommitteeParty(
 	if indices.Res >= 0 {
 		msg, err := PerformResolution(pub, prv, indices.Res, dealingMessages, verificationMessages)
 		if err != nil {
-			return nil, nil, fmt.Errorf("party %d failed to perform resolution: %w", prv.Id, err)
+			return nil, nil, fmt.Errorf("party %d failed to perform resolution: %w", prv.ID, err)
 		}
 		prv.BC.Send(msgpack.Encode(msg))
 	} else { // Do nothing if not part of the resolution committee
@@ -115,7 +115,7 @@ func StartCommitteeParty(
 	// Receive broadcast messages from the resolution committee
 	resolutionMessages, err := ReceiveResolutionMessages(prv.BC, pub.Committees.Res)
 	if err != nil {
-		return nil, nil, fmt.Errorf("party %d failed receiving resolution messages: %w", prv.Id, err)
+		return nil, nil, fmt.Errorf("party %d failed receiving resolution messages: %w", prv.ID, err)
 	}
 
 	// Witness
@@ -125,7 +125,7 @@ func StartCommitteeParty(
 		if !dbg.SkipWitness {
 			msg, err := PerformWitness(pub, dealingMessages)
 			if err != nil {
-				return nil, nil, fmt.Errorf("party %d failed to perform witness: %w", prv.Id, err)
+				return nil, nil, fmt.Errorf("party %d failed to perform witness: %w", prv.ID, err)
 			}
 			prv.BC.Send(msgpack.Encode(msg))
 		} else {
@@ -141,7 +141,7 @@ func StartCommitteeParty(
 	// Receive witness messages
 	witnessMessages, err := ReceiveWitnessMessages(prv.BC, pub.Committees.Wit)
 	if err != nil {
-		return nil, nil, fmt.Errorf("party %d failed receiving witness messages: %w", prv.Id, err)
+		return nil, nil, fmt.Errorf("party %d failed receiving witness messages: %w", prv.ID, err)
 	}
 
 	// Auditing
@@ -150,7 +150,7 @@ func StartCommitteeParty(
 	if indices.Aud >= 0 {
 		msg, err := PerformAuditing(pub, dealingMessages, witnessMessages)
 		if err != nil {
-			return nil, nil, fmt.Errorf("party %d failed to perform auditing: %w", prv.Id, err)
+			return nil, nil, fmt.Errorf("party %d failed to perform auditing: %w", prv.ID, err)
 		}
 		prv.BC.Send(msgpack.Encode(msg))
 	} else { // Do nothing if not part of the auditing committee
@@ -160,7 +160,7 @@ func StartCommitteeParty(
 	// Receive auditing messages
 	auditingMessages, err := ReceiveAuditingMessages(prv.BC, pub.Committees.Aud)
 	if err != nil {
-		return nil, nil, fmt.Errorf("party %d failed receiving auditing messages: %w", prv.Id, err)
+		return nil, nil, fmt.Errorf("party %d failed receiving auditing messages: %w", prv.ID, err)
 	}
 
 	// Refreshing

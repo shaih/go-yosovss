@@ -29,7 +29,7 @@ func PerformResolution(
 	*ResolutionMessage, error,
 ) {
 	myLog := log.WithFields(log.Fields{
-		"party":     prv.Id,
+		"party":     prv.ID,
 		"committee": "resolution",
 		"l":         l,
 	})
@@ -83,7 +83,7 @@ func DecryptEpsL(
 	i int,
 	myLog *log.Entry,
 ) *EpsL {
-	b, err := curve25519.Decrypt(pub.EncPKs[prv.Id], prv.EncSK, dealingMessages[i].EncEpsL[l])
+	b, err := curve25519.Decrypt(pub.EncPKs[prv.ID], prv.EncSK, dealingMessages[i].EncEpsL[l])
 	if err != nil {
 		// invalid dealer
 		myLog.Infof("dealer %d did not encrypt properly epsL[%d]: %v", i, l, err)

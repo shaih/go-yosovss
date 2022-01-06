@@ -58,6 +58,14 @@ func PointEqual(p, q *Point) bool {
 	// return C.sodium_memcmp(unsafe.Pointer(&p[0]), unsafe.Pointer(&q[0]), 32) == 0 // we don't do constant time
 }
 
+func PointFromHash(hashValue [64]byte) (*Point, error) {
+	p := Point{}
+	if C.crypto_core_ed25519_from_hash((*C.uchar)(&p[0]), (*C.uchar)(&hashValue[0])) != 0 {
+		return nil, fmt.Errorf("error while hashing to curve")
+	}
+	return &p, nil
+}
+
 // ScalarEqual returns true if two scalars are equal
 func ScalarEqual(x, y *Scalar) bool {
 	return *x == *y

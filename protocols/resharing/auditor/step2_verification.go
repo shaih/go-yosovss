@@ -42,7 +42,7 @@ func PerformVerification(
 	var err error
 
 	myLog := log.WithFields(log.Fields{
-		"party":     prv.Id,
+		"party":     prv.ID,
 		"committee": "verification",
 		"k":         k,
 	})
@@ -144,7 +144,7 @@ func getMK(
 ) (mk *VerificationMK) {
 
 	// Decrypt and decode M_k
-	b, err := curve25519.Decrypt(pub.EncPKs[prv.Id], prv.EncSK, dealingMessages[i].EncVerM[k])
+	b, err := curve25519.Decrypt(pub.EncPKs[prv.ID], prv.EncSK, dealingMessages[i].EncVerM[k])
 	if err != nil {
 		// invalid dealer
 		myLog.Infof("complain against dealer %d: %v", i, err)

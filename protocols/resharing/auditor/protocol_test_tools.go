@@ -3,6 +3,7 @@ package auditor
 import (
 	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/feldman"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	"github.com/stretchr/testify/assert"
@@ -65,6 +66,8 @@ func setupResharing(
 	var channels []fake.PartyBroadcastChannel
 
 	// Generate parameters and keys
+	vcParams, err := feldman.GenerateVCParams(n)
+	require.NoError(err)
 	encPKs, encSKs := curve25519.SetupKeys(numParties)
 	sigPKs, sigSKs := curve25519.SetupSignKeys(numParties)
 	vssParams, err := vss.NewVSSParams(
@@ -82,6 +85,7 @@ func setupResharing(
 
 	// Public input
 	pub = &PublicInput{
+		VCParams:                 *vcParams,
 		EncPKs:                   encPKs,
 		SigPKs:                   sigPKs,
 		VSSParams:                *vssParams,
@@ -113,7 +117,7 @@ func setupResharing(
 			EncSK: encSKs[party],
 			SigSK: sigSKs[party],
 			Share: allPartiesShares[party],
-			Id:    party,
+			ID:    party,
 		}
 	}
 
@@ -132,7 +136,8 @@ func checkProtocolResults(
 	rnd *curve25519.Scalar,
 	outputCommitments [][]pedersen.Commitment,
 	outputShares []*vss.Share,
-	allowMissingShares bool, // allow for shares to be missing, e.g., not all new holding committee parties are simulated
+	allowMissingShares bool, // allow for shares to be missing,
+	// e.g., not all new holding committee parties are simulated
 	// remaining shares must be shares of new holding parties 0,1,... in this order (but last ones may be missing)
 ) {
 	var err error

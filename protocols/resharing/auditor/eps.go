@@ -3,10 +3,11 @@ package auditor
 import (
 	"crypto/sha256"
 	"fmt"
+	"io"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/shamir"
 	"golang.org/x/crypto/hkdf"
-	"io"
 )
 
 // File related to keys / shares for resolution committee / future braodcast
