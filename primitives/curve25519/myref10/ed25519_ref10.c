@@ -634,6 +634,50 @@ ge25519_cmov8_base(ge25519_precomp *t, const int pos, const signed char b) {
     ge25519_cmov8(t, base[pos], b);
 }
 
+static unsigned char
+negative16(int16_t b) {
+    /* 18446744073709551361..18446744073709551615: yes; 0..255: no */
+    uint64_t x = b;
+
+    x >>= 63; /* 1: yes; 0: no */
+
+    return x;
+}
+
+
+static void
+ge25519_cmov128(ge25519_precomp *t, const ge25519_precomp precomp[8], const int16_t b) {
+    ge25519_precomp minust;
+    const unsigned char bnegative = negative(b);
+    const unsigned char babs = b - (((-bnegative) & b) * ((signed char) 1 << 1));
+
+    ge25519_precomp_0(t);
+    ge25519_cmov(t, &precomp[0], equal(babs, 1));
+    ge25519_cmov(t, &precomp[1], equal(babs, 2));
+    ge25519_cmov(t, &precomp[2], equal(babs, 3));
+    ge25519_cmov(t, &precomp[3], equal(babs, 4));
+    ge25519_cmov(t, &precomp[4], equal(babs, 5));
+    ge25519_cmov(t, &precomp[5], equal(babs, 6));
+    ge25519_cmov(t, &precomp[6], equal(babs, 7));
+    ge25519_cmov(t, &precomp[7], equal(babs, 8));
+    fe25519_copy(minust.yplusx, t->yminusx);
+    fe25519_copy(minust.yminusx, t->yplusx);
+    fe25519_neg(minust.xy2d, t->xy2d);
+    ge25519_cmov(t, &minust, bnegative);
+}
+
+//static void
+//ge25519_cmov128_base_h(ge25519_precomp *t, const int pos, const signed char b) {
+//    static const ge25519_precomp base[16][128] = { /* base[i][j] = (j+1)*2^{16 i}*B */
+//#ifdef HAVE_TI_MODE
+//# include "ref10/fe_51/base_256.h"
+//#else
+//# include "ref10/fe_25_5/base.h"
+//#endif
+//    };
+//    ge25519_cmov8(t, base[pos], b);
+//}
+
 static void
 ge25519_cmov8_cached(ge25519_cached *t, const ge25519_cached cached[8], const signed char b) {
     ge25519_cached minust;
@@ -3031,29 +3075,51 @@ void ge25519_p3_to_xy(ge25519_xy *r, ge25519_p3 *p) {
     fe25519_mul(r->y, p->Y, recip);
 }
 
-
 /**
- *
- * @param r
- * @param p array of n points p1,...,pn
- * @param a array of n scalars
+ * Generate e, a representation of the scalar values in a
+ * so that
+ * e[i+64*j] = ... so that it is between -8 and 8
+ * @param e result array of n * 64 * sizeof(signed char) bytes
+ * @param a concatenation of the n scalars so that MSB is < 127
  * @param n
  */
-void
-ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge25519_p3 *pts, int n) {
-    signed char *e; // length = 64 * n
-    ge25519_cached *pi; // length = 8 * n
-
+void ge25519_multi_scalarmult_gen_e(signed char *e, const unsigned char *a, int n) {
     signed char carry;
-    ge25519_p1p1 r;
-    ge25519_p2 s;
+    int i, j;
+    for (j = 0; j < n; j++) {
+        signed char *ej = &e[64 * j];
+        for (i = 0; i < 32; ++i) {
+            ej[2 * i + 0] = (a[i + 32 * j] >> 0) & 15;
+            ej[2 * i + 1] = (a[i + 32 * j] >> 4) & 15;
+        }
+        /* each e[i] is between 0 and 15 */
+        /* e[63] is between 0 and 7 */
+
+        carry = 0;
+        for (i = 0; i < 63; ++i) {
+            ej[i] += carry;
+            carry = ej[i] + 8;
+            carry >>= 4;
+            ej[i] -= carry * ((signed char) 1 << 4);
+        }
+        ej[63] += carry;
+        /* each ej[i] is between -8 and 8 */
+    }
+}
+
+
+/**
+ * Generate precomputed array pi
+ * pi[i+8*j] = (i+1)*p[j]
+ * @param pi array of size n * 8 * sizeof(ge25519_cached) for the result
+ * @param pts array of n points
+ * @param n
+ * @return
+ */
+void ge25519_multi_scalarmult_gen_pi(ge25519_cached *pi, const ge25519_p3 *pts, int n) {
+    int j;
     ge25519_p1p1 t2, t3, t4, t5, t6, t7, t8;
     ge25519_p3 p2, p3, p4, p5, p6, p7, p8;
-    int i, j;
-
-    // Generate pi
-    // pi[i+8*j] = (i+1)*p[j]
-    pi = malloc(n * 8 * sizeof(ge25519_cached));
     for (j = 0; j < n; j++) {
         ge25519_cached *pij = &pi[8 * j];
         const ge25519_p3 *p = &pts[j];
@@ -3087,42 +3153,41 @@ ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge
         ge25519_p1p1_to_p3(&p8, &t8);
         ge25519_p3_to_cached(&pij[8 - 1], &p8); /* 8p = 2*4p */
     }
+}
 
-    // Generate pi
-    // e[i+64*j] = ...
-    e = malloc(n * 64 * sizeof(signed char));
-    for (j = 0; j < n; j++) {
-        signed char *ej = &e[64 * j];
-        for (i = 0; i < 32; ++i) {
-            ej[2 * i + 0] = (a[i+32*j] >> 0) & 15;
-            ej[2 * i + 1] = (a[i+32*j] >> 4) & 15;
-        }
-        /* each e[i] is between 0 and 15 */
-        /* e[63] is between 0 and 7 */
+/**
+ *
+ * @param r
+ * @param p array of n points p1,...,pn
+ * @param a array of n scalars, MSB of each < 127
+ * @param n
+ */
+void
+ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge25519_p3 *pts, int n) {
+    ge25519_p1p1 r;
+    ge25519_p2 s;
+    int i, j;
 
-        carry = 0;
-        for (i = 0; i < 63; ++i) {
-            ej[i] += carry;
-            carry = ej[i] + 8;
-            carry >>= 4;
-            ej[i] -= carry * ((signed char) 1 << 4);
-        }
-        ej[63] += carry;
-        /* each ej[i] is between -8 and 8 */
-    }
+    ge25519_cached *pi; // length = 8 * n
+    pi = malloc(n * 8 * sizeof(ge25519_cached));
+    ge25519_multi_scalarmult_gen_pi(pi, pts, n);
+
+    signed char *e; // length = 64 * n
+    e = malloc(n * 64 * sizeof(signed char)); // length = 64 * n
+    ge25519_multi_scalarmult_gen_e(e, a, n);
 
     ge25519_p3_0(h);
 
     // WAY TOO MUCH COPY-PASTING
     for (i = 63; i != 0; i--) {
         for (j = 0; j < n; j++) {
-            signed char ee = e[64*j + i];
+            signed char ee = e[64 * j + i];
             if (ee > 0) {
-                ge25519_add(&r, h, &pi[8*j + ee - 1]);
+                ge25519_add(&r, h, &pi[8 * j + ee - 1]);
             } else if (ee < 0) {
-                ge25519_sub(&r, h, &pi[8*j - ee - 1]);
+                ge25519_sub(&r, h, &pi[8 * j - ee - 1]);
             }
-            if (j < n-1) {
+            if (j < n - 1) {
                 if (ee != 0) {
                     ge25519_p1p1_to_p3(h, &r);
                 }
@@ -3147,12 +3212,12 @@ ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge
         ge25519_p1p1_to_p3(h, &r);  /* *16 */
     }
     for (j = 0; j < n; j++) {
-        signed char ee = e[64*j + i];
-        if (e[64*j + i] > 0) {
-            ge25519_add(&r, h, &pi[8*j + ee - 1]);
+        signed char ee = e[64 * j + i];
+        if (e[64 * j + i] > 0) {
+            ge25519_add(&r, h, &pi[8 * j + ee - 1]);
             ge25519_p1p1_to_p3(h, &r);
-        } else if (e[64*j + i] < 0) {
-            ge25519_sub(&r, h, &pi[8*j - ee - 1]);
+        } else if (e[64 * j + i] < 0) {
+            ge25519_sub(&r, h, &pi[8 * j - ee - 1]);
             ge25519_p1p1_to_p3(h, &r);
         }
     }
@@ -3160,3 +3225,63 @@ ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge
     free(pi);
     free(e);
 }
+
+
+/**
+ * Same as ge25519_multi_scalarmult_vartime but constant time.
+ * @param r
+ * @param p array of n points p1,...,pn
+ * @param a array of n scalars, MSB of each < 127
+ * @param n
+ */
+void
+ge25519_multi_scalarmult(ge25519_p3 *h, const unsigned char *a, const ge25519_p3 *pts, int n) {
+    signed char carry;
+    ge25519_p1p1 r;
+    ge25519_p2 s;
+    ge25519_cached t;
+    int i, j;
+
+    ge25519_cached *pi; // length = 8 * n
+    pi = malloc(n * 8 * sizeof(ge25519_cached));
+    ge25519_multi_scalarmult_gen_pi(pi, pts, n);
+
+    signed char *e; // length = 64 * n
+    e = malloc(n * 64 * sizeof(signed char)); // length = 64 * n
+    ge25519_multi_scalarmult_gen_e(e, a, n);
+
+    ge25519_p3_0(h);
+
+    for (i = 63; i != 0; i--) {
+        for (j = 0; j < n; j++) {
+            signed char ee = e[64 * j + i];
+            ge25519_cmov8_cached(&t, &pi[8 * j], ee);
+            ge25519_add(&r, h, &t);
+
+            if (j < n - 1) {
+                ge25519_p1p1_to_p3(h, &r);
+            } else {
+                // last iteration for j
+                ge25519_p1p1_to_p2(&s, &r);
+                ge25519_p2_dbl(&r, &s);
+            }
+        }
+
+        ge25519_p1p1_to_p2(&s, &r);
+        ge25519_p2_dbl(&r, &s);
+        ge25519_p1p1_to_p2(&s, &r);
+        ge25519_p2_dbl(&r, &s);
+        ge25519_p1p1_to_p2(&s, &r);
+        ge25519_p2_dbl(&r, &s);
+
+        ge25519_p1p1_to_p3(h, &r);  /* *16 */
+    }
+
+    for (j = 0; j < n; j++) {
+        signed char ee = e[64 * j + i];
+        ge25519_cmov8_cached(&t, &pi[8 * j], ee);
+        ge25519_add(&r, h, &t);
+        ge25519_p1p1_to_p3(h, &r);
+    }
+}
+

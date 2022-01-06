@@ -192,3 +192,21 @@ func MultiMultPointXYScalarVarTime(p []PointXY, n []Scalar) (*PointXY, error) {
 	myref10.Crypto_multi_scalarmult_ed25519_vartime_xy(&r[0], &n[0][0], &p[0][0], len(p))
 	return &r, nil
 }
+
+// MultiMultPointXYScalar computes the scalar product of k scalars with k points
+// Same as MultiMultPointXYScalarVarTime but constant time
+func MultiMultPointXYScalar(p []PointXY, n []Scalar) (*PointXY, error) {
+	var r PointXY
+
+	if len(p) != len(n) {
+		return nil, fmt.Errorf("number of points must be equal to number of scalars")
+	}
+
+	if len(p) == 0 {
+		r = PointXYInfinity
+		return &r, nil
+	}
+
+	myref10.Crypto_multi_scalarmult_ed25519_xy(&r[0], &n[0][0], &p[0][0], len(p))
+	return &r, nil
+}

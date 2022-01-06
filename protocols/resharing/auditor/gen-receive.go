@@ -18,10 +18,9 @@ import (
 func ReceiveDealingMessages(bc communication.BroadcastChannel, parties []int) ([]DealingMessage, error) {
 	messages := make([]DealingMessage, len(parties))
 
-	_, bm := bc.ReceiveRound() // get all messages broadcast in the last round (ignore round number)
+	_, bm := bc.ReceiveRound()
 
 	for i, party := range parties {
-		// decode message sent by member with id==party, store in ith position in messages array
 		err := msgpack.Decode(bm[party].Payload, &messages[i])
 		if err != nil {
 			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
@@ -33,14 +32,14 @@ func ReceiveDealingMessages(bc communication.BroadcastChannel, parties []int) ([
 
 // This file is a template generating gen-matrix_generic.go
 
-// ReceiveVerificationMessages receives and parse the messages sent by the verifying committee
+// ReceiveVerificationMessages receives and parse the messages sent by dealers in the dealing round
+// parties is the list of parties in the round
 func ReceiveVerificationMessages(bc communication.BroadcastChannel, parties []int) ([]VerificationMessage, error) {
 	messages := make([]VerificationMessage, len(parties))
 
-	_, bm := bc.ReceiveRound() // get all messages broadcast in the last round (ignore round number)
+	_, bm := bc.ReceiveRound()
 
 	for i, party := range parties {
-		// decode message sent by member with id==party, store in ith position in messages array
 		err := msgpack.Decode(bm[party].Payload, &messages[i])
 		if err != nil {
 			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
@@ -57,10 +56,9 @@ func ReceiveVerificationMessages(bc communication.BroadcastChannel, parties []in
 func ReceiveWitnessMessages(bc communication.BroadcastChannel, parties []int) ([]WitnessMessage, error) {
 	messages := make([]WitnessMessage, len(parties))
 
-	_, bm := bc.ReceiveRound() // get all messages broadcast in the last round (ignore round number)
+	_, bm := bc.ReceiveRound()
 
 	for i, party := range parties {
-		// decode message sent by member with id==party, store in ith position in messages array
 		err := msgpack.Decode(bm[party].Payload, &messages[i])
 		if err != nil {
 			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
@@ -72,15 +70,14 @@ func ReceiveWitnessMessages(bc communication.BroadcastChannel, parties []int) ([
 
 // This file is a template generating gen-matrix_generic.go
 
-// ReceiveAuditingMessages receives and parse the messages sent
-// members of the audit committee
+// ReceiveAuditingMessages receives and parse the messages sent by dealers in the dealing round
+// parties is the list of parties in the round
 func ReceiveAuditingMessages(bc communication.BroadcastChannel, parties []int) ([]AuditingMessage, error) {
 	messages := make([]AuditingMessage, len(parties))
 
-	_, bm := bc.ReceiveRound() // get all messages broadcast in the last round (ignore round number)
+	_, bm := bc.ReceiveRound()
 
 	for i, party := range parties {
-		// decode message sent by member with id==party, store in ith position in messages array
 		err := msgpack.Decode(bm[party].Payload, &messages[i])
 		if err != nil {
 			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
@@ -92,15 +89,14 @@ func ReceiveAuditingMessages(bc communication.BroadcastChannel, parties []int) (
 
 // This file is a template generating gen-matrix_generic.go
 
-// ReceiveResolutionMessages receives and parse the messages sent
-// by members of the resolution (future broadcast) committee
+// ReceiveResolutionMessages receives and parse the messages sent by dealers in the dealing round
+// parties is the list of parties in the round
 func ReceiveResolutionMessages(bc communication.BroadcastChannel, parties []int) ([]ResolutionMessage, error) {
 	messages := make([]ResolutionMessage, len(parties))
 
-	_, bm := bc.ReceiveRound() // get all messages broadcast in the last round (ignore round number)
+	_, bm := bc.ReceiveRound()
 
 	for i, party := range parties {
-		// decode message sent by member with id==party, store in ith position in messages array
 		err := msgpack.Decode(bm[party].Payload, &messages[i])
 		if err != nil {
 			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)

@@ -269,7 +269,10 @@ func TestAddPointsXYNaive(t *testing.T) {
 	assert.Equal(*r2, *r)
 }
 
-func TestMultiMultPointXYScalarVarTime(t *testing.T) {
+// GenTestMultiMultPointXYScalar allows to test easily both the constant-time and the var-time
+// version of the multi-mult point/scalar functions
+// see TestMultiMultPointXYScalarVarTime and TestMultiMultPointXYScalar
+func GenTestMultiMultPointXYScalar(t *testing.T, f func(p []PointXY, n []Scalar) (*PointXY, error)) {
 	require := require.New(t)
 	assert := assert.New(t)
 
@@ -277,27 +280,27 @@ func TestMultiMultPointXYScalarVarTime(t *testing.T) {
 	s1 := RandomScalar()
 	s2 := RandomScalar()
 
-	r, err := MultiMultPointXYScalarVarTime([]PointXY{PointXYInfinity}, []Scalar{ScalarOne})
+	r, err := f([]PointXY{PointXYInfinity}, []Scalar{ScalarOne})
 	require.NoError(err)
 	assert.Equal(PointXYInfinity, *r)
 
-	r, err = MultiMultPointXYScalarVarTime([]PointXY{BaseXYG}, []Scalar{ScalarOne})
+	r, err = f([]PointXY{BaseXYG}, []Scalar{ScalarOne})
 	require.NoError(err)
 	assert.Equal(BaseXYG, *r)
 
-	r, err = MultiMultPointXYScalarVarTime([]PointXY{*p}, []Scalar{*s1})
+	r, err = f([]PointXY{*p}, []Scalar{*s1})
 	require.NoError(err)
 	r2, err := MultPointXYScalar(p, s1)
 	require.NoError(err)
 	assert.Equal(*r2, *r)
 
-	r, err = MultiMultPointXYScalarVarTime([]PointXY{BaseXYG, BaseXYH}, []Scalar{*s1, *s2})
+	r, err = f([]PointXY{BaseXYG, BaseXYH}, []Scalar{*s1, *s2})
 	require.NoError(err)
 	r2, err = DoubleMultBaseGHPointXYScalar(s1, s2)
 	require.NoError(err)
 	assert.Equal(*r2, *r)
 
-	r, err = MultiMultPointXYScalarVarTime(
+	r, err = f(
 		[]PointXY{BaseXYG, BaseXYH, BaseXYG, BaseXYH},
 		[]Scalar{*s1, ScalarZero, ScalarZero, *s2},
 	)
@@ -305,4 +308,12 @@ func TestMultiMultPointXYScalarVarTime(t *testing.T) {
 	r2, err = DoubleMultBaseGHPointXYScalar(s1, s2)
 	require.NoError(err)
 	assert.Equal(*r2, *r)
+}
+
+func TestMultiMultPointXYScalarVarTime(t *testing.T) {
+	GenTestMultiMultPointXYScalar(t, MultiMultPointXYScalarVarTime)
+}
+
+func TestMultiMultPointXYScalar(t *testing.T) {
+	GenTestMultiMultPointXYScalar(t, MultiMultPointXYScalar)
 }

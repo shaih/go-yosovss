@@ -25,6 +25,9 @@ ge25519_msub(ge25519_p1p1 *r, const ge25519_p3 *p, const ge25519_precomp *q);
 void
 ge25519_multi_scalarmult_vartime(ge25519_p3 *h, const unsigned char *a, const ge25519_p3 *p, int n);
 
+void
+ge25519_multi_scalarmult(ge25519_p3 *h, const unsigned char *a, const ge25519_p3 *p, int n);
+
 int
 crypto_scalarmult_ed25519(unsigned char *q, const unsigned char *n,
                           const unsigned char *p) {
@@ -407,14 +410,33 @@ void crypto_core_ed25519_scalar_matrix_mul(unsigned char *c,
 /**
  * WARNING: It's variable time, not constant time
  * use only with public exponents!
- * @param q
- * @param a array of n scalars (size = 32*n)
- * @param p array of n points xy (size = 64*n)
- * @param n number of points
- * @return
  */
 void
 crypto_multi_scalarmult_ed25519_vartime_xy(unsigned char *q, const unsigned char *a,
+                                           const unsigned char *p, int n) {
+
+    ge25519_p3 Q;
+    ge25519_xy Q_xy;
+    ge25519_p3 *P;
+    ge25519_xy P_xy;
+
+    int j;
+
+    P = malloc(n * sizeof(ge25519_p3));
+    for (j = 0; j < n; j++) {
+        ge25519_xy_fromxybytes(&P_xy, &p[64 * j]);
+        ge25519_xy_to_p3(&P[j], &P_xy);
+    }
+
+    ge25519_multi_scalarmult_vartime(&Q, a, P, n);
+    ge25519_p3_to_xy(&Q_xy, &Q);
+    ge25519_xy_toxybytes(q, &Q_xy);
+
+    free(P);
+}
+
+void
+crypto_multi_scalarmult_ed25519_xy(unsigned char *q, const unsigned char *a,
                                    const unsigned char *p, int n) {
 
     ge25519_p3 Q;
@@ -426,11 +448,11 @@ crypto_multi_scalarmult_ed25519_vartime_xy(unsigned char *q, const unsigned char
 
     P = malloc(n * sizeof(ge25519_p3));
     for (j = 0; j < n; j++) {
-        ge25519_xy_fromxybytes(&P_xy, &p[64*j]);
+        ge25519_xy_fromxybytes(&P_xy, &p[64 * j]);
         ge25519_xy_to_p3(&P[j], &P_xy);
     }
 
-    ge25519_multi_scalarmult_vartime(&Q, a, P, n);
+    ge25519_multi_scalarmult(&Q, a, P, n);
     ge25519_p3_to_xy(&Q_xy, &Q);
     ge25519_xy_toxybytes(q, &Q_xy);
 

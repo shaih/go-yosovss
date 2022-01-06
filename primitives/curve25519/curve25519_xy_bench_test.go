@@ -160,7 +160,10 @@ func BenchmarkAddPointsXYCheckOnCurve(b *testing.B) {
 	}
 }
 
-func BenchmarkMultiMultPointXYScalarVarTime(b *testing.B) {
+// GenBenchmarkMultiMultPointXYScalar allows to test easily both the constant-time and the var-time
+// version of the multi-mult point/scalar functions
+// see BenchmarkMultiMultPointXYScalarVarTime and BenchmarkMultiMultPointXYScalar
+func GenBenchmarkMultiMultPointXYScalar(b *testing.B, f func(p []PointXY, n []Scalar) (*PointXY, error)) {
 	testCases := []struct {
 		n int
 	}{
@@ -191,9 +194,17 @@ func BenchmarkMultiMultPointXYScalarVarTime(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, err := MultiMultPointXYScalarVarTime(pts, scs)
+				_, err := f(pts, scs)
 				require.NoError(err)
 			}
 		})
 	}
+}
+
+func BenchmarkMultiMultPointXYScalarVarTime(b *testing.B) {
+	GenBenchmarkMultiMultPointXYScalar(b, MultiMultPointXYScalarVarTime)
+}
+
+func BenchmarkMultiMultPointXYScalar(b *testing.B) {
+	GenBenchmarkMultiMultPointXYScalar(b, MultiMultPointXYScalar)
 }
