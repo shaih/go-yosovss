@@ -14,7 +14,7 @@ type Share struct {
 }
 
 // Message is the value the dealer
-type Message curve25519.Scalar
+type Message = curve25519.Scalar
 
 // GenerateShares creates shares of t-of-n Shamir secret sharing for some secret m
 func GenerateShares(m Message, t int, n int) (shares []Share, err error) {

@@ -2,10 +2,11 @@ package auditor
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestReconstructEpsKey(t *testing.T) {
@@ -38,7 +39,8 @@ func TestReconstructEpsKey(t *testing.T) {
 				// Check reconstruction with all shares
 				reconsKey, err := ReconstructEpsKey(n, d, shares, hashEps[k])
 				require.NoError(err)
-				assert.Equal(epsKey[k], reconsKey, "reconstructed key match original key when reconstruction with all shares")
+				assert.Equal(epsKey[k], reconsKey,
+					"reconstructed key match original key when reconstruction with all shares")
 
 				// Check reconstruction with the last d+1 shares only
 				for l := 0; l < n-(d+1); l++ {
@@ -46,7 +48,8 @@ func TestReconstructEpsKey(t *testing.T) {
 				}
 				reconsKey, err = ReconstructEpsKey(n, d, shares, hashEps[k])
 				require.NoError(err)
-				assert.Equal(epsKey[k], reconsKey, "reconstructed key match original key when reconstruction with d+1 shares")
+				assert.Equal(epsKey[k], reconsKey,
+					"reconstructed key match original key when reconstruction with d+1 shares")
 
 				// Check reconstruction with some invalid shares
 				for l := 0; l < n-(d+1); l++ {
@@ -55,7 +58,8 @@ func TestReconstructEpsKey(t *testing.T) {
 				}
 				reconsKey, err = ReconstructEpsKey(n, d, shares, hashEps[k])
 				require.NoError(err)
-				assert.Equal(epsKey[k], reconsKey, "reconstructed key match original key when reconstruction with d+1 shares")
+				assert.Equal(epsKey[k], reconsKey,
+					"reconstructed key match original key when reconstruction with d+1 shares")
 			}
 		})
 	}

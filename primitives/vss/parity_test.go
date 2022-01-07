@@ -2,10 +2,11 @@ package vss
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func generatorMatrix(n, t int) *curve25519.ScalarMatrix {

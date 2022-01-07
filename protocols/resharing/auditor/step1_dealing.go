@@ -2,69 +2,112 @@ package auditor
 
 import (
 	"fmt"
+
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
-	"github.com/shaih/go-yosovss/primitives/pedersen"
+	"github.com/shaih/go-yosovss/primitives/feldman"
+	"github.com/shaih/go-yosovss/primitives/shamir"
 	"github.com/shaih/go-yosovss/primitives/vss"
 )
 
 // DealingMessage is the message dealers send during dealing round
+// Notations below are for dealer i in [0,n-1]
 type DealingMessage struct {
-	_struct struct{}                `codec:",omitempty,omitemptyarray"`
-	ComS    [][]pedersen.Commitment `codec:"S"` // n x (n+1) matrix where
-	// (com[j][0])_j=0,...,n-1 are commitments to first-level shares sigma_{j+1} of the secret s of the dealer
-	// and for each j, com[j][k] for k=1,...,n are commitments to the shares sigma_{j+1,k} of the share sigma_{j+1}
-	EncVerM []curve25519.Ciphertext `codec:"V"` // EncVerM[k] is an encryption under the verification
-	// committee member k's key of message M[k] (type VerificationMK)
-	EncResM []curve25519.SymmetricCiphertext `codec:"R"` // EncResM[k] is a symmetric encryption of M[k]
+	_struct struct{}     `codec:",omitempty,omitemptyarray"`
+	ComC    []feldman.VC `codec:"C"` // ComC[j] is a vector commitment to sigma_{i+1,j+1,l} for l in [0,n],
+	// where sigma_{i+1,j+1,l} is the (j+1)-th share of sigma_{i+1,0,l}=sigma_{i+1,l},
+	// where sigma_{i+1,l} for l in [1,n] is a sharing of sigma_{i+1}
+	// and sigma_{i+1,0} is a random value
+	EncVerM []curve25519.Ciphertext `codec:"V"` // EncVerM[j] is an encryption under the verification
+	// committee member j's key of message M[j] (type VerificationMJ)
+	EncResM []curve25519.SymmetricCiphertext `codec:"R"` // EncResM[j] is a symmetric encryption of M[j]
 	// under a fresh symmetric key K generated as follows:
-	// generate a random scalar eps_{k+1} that is secret-shared into eps_{k+1,1},...,eps_{k+1,n}
-	// K = HKDF(eps_k+1)
-	// k in 0,...,n-1
-	EncEpsL []curve25519.Ciphertext `codec:"e"` // EncEpsL[l] is an encryption under the resolution
-	// committee member l's key of message EpsL described below
-	// l in 0,...,n-1
-	HashEps [][][HashLength]byte `codec:"h"` // HashEps[k][l] is the hash of eps_{k,l+1}
-	// k,l in 0,...,n-1
+	// generate a random scalar eps_{j+1} that is secret-shared into eps_{j+1,1},...,eps_{j+1,n}
+	// K = HKDF(eps_{j+1})
+	// j in 0,...,n-1
+	EncEpsK []curve25519.Ciphertext `codec:"e"` // EncEpsK[j] is an encryption under the resolution
+	// committee member j's key of message EpsK described below
+	// j in 0,...,n-1
+	HashEps [][][HashLength]byte `codec:"h"` // HashEps[j][j] is the hash of eps_{j+1,j+1}
+	// j,j in 0,...,n-1
 }
 
-// VerificationMK is the message M[k] for verification committee member k
-type VerificationMK struct {
-	S []curve25519.Scalar // sigma_1k,..., sigma_nk
-	R []curve25519.Scalar // rho_1k, ..., rho_nk
+// VerificationMJ is the message M[j] for verification committee member j+1
+type VerificationMJ struct {
+	S []curve25519.Scalar // sigma_ij0,..., sigma_ijn
 }
 
-// EpsL is the message for resolution committee member l
-type EpsL struct {
-	Eps []curve25519.Scalar // eps_{1,l+1},...,eps_{n,l+1}
+// EpsK is the message for resolution committee member j
+type EpsK struct {
+	Eps []curve25519.Scalar // eps_{i,1,j+1},...,eps_{i,n,j+1}
 	// TODO: not optimized as we could use a smaller modulus, but that's good enough for this implementation
 }
 
+// GenerateDealerSharesCommitments generate sigma and comC and sigma for secret s for dealer D_i
+// where sigma[j][l] = sigma_{i+1,j,l} is a (n+1)*(n+1) matrix, see ComC in DealingMessage
 func GenerateDealerSharesCommitments(
-	vssParams *vss.Params, s, r *curve25519.Scalar,
+	vssParams *vss.Params, vcParams *feldman.VCParams, s *curve25519.Scalar,
 ) (
-	shares [][]vss.Share, comS [][]pedersen.Commitment, err error,
+	sigma [][]curve25519.Scalar, comC []feldman.VC, err error,
 ) {
-	comS = make([][]pedersen.Commitment, vssParams.N)
+	n := vssParams.N
+	t := vssParams.D + 1
 
 	// First-level sharing
-	// commitments are not needed as they're recomputed anyway by second level
-	// TODO this is not optimal
-	shares0, _, err := vss.FixedRShare(vssParams, s, r)
+	// shares0[l] = sigma_{i+1,l+1} = sigma_{i+1,0,l+1} for
+	shares0, err := shamir.GenerateShares(shamir.Message(*s), t, n)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// sigma0 = sigma_{i+1,0} = a random value
+	sigma0 := curve25519.RandomScalar()
+
 	// Second-level sharing
-	shares = make([][]vss.Share, vssParams.N)
-	for j := 0; j < vssParams.N; j++ {
-		shares[j], comS[j], err = vss.FixedRShare(vssParams, &shares0[j].S, &shares0[j].R)
+	// shares[l][j] = sigma_{i+1,j+1,l}
+	shares := make([][]shamir.Share, n+1)
+	//   for l=0, shares[0][j] = sigma_{i,j+1,0} = shares (in j) of sigma0
+	shares[0], err = shamir.GenerateShares(shamir.Message(*sigma0), t, n)
+	if err != nil {
+		return nil, nil, err
+	}
+	//   for l>0,
+	for l := 1; l < n+1; l++ {
+		shares[l], err = shamir.GenerateShares(shamir.Message(shares0[l-1].S), t, n)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	return shares, comS, nil
+	// Reorganize the shares into sigma
+	sigma = make([][]curve25519.Scalar, n+1)
+	for j := 0; j <= n; j++ {
+		sigma[j] = make([]curve25519.Scalar, n+1)
+	}
+	// handle j=0,l=0, i.e., sigma[0][0]
+	sigma[0][0] = shares0[0].S
+	// handle j=0,l>0
+	for l := 1; l < n+1; l++ {
+		sigma[0][l] = shares0[l-1].S
+	}
+	// handle j>0, i.e., sigma[j][l] = shares[l][j-1]
+	for l := 0; l < n+1; l++ {
+		for j := 1; j < n+1; j++ {
+			sigma[j][l] = shares[l][j-1].S
+		}
+	}
+
+	// Commitment
+	comC = make([]feldman.VC, n+1)
+	for j := 0; j < n+1; j++ {
+		cj, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, sigma[j])
+		if err != nil {
+			return nil, nil, err
+		}
+		comC[j] = *cj
+	}
+
+	return sigma, comC, nil
 }
 
 // PerformDealing executes what a dealer does in the dealing round
@@ -77,24 +120,24 @@ func PerformDealing(
 	msg := &DealingMessage{
 		EncVerM: make([]curve25519.Ciphertext, pub.N),
 		EncResM: make([]curve25519.SymmetricCiphertext, pub.N),
-		EncEpsL: make([]curve25519.Ciphertext, pub.N),
+		EncEpsK: make([]curve25519.Ciphertext, pub.N),
 	}
 
-	shares, comS, err := GenerateDealerSharesCommitments(&pub.VSSParams, &prv.Share.S, &prv.Share.R)
+	sigma, comC, err := GenerateDealerSharesCommitments(&pub.VSSParams, &pub.VCParams, &prv.Share.S)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while generating shares commitments: %w", err)
 	}
-	msg.ComS = comS
+	msg.ComC = comC
 
 	if len(pub.Committees.Ver) != pub.N {
-		return nil, fmt.Errorf("invalid committe length")
+		return nil, fmt.Errorf("invalid committee length")
 	}
 
 	// Generate keys and shares for resolution committee (future broadcast)
-	var epsL []EpsL
+	var epsK []EpsK
 	var epsKeys []curve25519.Key
 	if !dbg.SkipDealingFutureBroadcast {
-		epsKeys, epsL, msg.HashEps, err = GenerateAllEps(pub.N, pub.T)
+		epsKeys, epsK, msg.HashEps, err = GenerateAllEps(pub.N, pub.T)
 		if err != nil {
 			return nil, err
 		}
@@ -103,46 +146,42 @@ func PerformDealing(
 	}
 
 	// Encryption for verification committee and resolution committee
-	for k := 0; k < pub.N; k++ {
-		// Compute M[K]
-		mk := ComputeMK(pub.N, shares, k)
+	for j := 0; j < pub.N; j++ {
+		// Compute M[j]
+		mj := VerificationMJ{S: sigma[j+1]}
 
-		mkMsg := msgpack.Encode(mk)
+		mjMsg := msgpack.Encode(mj)
 
-		// Encrypt M[k] for the verification committee
-		msg.EncVerM[k], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Ver[k]], mkMsg)
+		// Encrypt M[j] for the verification member j+1
+		msg.EncVerM[j], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Ver[j]], mjMsg)
+		if err != nil {
+			return nil, err
+		}
 
 		if !dbg.SkipDealingFutureBroadcast {
-			// Encrypt M[k] for resolution / future broadcast
+			// Encrypt M[j] for resolution / future broadcast
 			// Use a zero nonce as the key is fresh
 			zeroNonce := curve25519.Nonce{}
-			msg.EncResM[k], err = curve25519.SymmetricEncrypt(epsKeys[k], zeroNonce, mkMsg)
+			msg.EncResM[j], err = curve25519.SymmetricEncrypt(epsKeys[j], zeroNonce, mjMsg)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			msg.EncResM[k] = curve25519.SymmetricCiphertext{} // just to please go-codec
+			msg.EncResM[j] = curve25519.SymmetricCiphertext{} // just to please go-codec
 		}
 	}
 
-	// Encrypt epsL for each resolution committee member
-	for l := 0; l < pub.N; l++ {
+	// Encrypt epsK for each resolution committee member
+	for k := 0; k < pub.N; k++ {
 		if !dbg.SkipDealingFutureBroadcast {
-			msg.EncEpsL[l], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Res[l]], msgpack.Encode(epsL[l]))
+			msg.EncEpsK[k], err = curve25519.Encrypt(pub.EncPKs[pub.Committees.Res[k]], msgpack.Encode(epsK[k]))
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			msg.EncEpsL[l] = curve25519.Ciphertext{} // just to please go-codec
+			msg.EncEpsK[k] = curve25519.Ciphertext{} // just to please go-codec
 		}
 	}
 
 	return msg, nil
-}
-
-// ComputeMK computes the verification committee message M[k] see above
-func ComputeMK(n int, shares [][]vss.Share, k int) VerificationMK {
-	mk := VerificationMK{
-		S: make([]curve25519.Scalar, n),
-		R: make([]curve25519.Scalar, n),
-	}
-	for j := 0; j < n; j++ {
-		mk.S[j] = shares[j][k].S
-		mk.R[j] = shares[j][k].R
-	}
-	return mk
 }

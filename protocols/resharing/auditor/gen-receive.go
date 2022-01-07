@@ -11,7 +11,7 @@ import (
 	"github.com/shaih/go-yosovss/msgpack"
 )
 
-// This file is a template generating gen-matrix_generic.go
+// This file (receive.go) is a template generating gen-receive.go
 
 // ReceiveDealingMessages receives and parse the messages sent by dealers in the dealing round
 // parties is the list of parties in the round
@@ -30,7 +30,7 @@ func ReceiveDealingMessages(bc communication.BroadcastChannel, parties []int) ([
 	return messages, nil
 }
 
-// This file is a template generating gen-matrix_generic.go
+// This file (receive.go) is a template generating gen-receive.go
 
 // ReceiveVerificationMessages receives and parse the messages sent by dealers in the dealing round
 // parties is the list of parties in the round
@@ -49,45 +49,7 @@ func ReceiveVerificationMessages(bc communication.BroadcastChannel, parties []in
 	return messages, nil
 }
 
-// This file is a template generating gen-matrix_generic.go
-
-// ReceiveWitnessMessages receives and parse the messages sent by dealers in the dealing round
-// parties is the list of parties in the round
-func ReceiveWitnessMessages(bc communication.BroadcastChannel, parties []int) ([]WitnessMessage, error) {
-	messages := make([]WitnessMessage, len(parties))
-
-	_, bm := bc.ReceiveRound()
-
-	for i, party := range parties {
-		err := msgpack.Decode(bm[party].Payload, &messages[i])
-		if err != nil {
-			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
-		}
-	}
-
-	return messages, nil
-}
-
-// This file is a template generating gen-matrix_generic.go
-
-// ReceiveAuditingMessages receives and parse the messages sent by dealers in the dealing round
-// parties is the list of parties in the round
-func ReceiveAuditingMessages(bc communication.BroadcastChannel, parties []int) ([]AuditingMessage, error) {
-	messages := make([]AuditingMessage, len(parties))
-
-	_, bm := bc.ReceiveRound()
-
-	for i, party := range parties {
-		err := msgpack.Decode(bm[party].Payload, &messages[i])
-		if err != nil {
-			return nil, fmt.Errorf("decoding message from party %d (id=%d) failed: %v", i, party, err)
-		}
-	}
-
-	return messages, nil
-}
-
-// This file is a template generating gen-matrix_generic.go
+// This file (receive.go) is a template generating gen-receive.go
 
 // ReceiveResolutionMessages receives and parse the messages sent by dealers in the dealing round
 // parties is the list of parties in the round

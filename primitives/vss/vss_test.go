@@ -2,11 +2,12 @@ package vss
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestVSS(t *testing.T) {

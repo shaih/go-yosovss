@@ -6,6 +6,7 @@ package vss
 
 import (
 	"fmt"
+
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
@@ -23,8 +24,8 @@ type Params struct {
 	N                  int                     // number of shares
 	D                  int                     // degree of the polynomial (reconstruction threshold t = d+1)
 	ParityMatrix       curve25519.ScalarMatrix // paritycpp-check matrix size = (n+1) * (n+1-t)
-	LagrangeCoefsFirst []curve25519.Scalar     // Lagrange coefficients for 1,...,d+1. Used for a dirty optimization when
-	// the first d+1 shares are valid
+	LagrangeCoefsFirst []curve25519.Scalar     // Lagrange coefficients for 1,...,d+1.
+	// Used for a dirty optimization when the first d+1 shares are valid
 }
 
 func NewVSSParams(pedersenParams *pedersen.Params, n, d int) (*Params, error) {
@@ -120,7 +121,8 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 	}
 
 	if len(validShares) < t {
-		return nil, nil, fmt.Errorf("insufficient valid shares") // Unable to reconstruct due to insufficient valid shares
+		// Unable to reconstruct due to insufficient valid shares
+		return nil, nil, fmt.Errorf("insufficient valid shares")
 	}
 
 	// Polynomial interpolation evaluated at 0

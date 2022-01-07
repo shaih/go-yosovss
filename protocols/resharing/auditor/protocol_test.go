@@ -1,14 +1,15 @@
 package auditor
 
 import (
-	"github.com/shaih/go-yosovss/msgpack"
-	"github.com/shaih/go-yosovss/primitives/curve25519"
-	"github.com/shaih/go-yosovss/primitives/pedersen"
-	"github.com/shaih/go-yosovss/primitives/vss"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
+
+	"github.com/shaih/go-yosovss/msgpack"
+	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/feldman"
+	"github.com/shaih/go-yosovss/primitives/shamir"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestResharingProtocol(t *testing.T) {
@@ -18,16 +19,16 @@ func TestResharingProtocol(t *testing.T) {
 	require := require.New(t)
 
 	const (
-		n          = 7                 // number of parties per committee
+		n          = 3                 // number of parties per committee
 		numParties = n * numCommittees // total number of parties
-		tt         = 2                 // threshold of malicious parties
+		tt         = 1                 // threshold of malicious parties
 	)
 
 	pub, prvs, o, secret, rnd := setupResharingSeq(t, n, tt)
 
 	// Output of all parties
-	outputCommitments := make([][]pedersen.Commitment, numParties)
-	outputShares := make([]*vss.Share, numParties)
+	outputCommitments := make([][]feldman.GCommitment, numParties)
+	outputShares := make([]*shamir.Share, numParties)
 
 	var wg sync.WaitGroup
 
@@ -36,7 +37,8 @@ func TestResharingProtocol(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
+			outputShares[party], outputCommitments[party], err =
+				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -84,8 +86,8 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 	pub, prvs, o, secret, rnd := setupResharingSeq(t, n, tt)
 
 	// Output of all parties
-	outputCommitments := make([][]pedersen.Commitment, numParties)
-	outputShares := make([]*vss.Share, numParties)
+	outputCommitments := make([][]feldman.GCommitment, numParties)
+	outputShares := make([]*shamir.Share, numParties)
 
 	var wg sync.WaitGroup
 
@@ -94,7 +96,8 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
+			outputShares[party], outputCommitments[party], err =
+				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -108,9 +111,9 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			// Dealing
 			msg, err := PerformDealing(pub, &prvs[0], &PartyDebugParams{})
 			require.NoError(err)
-			c, err := curve25519.AddPointXY(&msg.ComS[0][0], &msg.ComS[0][0]) // make the comS[0][0] incorrect
+			c, err := curve25519.AddPointXY(&msg.ComC[0], &msg.ComC[0]) // make the comC[0] incorrect
 			require.NoError(err)
-			msg.ComS[0][0] = *c
+			msg.ComC[0] = *c
 			prvs[0].BC.Send(msgpack.Encode(msg))
 			prvs[0].BC.ReceiveRound()
 
@@ -122,16 +125,8 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			prvs[0].BC.Send([]byte{})
 			prvs[0].BC.ReceiveRound()
 
-			// Wit
-			prvs[0].BC.Send([]byte{})
-			prvs[0].BC.ReceiveRound()
-
-			// Aud
-			prvs[0].BC.Send([]byte{})
-			auditingMessages, err := ReceiveAuditingMessages(prvs[0].BC, pub.Committees.Aud)
-			require.NoError(err)
-
-			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, auditingMessages, map[int]bool{})
+			// TODO CURRENTLY FAILS BECAUSE NO LINEAR TEST DONE
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, map[int]bool{})
 			require.NoError(err)
 
 			// Check qualified dealers are [1,...,t+1]
@@ -165,7 +160,7 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 }
 
 func TestResharingProtocolVerifiedComplain(t *testing.T) {
-	// Make the verification member k=0 cheating and complaining about dealer 0
+	// Make the verification member j=0 cheating and complaining about dealer 0
 	// so that future broadcast needs to be used
 	// Other parties are restricted to minimal work so party 0 can work properly
 	// This is to allow testing on a single compuer
@@ -184,21 +179,22 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 	pub, prvs, o, secret, rnd := setupResharingSeq(t, n, tt)
 
 	// Output of all parties
-	outputCommitments := make([][]pedersen.Commitment, numParties)
-	outputShares := make([]*vss.Share, numParties)
+	outputCommitments := make([][]feldman.GCommitment, numParties)
+	outputShares := make([]*shamir.Share, numParties)
 
 	var wg sync.WaitGroup
 
 	// Start protocol for all but dealer 0
 	for party := 0; party < numParties; party++ {
 		if party == n {
-			// this is verification member k=0
+			// this is verification member j=0
 			continue
 		}
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
+			outputShares[party], outputCommitments[party], err =
+				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -231,17 +227,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 			resolutionMessages, err := ReceiveResolutionMessages(prv.BC, pub.Committees.Res)
 			require.NoError(err)
 
-			// Wit
-			prv.BC.Send([]byte{})
-			_, err = ReceiveWitnessMessages(prv.BC, pub.Committees.Wit)
-			require.NoError(err)
-
-			// Aud
-			prv.BC.Send([]byte{})
-			auditingMessages, err := ReceiveAuditingMessages(prv.BC, pub.Committees.Aud)
-			require.NoError(err)
-
-			_, _, disqualifiedDealers, err := ResolveComplaints(
+			_, disqualifiedDealers, err := ResolveComplaints(
 				pub,
 				dealingMessages,
 				verificationMessages,
@@ -249,7 +235,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 				&PartyDebugParams{},
 			)
 			require.NoError(err)
-			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, auditingMessages, disqualifiedDealers)
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, disqualifiedDealers)
 			require.NoError(err)
 
 			// Check qualified dealers are [0,...,t]

@@ -1,15 +1,16 @@
 package auditor
 
-// This file is a template generating gen-matrix_generic.go
+// This file (receive.go) is a template generating gen-receive.go
 
 import (
 	"fmt"
+
 	"github.com/cheekybits/genny/generic"
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/msgpack"
 )
 
-//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "MessageType=DealingMessage,VerificationMessage,WitnessMessage,AuditingMessage,ResolutionMessage"
+//go:generate genny -in=$GOFILE -out=gen-$GOFILE gen "MessageType=DealingMessage,VerificationMessage,ResolutionMessage"
 
 type MessageType generic.Type
 

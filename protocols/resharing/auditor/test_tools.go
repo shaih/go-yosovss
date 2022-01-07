@@ -1,7 +1,7 @@
 package auditor
 
 const (
-	numRounds     = 5 // number of rounds of messaging required for the protocol
+	numRounds     = 3 // number of rounds of messaging required for the protocol
 	numCommittees = 6 // number of committees
 )
 

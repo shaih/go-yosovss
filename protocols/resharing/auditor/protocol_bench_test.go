@@ -2,16 +2,17 @@ package auditor
 
 import (
 	"fmt"
-	"github.com/shaih/go-yosovss/communication/fake"
-	"github.com/shaih/go-yosovss/msgpack"
-	"github.com/shaih/go-yosovss/primitives/pedersen"
-	"github.com/shaih/go-yosovss/primitives/vss"
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/shaih/go-yosovss/communication/fake"
+	"github.com/shaih/go-yosovss/msgpack"
+	"github.com/shaih/go-yosovss/primitives/feldman"
+	"github.com/shaih/go-yosovss/primitives/shamir"
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 )
 
 var RoundNames = []string{"dealing", "verification", "resolution", "witness", "auditing", "refreshing"}
@@ -31,7 +32,7 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 16       // threshold of malicious parties
+		tt         = 3        // threshold of malicious parties
 		n          = 2*tt + 1 // number of parties per committee
 		numParties = n        // total number of parties
 	)
@@ -41,8 +42,8 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 	pub, prvs, o, secret, rnd := setupResharingSame(t, n, tt)
 
 	// Output of all parties
-	outputCommitments := make([][]pedersen.Commitment, numParties)
-	outputShares := make([]*vss.Share, numParties)
+	outputCommitments := make([][]feldman.GCommitment, numParties)
+	outputShares := make([]*shamir.Share, numParties)
 
 	var wg sync.WaitGroup
 
@@ -53,7 +54,8 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
+			outputShares[party], outputCommitments[party], err =
+				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 		}(party, &wg)
 	}
@@ -78,7 +80,6 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 
 	d := time.Since(lastTime)
 	fmt.Printf("Round %d (%-12s) took %fs\n", o.Round, RoundNames[o.Round], d.Seconds())
-	lastTime = time.Now()
 
 	// Check the results
 	checkProtocolResults(
@@ -120,8 +121,8 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 	pub, prvs, o, secret, rnd := setupResharingSame(t, n, tt)
 
 	// Output of party 0
-	outputCommitments := make([][]pedersen.Commitment, 1)
-	outputShares := make([]*vss.Share, 1)
+	outputCommitments := make([][]feldman.GCommitment, 1)
+	outputShares := make([]*shamir.Share, 1)
 
 	var wg sync.WaitGroup
 
@@ -134,7 +135,8 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 		wg.Add(1)
 		go func(party int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			outputShares[party], outputCommitments[party], err = StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
+			outputShares[party], outputCommitments[party], err =
+				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
 			require.NoError(err)
 			party0done <- true
 		}(party, &wg)
@@ -202,7 +204,6 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 
 	d = time.Since(lastTime)
 	fmt.Printf("Round %d (%-12s) took %fs for the other parties\n", o.Round, RoundNames[o.Round], d.Seconds())
-	lastTime = time.Now()
 
 	// Check the results
 	checkProtocolResults(
@@ -250,8 +251,8 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 	pub, prvs, o, secret, rnd := setupResharingSame(t, n, tt)
 
 	// Output of party 0
-	outputCommitments := make([][]pedersen.Commitment, 1)
-	outputShares := make([]*vss.Share, 1)
+	outputCommitments := make([][]feldman.GCommitment, 1)
+	outputShares := make([]*shamir.Share, 1)
 
 	lastTime := time.Now()
 
@@ -261,10 +262,9 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
 		if party == 0 {
 			return PerformDealing(pub, prv, &PartyDebugParams{})
-		} else {
-			return PerformDealing(pub, prv, &PartyDebugParams{
-				SkipDealingFutureBroadcast: skipDealingFutureBroadcastOtherParties})
 		}
+		return PerformDealing(pub, prv, &PartyDebugParams{
+			SkipDealingFutureBroadcast: skipDealingFutureBroadcastOtherParties})
 	})
 
 	// Ver
@@ -292,37 +292,10 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 		return PerformResolution(pub, prv, party, dealingMessages, verificationMessages)
 	})
 
-	// Wit
-	// ===
-
-	resolutionMessages, err := ReceiveResolutionMessages(prvs[0].BC, pub.Committees.Res)
-	require.NoError(err)
-
-	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
-		if party == 0 {
-			return PerformWitness(pub, dealingMessages)
-		} else {
-			// we skip witness for party non-zero
-			return &WitnessMessage{
-				WitnessSeeds: make([]*[SeedLength]byte, pub.N),
-			}, nil
-		}
-	})
-
-	// Aud
-	// ===
-
-	witnessMessages, err := ReceiveWitnessMessages(prvs[0].BC, pub.Committees.Wit)
-	require.NoError(err)
-
-	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
-		return PerformAuditing(pub, dealingMessages, witnessMessages)
-	})
-
 	// Refreshing
 	// ==========
 
-	auditingMessages, err := ReceiveAuditingMessages(prvs[0].BC, pub.Committees.Aud)
+	resolutionMessages, err := ReceiveResolutionMessages(prvs[0].BC, pub.Committees.Res)
 	require.NoError(err)
 
 	runManualRound(t, n, &o, &lastTime, prvs, func(prv *PrivateInput, party int) (interface{}, error) {
@@ -333,15 +306,13 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 				dealingMessages,
 				verificationMessages,
 				resolutionMessages,
-				auditingMessages,
 				party,
 				&PartyDebugParams{SkipDealingFutureBroadcast: skipDealingFutureBroadcastOtherParties},
 			)
 			return struct{}{}, nil
-		} else {
-			// we skip witness for party non-zero
-			return struct{}{}, nil
 		}
+		// we skip witness for party non-zero
+		return struct{}{}, nil
 	})
 
 	// Check the results

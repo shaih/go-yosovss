@@ -17,7 +17,7 @@ type Committees struct {
 
 // CommitteeIndices is a struct that contains for a participant in the protocol their index in each of the committees
 // for a round of resharing. If an index is -1, that means that the party is not a part of the committee for the round.
-// Otherwise, indices range from 0 to n-1. Note that these indices represent a party's index with respect to the
+// Otherwise, indices range from 1 to n. Note that these indices represent a party's index with respect to the
 // committee specifically, not the id of the party with respect to the entire protocol.
 type CommitteeIndices struct {
 	Hold int

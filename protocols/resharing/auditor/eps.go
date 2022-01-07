@@ -20,13 +20,13 @@ const (
 
 // GenerateAllEps generate all the epsKeys, epsL structures, and corresponding hashes
 // for all resolution committee members
-func GenerateAllEps(n int, t int) (epsKeys []curve25519.Key, epsL []EpsL, hashEps [][][HashLength]byte, err error) {
+func GenerateAllEps(n int, t int) (epsKeys []curve25519.Key, epsK []EpsK, hashEps [][][HashLength]byte, err error) {
 	// Initialization
 	epsKeys = make([]curve25519.Key, n)
-	epsL = make([]EpsL, n)
+	epsK = make([]EpsK, n)
 	hashEps = make([][][HashLength]byte, n)
-	for l := 0; l < n; l++ {
-		epsL[l].Eps = make([]curve25519.Scalar, n)
+	for k := 0; k < n; k++ {
+		epsK[k].Eps = make([]curve25519.Scalar, n)
 	}
 
 	chacha20Key, err := curve25519.RandomChacha20Key()
@@ -35,21 +35,21 @@ func GenerateAllEps(n int, t int) (epsKeys []curve25519.Key, epsL []EpsL, hashEp
 	}
 	eps := curve25519.Scalar{}
 
-	for k := 0; k < n; k++ {
+	for j := 0; j < n; j++ {
 		// Generate random secret seed eps for Vk
-		curve25519.RandomScalarChacha20C(&eps, &chacha20Key, uint64(k))
+		curve25519.RandomScalarChacha20C(&eps, &chacha20Key, uint64(j))
 
 		// Secret share it and derive the symmetric encryption key epsKey
 		epsKey, epsShares, err := GenerateEpsKeyShares(n, t, &eps)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to generate eps keys for k=%d: %w", k, err)
+			return nil, nil, nil, fmt.Errorf("failed to generate eps keys for j=%d: %w", j, err)
 		}
 
-		epsKeys[k] = epsKey
-		hashEps[k] = make([][HashLength]byte, n)
-		for l := 0; l < n; l++ {
-			hashEps[k][l] = sha256.Sum256(epsShares[l][:])
-			epsL[l].Eps[k] = epsShares[l]
+		epsKeys[j] = epsKey
+		hashEps[j] = make([][HashLength]byte, n)
+		for k := 0; k < n; k++ {
+			hashEps[j][k] = sha256.Sum256(epsShares[k][:])
+			epsK[k].Eps[j] = epsShares[k]
 		}
 	}
 	return
@@ -90,7 +90,7 @@ func GenerateEpsKeyShares(
 }
 
 // SymmetricKeyFromEps converts the eps scalar that is shared into the symmetric key
-// that is used to encrypt ciphertexts of M[k] for future broadcast
+// that is used to encrypt ciphertexts of M[j] for future broadcast
 func SymmetricKeyFromEps(eps *curve25519.Scalar) (epsKey curve25519.Key, err error) {
 	// TODO: normally we want some hardcoded salt there
 	hkdf := hkdf.New(sha256.New, eps[:], nil, nil)

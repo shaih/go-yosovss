@@ -18,6 +18,9 @@ issues:
     - path: primitives/vss
       text: "illegal character U\\+0023 '#'" # fix issue with swig
 linters-settings:
+  govet:
+    disable:
+      - cgocall # disabled because not working with swig
   revive:
     ignore-generated-header: false
     severity: warning

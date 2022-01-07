@@ -6,17 +6,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// PairIK is a pair of two integers i and k
-// i,k in 0,...,n-1 and represent a dealer i and a verification member committee k (Vk) respectively
-type PairIK struct {
-	i, k int
+// PairIJ is a pair of two integers i and j
+// i,j in 0,...,n-1 and represent a dealer i and a verification member committee j (Vk) respectively
+type PairIJ struct {
+	i, j int
 }
 
 // ResolutionMessage is the message resolution committee members send during resolution round
 // Below we assume the committee member is l
 type ResolutionMessage struct {
 	_struct   struct{}                     `codec:",omitempty,omitemptyarray"`
-	EpsShares map[PairIK]curve25519.Scalar `codec:"E"` // EpsShares[(i,k)] = eps_{k+1,l+1} for dealer i if there was a complaint from
+	EpsShares map[PairIJ]curve25519.Scalar `codec:"E"`
+	// EpsShares[(i,j)] = eps_{j+1,l+1} for dealer i if there was a complaint from
 }
 
 // PerformResolution implements the role of party ell in the resolution (future
@@ -37,37 +38,37 @@ func PerformResolution(
 	n := pub.N
 
 	msg := ResolutionMessage{
-		EpsShares: map[PairIK]curve25519.Scalar{},
+		EpsShares: map[PairIJ]curve25519.Scalar{},
 	}
 
-	epsLI := make([]*EpsL, n) // epsLI[i] is non-nil when decrypted once
+	epsLI := make([]*EpsK, n) // epsLI[i] is non-nil when decrypted once
 
 	// We order the loops this way to optimize memory
-	// accessing verificationMessages[k] by order of k
+	// accessing verificationMessages[j] by order of j
 	// It is unclear that it matters though...
 	// Most likely the decoding of the messages cost already much more...
 
-	for k := 0; k < n; k++ { // message sent by party k in verification cmte
+	for k := 0; k < n; k++ { // message sent by party j in verification cmte
 		if len(verificationMessages[k].Complaints) != n {
-			// the verifier k is invalid
+			// the verifier j is invalid
 			continue
 		}
 		for i := 0; i < n; i++ {
 			if verificationMessages[k].Complaints[i] {
-				// Verifier k complained against dealer i
-				myLog.Infof("verification committee member k=%d complaints against dealer %d", k, i)
+				// Verifier j complained against dealer i
+				myLog.Infof("verification committee member j=%d complaints against dealer %d", k, i)
 
 				// Decrypt and decode epsL if not yet decrypted
 				if epsLI[i] == nil {
-					epsLI[i] = DecryptEpsL(pub, prv, l, dealingMessages, i, myLog)
+					epsLI[i] = DecryptEpsK(pub, prv, l, dealingMessages, i, myLog)
 					// If it fails, stops with this dealer
 					if epsLI[i] == nil {
 						break
 					}
 				}
 
-				// Broadcast i'th share according to k (eps_{k+1,l+1})
-				msg.EpsShares[PairIK{i, k}] = epsLI[i].Eps[k]
+				// Broadcast i'th share according to j (eps_{j+1,l+1})
+				msg.EpsShares[PairIJ{i, k}] = epsLI[i].Eps[k]
 			}
 		}
 	}
@@ -75,26 +76,26 @@ func PerformResolution(
 	return &msg, nil
 }
 
-func DecryptEpsL(
+func DecryptEpsK(
 	pub *PublicInput,
 	prv *PrivateInput,
-	l int,
+	k int,
 	dealingMessages []DealingMessage,
 	i int,
 	myLog *log.Entry,
-) *EpsL {
-	b, err := curve25519.Decrypt(pub.EncPKs[prv.ID], prv.EncSK, dealingMessages[i].EncEpsL[l])
+) *EpsK {
+	b, err := curve25519.Decrypt(pub.EncPKs[prv.ID], prv.EncSK, dealingMessages[i].EncEpsK[k])
 	if err != nil {
 		// invalid dealer
-		myLog.Infof("dealer %d did not encrypt properly epsL[%d]: %v", i, l, err)
+		myLog.Infof("dealer %d did not encrypt properly epsL[%d]: %v", i, k, err)
 		return nil
 	}
 
-	var epsL EpsL
+	var epsL EpsK
 	err = msgpack.Decode(b, &epsL)
 	if err != nil {
 		// invalid dealer
-		myLog.Infof("dealer %d did not encode properly epsL[%d]: %v", i, l, err)
+		myLog.Infof("dealer %d did not encode properly epsL[%d]: %v", i, k, err)
 		return nil
 	}
 
