@@ -25,8 +25,8 @@ type VCParams struct {
 // but this may change
 // The only guarantee is that the G_i are distinct from G and H the two bases in curve25519
 func GenerateVCParams(n int) (*VCParams, error) {
-	if n <= 0 {
-		return nil, fmt.Errorf("n needs to be > 0")
+	if n < 0 {
+		return nil, fmt.Errorf("n needs to be >= 0")
 	}
 
 	vcp := VCParams{

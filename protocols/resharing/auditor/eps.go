@@ -15,7 +15,7 @@ import (
 // See also step1_dealing.go for details, and structure DealingMessage
 
 const (
-	HashLength = 32
+	HashLength = 32 // HashLength is the length of hashes we use in bytes
 )
 
 // GenerateAllEps generate all the epsKeys, epsL structures, and corresponding hashes
