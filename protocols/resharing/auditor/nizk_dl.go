@@ -1,4 +1,4 @@
-package nizk
+package auditor
 
 import (
 	"crypto/sha256"
@@ -7,6 +7,11 @@ import (
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 )
+
+// This file should be in a package nizk in primitives
+// but because of weird issues with codecgen, having
+// two codecgen seems to create too many problems
+// So to dirtily fix things, we move this file here even if not ideal
 
 // This file is to handle NIZK Proof of Knowledge of discrete logarithms
 // Concretely the statement is (G_0,...,G_{n-1},X_0, ..., X_{n-1})
@@ -48,8 +53,8 @@ type DLChHashIn struct {
 // For batching the proof contain com and resp instead of ch and resp
 // which is more compact but not possible to batch
 type DLProof struct {
-	Com  []curve25519.PointXY // Com is the commtiments
-	Resp []curve25519.Scalar  // Resp
+	Com  []curve25519.PointXY `codec:"c"` // Com is the commtiments
+	Resp []curve25519.Scalar  `codec:"r"` // Resp
 }
 
 func dlBasicCheckStatement(stmt DLStatement) error {

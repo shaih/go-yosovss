@@ -1,4 +1,4 @@
-package nizk
+package auditor
 
 import (
 	"fmt"

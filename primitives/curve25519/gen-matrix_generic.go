@@ -56,6 +56,16 @@ func NewPointMatrix(rows, columns int) *PointMatrix {
 	}
 }
 
+// NewPointMatrixFromEntries creates a new Point matrix directly from their entries
+// in row-major
+func NewPointMatrixFromEntries(rows, columns int, entries []Point) *PointMatrix {
+	return &PointMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
+	}
+}
+
 // PointMatrixFromEntries create a new EntrypeType matrix
 // with the given entries in row-major order
 // entries are *not* copied
@@ -135,6 +145,16 @@ func NewPointXYMatrix(rows, columns int) *PointXYMatrix {
 	}
 }
 
+// NewPointXYMatrixFromEntries creates a new PointXY matrix directly from their entries
+// in row-major
+func NewPointXYMatrixFromEntries(rows, columns int, entries []PointXY) *PointXYMatrix {
+	return &PointXYMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
+	}
+}
+
 // PointXYMatrixFromEntries create a new EntrypeType matrix
 // with the given entries in row-major order
 // entries are *not* copied
@@ -211,6 +231,16 @@ func NewScalarMatrix(rows, columns int) *ScalarMatrix {
 		rows:    rows,
 		columns: columns,
 		entries: make([]Scalar, rows*columns),
+	}
+}
+
+// NewScalarMatrixFromEntries creates a new Scalar matrix directly from their entries
+// in row-major
+func NewScalarMatrixFromEntries(rows, columns int, entries []Scalar) *ScalarMatrix {
+	return &ScalarMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
 	}
 }
 

@@ -60,6 +60,16 @@ func NewEntryTypeMatrix(rows, columns int) *EntryTypeMatrix {
 	}
 }
 
+// NewEntryTypeMatrixFromEntries creates a new EntryType matrix directly from their entries
+// in row-major
+func NewEntryTypeMatrixFromEntries(rows, columns int, entries []EntryType) *EntryTypeMatrix {
+	return &EntryTypeMatrix{
+		rows:    rows,
+		columns: columns,
+		entries: entries,
+	}
+}
+
 // EntryTypeMatrixFromEntries create a new EntrypeType matrix
 // with the given entries in row-major order
 // entries are *not* copied

@@ -28,14 +28,12 @@ github.com/ugorji/go/codec
 # golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 ## explicit
 golang.org/x/crypto/hkdf
-# golang.org/x/mod v0.5.0
-## explicit
-# golang.org/x/sys v0.0.0-20210816074244-15123e1e1f71
+# golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/tools v0.1.5
+# golang.org/x/tools v0.1.8
 ## explicit
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
