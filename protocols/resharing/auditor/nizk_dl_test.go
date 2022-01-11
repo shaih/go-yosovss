@@ -28,7 +28,7 @@ func TestDLProveCorrect(t *testing.T) {
 			n := tc.n
 
 			// Create a valid statement
-			stmt, wit, err := genStmtWit(n)
+			stmt, wit, err := genDLStmtWit(n)
 			require.NoError(err)
 
 			// Generate the proof
@@ -60,7 +60,7 @@ func TestDLProveIncorrect(t *testing.T) {
 			n := tc.n
 
 			// Create a valid statement
-			stmt, wit, err := genStmtWit(n)
+			stmt, wit, err := genDLStmtWit(n)
 			require.NoError(err)
 
 			// Generate the proof
@@ -77,8 +77,8 @@ func TestDLProveIncorrect(t *testing.T) {
 	}
 }
 
-// genStmtWit generates a random valid statement and witness
-func genStmtWit(n int) (stmt DLStatement, wit DLWitness, err error) {
+// genDLStmtWit generates a random valid statement and witness
+func genDLStmtWit(n int) (stmt DLStatement, wit DLWitness, err error) {
 	vcParams, err := feldman.GenerateVCParams(n - 1)
 	if err != nil {
 		return DLStatement{}, DLWitness{}, fmt.Errorf("error generating vcparams: %w", err)
