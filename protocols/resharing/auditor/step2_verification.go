@@ -10,18 +10,20 @@ import (
 )
 
 // VerSentShares for verification committee member j+1 and holding committeee member l+1
-// contains the shares sigma_{i+1,j+1,l}, for i in [0,n-1] (i+1 corresponding to the dealer)
+// contains the shares sigma_{i+1,j+1,l}/rho_{i+1,j+1,l},
+// for i in [0,n-1] (i+1 corresponding to the dealer)
 // with nil for every dealer i that has incorrect shares
 type VerSentShares struct {
-	S []*curve25519.Scalar // sigma_{1,j+1,l+1},..., sigma_{n,j+1,l+1}
+	S []*curve25519.Scalar // sigma_{1,j+1,l},..., sigma_{n,j+1,l}
+	R []*curve25519.Scalar // same for rho
 }
 
 // VerificationMessage is the message verification committee members send during verification round
 // Below we assume the committee member is j
 type VerificationMessage struct {
 	_struct    struct{}                `codec:",omitempty,omitemptyarray"`
-	Complaints []bool                  `codec:"C"` // Complaints[i] == true iff complaint against dealer i+1
-	EncShares  []curve25519.Ciphertext `codec:"S"` // EncShares[l] contains an encryption of VerSentShare
+	Complaints []bool                  `codec:"C"`  // Complaints[i] == true iff complaint against dealer i+1
+	EncShares  []curve25519.Ciphertext `codec:"SR"` // EncShares[l] contains an encryption of VerSentShare
 	// for new holding committee member l+1 (type = VerSentShares)
 	VPComProof VPCommitProof `codec:"V"` // VPComProof is a re-commitment and proof that the shares are valid
 	// see VPCommitProof
@@ -62,15 +64,16 @@ func PerformVerification(
 	for l := 0; l < pub.N; l++ {
 		verSentShares[l] = VerSentShares{
 			S: make([]*curve25519.Scalar, pub.N),
+			R: make([]*curve25519.Scalar, pub.N),
 		}
 	}
 
-	// sigma[i][l] = sigma_{i+1,l+1} for all dealers i
-	// if i disqualified, sigma[i] = nil
-	sigma := make([][]curve25519.Scalar, pub.N)
+	// sigmaRho[i][l] = sigma_{i+1,l+1} for all dealers i
+	// if i disqualified, sigmaRho[i] = nil
+	sigmaRho := make([][]curve25519.Scalar, pub.N)
 
 	for i := 0; i < pub.N; i++ {
-		// Fill in verSentShares[l].S[i] for all l
+		// Fill in verSentShares[l].SR[i] for all l
 		// And issue a complaint against dealer i if something goes wrong
 
 		// Get the message mj
@@ -86,7 +89,7 @@ func PerformVerification(
 
 		// Verify shares
 		if !dbg.SkipVerificationVerifyShare {
-			err := VerifyMJ(&pub.VCParams, &dealingMessages[i].ComC[j], mj)
+			err := VerifyMJ(&pub.VCParams, &dealingMessages[i].ComC[j+1], mj)
 			if err != nil {
 				// invalid dealer
 				msg.Complaints[i] = true
@@ -97,23 +100,28 @@ func PerformVerification(
 
 		// the dealer is good
 
-		sigma[i] = make([]curve25519.Scalar, pub.N+1)
-		for l := 0; l <= pub.N; l++ {
-			copy(sigma[i], mj.S)
-		}
+		sigmaRho[i] = make([]curve25519.Scalar, 2*pub.N)
+		copy(sigmaRho[i], mj.SR)
 	}
 
 	// Generate verSentShares / Propagate the correct shares
+	qualDealers := 0
 	for i := 0; i < pub.N; i++ {
 		if !msg.Complaints[i] {
 			for l := 0; l < pub.N; l++ {
-				verSentShares[l].S[i] = &sigma[i][l+1]
+				verSentShares[l].S[i] = &sigmaRho[i][l]
+				verSentShares[l].R[i] = &sigmaRho[i][l+pub.N]
 			}
+			qualDealers++
 		}
 	}
 
+	if qualDealers == 0 {
+		return nil, fmt.Errorf("no qualified dealer")
+	}
+
 	// Generate the commit and proof
-	vpcp, err := genVPComProof(&pub.VCParams, sigma)
+	vpcp, err := genVPComProof(&pub.VCParams, sigmaRho)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +139,7 @@ func PerformVerification(
 }
 
 func VerifyMJ(vcParams *feldman.VCParams, comCIJ *feldman.VC, mj *VerificationMJ) error {
-	tmp, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, mj.S)
+	tmp, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, mj.SR)
 	if err != nil {
 		return fmt.Errorf("verify C_ij failed: %w", err)
 	}
@@ -145,31 +153,31 @@ func VerifyMJ(vcParams *feldman.VCParams, comCIJ *feldman.VC, mj *VerificationMJ
 // Importantly the disqualified dealer's shares should be nil
 // sigma[i] contains the shares sigma_{i+1,j+1,l+1} for qualified dealers i in [0,n-1]
 // sigma[i] = nil for non-qualified dealers
-func genVPComProof(vcParams *feldman.VCParams, allSigma [][]curve25519.Scalar) (VPCommitProof, error) {
-	n := len(allSigma)
+func genVPComProof(vcParams *feldman.VCParams, allSigmaRho [][]curve25519.Scalar) (VPCommitProof, error) {
+	n := len(allSigmaRho)
 
 	// computing the number of qualified dealers
 	m := 0
 	for i := 0; i < n; i++ {
-		if allSigma[i] != nil {
+		if allSigmaRho[i] != nil {
 			m++
 		}
 	}
 
-	// filling in sigma with qualified dealer only
-	sigma := make([][]curve25519.Scalar, m)
+	// filling in sigmaRho with qualified dealer only
+	sigmaRho := make([][]curve25519.Scalar, m)
 	ii := 0
 	for i := 0; i < n; i++ {
-		if allSigma[i] == nil {
+		if allSigmaRho[i] == nil {
 			continue // skip disqualified dealers
 		}
-		sigma[ii] = make([]curve25519.Scalar, n+1)
-		copy(sigma[ii], allSigma[i])
+		sigmaRho[ii] = make([]curve25519.Scalar, 2*n)
+		copy(sigmaRho[ii], allSigmaRho[i])
 		ii++
 	}
 
 	//
-	return VPCommitAndProve(vcParams, sigma)
+	return VPCommitAndProve(vcParams, sigmaRho)
 }
 
 // getMJ decrypts and decode message MK sent by dealer i to verifier j
@@ -198,9 +206,9 @@ func getMJ(
 	}
 
 	// Verify Mk lists are the correct length
-	if len(mk.S) != pub.N+1 {
+	if len(mk.SR) != 2*pub.N {
 		// invalid dealer
-		myLog.Infof("complain against dealer %d: R or S of incorrect length", i)
+		myLog.Infof("complain against dealer %d: SR of incorrect length", i)
 		return nil
 	}
 

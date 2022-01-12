@@ -109,7 +109,7 @@ func ComputeRefreshedShare(
 	pub *PublicInput, prv *PrivateInput, l int,
 	dealingMessages []DealingMessage, verificationMessages []VerificationMessage,
 	qualifiedDealers []int, lagrangeCoeffs []curve25519.Scalar,
-	resolvedSharesS map[TripleIJL]curve25519.Scalar,
+	resolvedSharesSR map[TripleIJL]curve25519.Scalar,
 ) (
 	share *shamir.Share,
 	err error,
@@ -129,14 +129,20 @@ func ComputeRefreshedShare(
 	sumS := &curve25519.Scalar{}
 	*sumS = curve25519.ScalarZero
 
+	sumR := &curve25519.Scalar{}
+	*sumR = curve25519.ScalarZero
+
 	for ii, i := range qualifiedDealers {
-		sIL, err := ComputeShareIL(pub, i, l, verSentShares, dealingMessages, resolvedSharesS)
+		sIL, rIL, err := ComputeShareIL(pub, i, l, verSentShares, dealingMessages, resolvedSharesSR)
 		if err != nil {
 			return nil, err
 		}
 
 		s := curve25519.MultScalar(sIL, &lagrangeCoeffs[ii])
 		sumS = curve25519.AddScalar(sumS, s)
+
+		r := curve25519.MultScalar(rIL, &lagrangeCoeffs[ii])
+		sumR = curve25519.AddScalar(sumR, r)
 	}
 
 	share.S = *sumS
@@ -145,7 +151,7 @@ func ComputeRefreshedShare(
 }
 
 // cleanInvalidVerSentShares removes from verSentShares the shares of invalid verifiers
-// i.e., make verSentShares[j].S = nil for invalid verifiers
+// i.e., make verSentShares[j].SR = nil for invalid verifiers
 func cleanInvalidVerSentShares(pub *PublicInput, l int,
 	dealingMessages []DealingMessage,
 	verificationMessages []VerificationMessage,
@@ -157,6 +163,7 @@ func cleanInvalidVerSentShares(pub *PublicInput, l int,
 		if err != nil {
 			// If invalid log it and return the shares of this verifier
 			verSentShares[j].S = nil
+			verSentShares[j].R = nil
 			log.WithField("party", l).
 				WithField("committee", "new holding").
 				Infof("verifier %d disqualified because: %v", j, err)
@@ -175,27 +182,47 @@ func isValidVerifier(pub *PublicInput, j int, l int,
 		return fmt.Errorf("invalid size of complaints")
 	}
 	if verSentShares.S == nil {
-		return fmt.Errorf("empty list of shares")
+		return fmt.Errorf("empty list of shares S")
+	}
+	if verSentShares.R == nil {
+		return fmt.Errorf("empty list of shares R")
 	}
 
 	// generating sigmaL = sigma_{i+1,j+1,l+1} only for qualified dealers
 	// so may be shorter than n
 	sigmaL := make([]curve25519.Scalar, 0, pub.N)
+	rhoL := make([]curve25519.Scalar, 0, pub.N)
 	comC := make([]feldman.VC, 0, pub.N)
 	for i := 0; i < pub.N; i++ {
-		if verMsg.Complaints[i] != (verSentShares.S[i] == nil) {
+		if verMsg.Complaints[i] != (verSentShares.S[i] == nil) ||
+			(verSentShares.S[i] == nil) != (verSentShares.R[i] == nil) {
 			return fmt.Errorf("complaining and providing shares inconsistently")
 		}
 		if verSentShares.S[i] != nil {
 			// the dealer is qualified from the point of view of this verifier
 			sigmaL = append(sigmaL, *verSentShares.S[i])
+			rhoL = append(rhoL, *verSentShares.R[i])
 			// normally dealing messages are good at this point
-			comC = append(comC, dealingMessages[i].ComC[j])
+			comC = append(comC, dealingMessages[i].ComC[j+1])
 		}
 
 	}
 
-	return VPVerify(pub.VCParams, l+1, comC, verMsg.VPComProof, sigmaL)
+	// Verify the generic part
+	err := VPVerifyGenericL(pub.VCParams, comC, verMsg.VPComProof)
+	if err != nil {
+		return err
+	}
+
+	// verify the sigma part
+	err = VPVerifySpecificL(pub.VCParams, l, comC, verMsg.VPComProof, sigmaL)
+	if err != nil {
+		return err
+	}
+
+	// verify the rho part
+	err = VPVerifySpecificL(pub.VCParams, l+pub.N, comC, verMsg.VPComProof, rhoL)
+	return err
 }
 
 // ComputeShareIL computes sigma_{i+1,l+1} = sigma_{i+1,0,l+1} from shares from verification committee
@@ -205,48 +232,64 @@ func isValidVerifier(pub *PublicInput, j int, l int,
 func ComputeShareIL(
 	pub *PublicInput, i int, l int,
 	verSentShares []VerSentShares, dealingMessages []DealingMessage,
-	resolvedSharesS map[TripleIJL]curve25519.Scalar,
+	resolvedSharesSR map[TripleIJL]curve25519.Scalar,
 ) (
-	*curve25519.Scalar,
-	error,
+	sIL *curve25519.Scalar,
+	rIL *curve25519.Scalar,
+	err error,
 ) {
-	sharesIL := make([]shamir.Share, 0, pub.VSSParams.D+1) // sharesIL[j] corresponds to sigma_ijl
+	sharesSIL := make([]shamir.Share, 0, pub.VSSParams.D+1) // sharesSIL[j] corresponds to sigma_ijl
+	sharesRIL := make([]shamir.Share, 0, pub.VSSParams.D+1) // sharesSIL[j] corresponds to sigma_ijl
 
 	// Get the first T valid shares
-	for j := 0; j < pub.N && len(sharesIL) < pub.VSSParams.D+1; j++ {
-		if _, ok := resolvedSharesS[TripleIJL{i, j, l + 1}]; ok {
+	for j := 0; j < pub.N && len(sharesSIL) < pub.VSSParams.D+1; j++ {
+		if _, ok := resolvedSharesSR[TripleIJL{i, j, l + 1}]; ok {
 			// If future broadcast/resolution is available, we must use that
 			// Note that these shares are necessarily ok because verified to match C_ij
 			log.Infof("use resolved shares for i=%d,j=%d,l=%d", i, j, l)
 
-			sharesIL = append(sharesIL, shamir.Share{
+			sharesSIL = append(sharesSIL, shamir.Share{
 				Index:       j + 1,
 				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
-				S:           resolvedSharesS[TripleIJL{i, j, l + 1}],
+				S:           resolvedSharesSR[TripleIJL{i, j, l}],
+			})
+			sharesRIL = append(sharesRIL, shamir.Share{
+				Index:       j + 1,
+				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
+				S:           resolvedSharesSR[TripleIJL{i, j, l + pub.N}],
 			})
 		} else if len(verSentShares[j].S) == pub.N && verSentShares[j].S[i] != nil {
 			// Otherwise we use the shares from the verification committee if available
 			// TODO TODO
 			// TODO ADD TESTS THAT VERIFY V_j BEFORE
 
-			sharesIL = append(sharesIL, shamir.Share{
+			sharesSIL = append(sharesSIL, shamir.Share{
 				Index:       j + 1,
 				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
 				S:           *verSentShares[j].S[i],
 			})
+			sharesRIL = append(sharesRIL, shamir.Share{
+				Index:       j + 1,
+				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
+				S:           *verSentShares[j].R[i],
+			})
 		}
 	}
 
-	if len(sharesIL) != pub.VSSParams.D+1 {
+	if len(sharesSIL) != pub.VSSParams.D+1 {
 		panic("not enough shares")
 	}
 
 	// TODO: optimize with dirty optimization precomputed lagrangian
-	sIL, err := shamir.Reconstruct(sharesIL)
+	sIL, err = shamir.Reconstruct(sharesSIL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to reconstruct sigma_{i+1,l+1} for i=%d, l=%d: %w", i, l, err)
+		return nil, nil, fmt.Errorf("failed to reconstruct sigma_{i+1,l+1} for i=%d, l=%d: %w", i, l, err)
 	}
-	return sIL, nil
+	rIL, err = shamir.Reconstruct(sharesRIL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to reconstruct rho{i+1,l+1} for i=%d, l=%d: %w", i, l, err)
+	}
+	return sIL, rIL, nil
 }
 
 func DecryptVerSentShares(

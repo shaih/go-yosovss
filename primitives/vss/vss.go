@@ -81,7 +81,7 @@ func checkSharesLength(params *Params, shares []Share) error {
 //
 // Shares need to contain at least t valid shares. It may contain invalid shares.
 // But it must not contain two shares with the same index, and all index/indexScalar of the shares are supposed valid
-// Only shares[i].R and shares[i].S may be invalid.
+// Only shares[i].R and shares[i].SR may be invalid.
 //
 // FIXME: not as efficient as it could be as it reconstruct the randomness R too
 func Reconstruct(params *Params, shares []Share, commitments []pedersen.Commitment) (*pedersen.Message, error) {

@@ -14,10 +14,12 @@ import (
 // Notations below are for dealer i in [0,n-1]
 type DealingMessage struct {
 	_struct struct{}     `codec:",omitempty,omitemptyarray"`
-	ComC    []feldman.VC `codec:"C"` // ComC[j] is a vector commitment to sigma_{i+1,j+1,l} for l in [0,n],
+	ComC    []feldman.VC `codec:"C"` // ComC[j] is a vector commitment to sigma_{i+1,j,l}, rho_{i+1,j,l} for l in [0,n],
 	// where sigma_{i+1,j+1,l} is the (j+1)-th share of sigma_{i+1,0,l}=sigma_{i+1,l},
 	// where sigma_{i+1,l} for l in [1,n] is a sharing of sigma_{i+1}
 	// and sigma_{i+1,0} is a random value
+	// and similar for rho with regards to the randomness r
+	// comC[j] = sum_l sigma_{i+1,j,l+1} G_l + sum_l rho_{i+1,j,l+1} G_{l+n}
 	// j in 0,...,n-1
 	EncVerM []curve25519.Ciphertext `codec:"V"` // EncVerM[j] is an encryption under the verification
 	// committee member j's key of message M[j] (type VerificationMJ)
@@ -35,7 +37,7 @@ type DealingMessage struct {
 
 // VerificationMJ is the message M[j] for verification committee member j+1
 type VerificationMJ struct {
-	S []curve25519.Scalar // sigma_ij0,..., sigma_ijn
+	SR []curve25519.Scalar // sigma_ij0,..., sigma_ijn-1, rho_ij0, ... (size = 2n)
 }
 
 // EpsK is the message for resolution committee member j
@@ -44,39 +46,71 @@ type EpsK struct {
 	// TODO: not optimized as we could use a smaller modulus, but that's good enough for this implementation
 }
 
-// GenerateDealerSharesCommitments generate sigma and comC and sigma for secret s for dealer D_i
-// where sigma[j][l] = sigma_{i+1,j,l} is a (n+1)*(n+1) matrix, see ComC in DealingMessage
+// GenerateDealerSharesCommitments generate sigmaRho and comC for secret s and randomness r for dealer D_i
+// where sigmaRho[j][l] is a (n+1)*2n matrix, see ComC in DealingMessage
+//     sigmaRho[j][l]   = sigma_{i+1,j,l+1} for j in [0,n], l in [0,n-1]
+// and sigmaRho[j][l+n] = rho_{i+1,j,l+1}   for j in [0,n], l in [0,n-1]
+// sigma_{i+1,l+1} = sigma_{i+1,0,l+1} (for l in [0,n-1]) is a sharing of s
+// same for rho
 func GenerateDealerSharesCommitments(
-	vssParams *vss.Params, vcParams *feldman.VCParams, s *curve25519.Scalar,
+	vssParams *vss.Params, vcParams *feldman.VCParams, s *curve25519.Scalar, r *curve25519.Scalar,
 ) (
-	sigma [][]curve25519.Scalar, comC []feldman.VC, err error,
+	sigmaRho [][]curve25519.Scalar, comC []feldman.VC, err error,
 ) {
 	n := vssParams.N
 	t := vssParams.D + 1
+
+	// Generate sigma
+	sigma, err := genSigmaOrRho(s, t, n)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Generate rho
+	rho, err := genSigmaOrRho(r, t, n)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Concatenate to obtain sigmaRho
+	sigmaRho = make([][]curve25519.Scalar, n+1)
+	for j := 0; j <= n; j++ {
+		sigmaRho[j] = make([]curve25519.Scalar, 2*n)
+		copy(sigmaRho[j][0:n], sigma[j])
+		copy(sigmaRho[j][n:2*n], rho[j])
+	}
+
+	// Commitment
+	comC = make([]feldman.VC, n+1)
+	for j := 0; j <= n; j++ {
+		cj, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, sigmaRho[j])
+		if err != nil {
+			return nil, nil, err
+		}
+		comC[j] = *cj
+	}
+
+	return sigmaRho, comC, nil
+}
+
+// genSigmaOrRho generates the matrix sigma or rho as defined in GenerateDealerSharesCommitments
+func genSigmaOrRho(s *curve25519.Scalar, t int, n int) (
+	sigma [][]curve25519.Scalar, err error) {
 
 	// First-level sharing
 	// shares0[l] = sigma_{i+1,l+1} = sigma_{i+1,0,l+1} for
 	shares0, err := shamir.GenerateShares(shamir.Message(*s), t, n)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	// sigma0 = sigma_{i+1,0} = a random value
-	sigma0 := curve25519.RandomScalar()
 
 	// Second-level sharing
-	// shares[l][j] = sigma_{i+1,j+1,l}
-	shares := make([][]shamir.Share, n+1)
-	//   for l=0, shares[0][j] = sigma_{i,j+1,0} = shares (in j) of sigma0
-	shares[0], err = shamir.GenerateShares(shamir.Message(*sigma0), t, n)
-	if err != nil {
-		return nil, nil, err
-	}
-	//   for l>0,
-	for l := 1; l < n+1; l++ {
-		shares[l], err = shamir.GenerateShares(shamir.Message(shares0[l-1].S), t, n)
+	// shares[l][j] = sigma_{i+1,j+1,l+1}
+	shares := make([][]shamir.Share, n)
+	for l := 0; l < n; l++ {
+		shares[l], err = shamir.GenerateShares(shamir.Message(shares0[l].S), t, n)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -85,30 +119,17 @@ func GenerateDealerSharesCommitments(
 	for j := 0; j <= n; j++ {
 		sigma[j] = make([]curve25519.Scalar, n+1)
 	}
-	// handle j=0,l=0, i.e., sigma[0][0]
-	sigma[0][0] = shares0[0].S
-	// handle j=0,l>0
-	for l := 1; l < n+1; l++ {
-		sigma[0][l] = shares0[l-1].S
+	// handle j=0
+	for l := 0; l < n; l++ {
+		sigma[0][l] = shares0[l].S
 	}
 	// handle j>0, i.e., sigma[j][l] = shares[l][j-1]
-	for l := 0; l < n+1; l++ {
+	for l := 0; l < n; l++ {
 		for j := 1; j < n+1; j++ {
 			sigma[j][l] = shares[l][j-1].S
 		}
 	}
-
-	// Commitment
-	comC = make([]feldman.VC, n)
-	for j := 0; j < n; j++ {
-		cj, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, sigma[j+1])
-		if err != nil {
-			return nil, nil, err
-		}
-		comC[j] = *cj
-	}
-
-	return sigma, comC, nil
+	return sigma, nil
 }
 
 // PerformDealing executes what a dealer does in the dealing round
@@ -124,7 +145,8 @@ func PerformDealing(
 		EncEpsK: make([]curve25519.Ciphertext, pub.N),
 	}
 
-	sigma, comC, err := GenerateDealerSharesCommitments(&pub.VSSParams, &pub.VCParams, &prv.Share.S)
+	sigmaRho, comC, err := GenerateDealerSharesCommitments(&pub.VSSParams, &pub.VCParams,
+		&prv.Share.S, &prv.Share.R)
 	if err != nil {
 		return nil, fmt.Errorf("error while generating shares commitments: %w", err)
 	}
@@ -149,7 +171,7 @@ func PerformDealing(
 	// Encryption for verification committee and resolution committee
 	for j := 0; j < pub.N; j++ {
 		// Compute M[j]
-		mj := VerificationMJ{S: sigma[j+1]}
+		mj := VerificationMJ{SR: sigmaRho[j+1]}
 
 		mjMsg := msgpack.Encode(mj)
 

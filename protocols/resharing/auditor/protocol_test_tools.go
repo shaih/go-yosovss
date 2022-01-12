@@ -68,7 +68,7 @@ func setupResharing(
 	var channels []fake.PartyBroadcastChannel
 
 	// Generate parameters and keys
-	vcParams, err := feldman.GenerateVCParams(n)
+	vcParams, err := feldman.GenerateVCParams(2 * n)
 	require.NoError(err)
 	encPKs, encSKs := curve25519.SetupKeys(numParties)
 	sigPKs, sigSKs := curve25519.SetupSignKeys(numParties)
@@ -81,15 +81,9 @@ func setupResharing(
 
 	// Generate a Pedersen share of a secret
 	secret = curve25519.RandomScalar() // secret s
-	shares, err := shamir.GenerateShares(*secret, tt, n)
+	rnd = curve25519.RandomScalar()    // randomness r
+	shares, commitments, err := vss.FixedRShare(vssParams, secret, rnd)
 	require.NoError(err)
-
-	commitments := make([]feldman.GCommitment, n)
-	for i := 0; i < n; i++ {
-		c, err := curve25519.MultBaseGPointXYScalar(&shares[i].S)
-		require.NoError(err)
-		commitments[i] = *c
-	}
 
 	// Public input
 	pub = &PublicInput{
@@ -110,7 +104,7 @@ func setupResharing(
 	}
 
 	// Generate shares array: allPartiesShares[party] is nil if party not in holding/dealer committee
-	allPartiesShares := make([]*shamir.Share, numParties)
+	allPartiesShares := make([]*vss.Share, numParties)
 	for i, party := range committees.Hold {
 		allPartiesShares[party] = &shares[i]
 	}

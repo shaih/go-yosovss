@@ -71,6 +71,13 @@ https://golangci-lint.run/usage/integrations/
 
 ### Fixing common gosec issues
 
+#### Msgpack decode some struct field into nil
+
+Re-generate the codec file:
+```bash
+make generate
+```
+
 #### G107: Url provided to HTTP request as taint input
 
 Verify there is no security risk and ignore using `// #nosec G107`.

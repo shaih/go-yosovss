@@ -6,7 +6,6 @@ import (
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
-	"github.com/shaih/go-yosovss/primitives/shamir"
 	"github.com/shaih/go-yosovss/primitives/vss"
 )
 
@@ -29,11 +28,14 @@ type PublicInput struct {
 	//       but should not matter in the grand scheme of things
 }
 
+// TODO IMPORTANT: contrary to the paper, we use Pedersen at the top level
+// We don't transform in Feldman hence the Share *vss.Share
+
 type PrivateInput struct {
 	BC    communication.BroadcastChannel
 	EncSK curve25519.PrivateKey
 	SigSK curve25519.PrivateSignKey
-	Share *shamir.Share // if the party is not a dealer (i.e., not in the original holding committe), it's nil
+	Share *vss.Share // if the party is not a dealer (i.e., not in the original holding committe), it's nil
 	ID    int
 }
 
@@ -42,7 +44,7 @@ func checkInputs(pub *PublicInput, prv *PrivateInput) error {
 	if pub.T >= pub.N {
 		return fmt.Errorf("T must be < N")
 	}
-	if len(pub.VCParams.Bases) != pub.N+1 {
+	if len(pub.VCParams.Bases) != pub.N*2 {
 		return fmt.Errorf("len of bases must be N+1")
 	}
 	// FIXME: add more checks

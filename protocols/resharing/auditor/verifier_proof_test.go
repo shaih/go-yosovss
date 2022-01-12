@@ -12,6 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// To test we use the protocol helper functions
+// this means we only test for N = 2*n
+// tc.n is this small n
+
 func TestVPProveCorrect(t *testing.T) {
 	testCases := []struct {
 		n      int
@@ -41,7 +45,7 @@ func TestVPProveCorrect(t *testing.T) {
 			require.NoError(err)
 
 			// Verify it
-			for l := 0; l <= n; l++ {
+			for l := 0; l < 2*n; l++ {
 				sigmaL := make([]curve25519.Scalar, n)
 				for i := 0; i < n; i++ {
 					sigmaL[i] = sigma[i][l]
@@ -82,7 +86,7 @@ func TestVPProveIncorrect(t *testing.T) {
 			require.NoError(err)
 
 			// Verify it
-			for l := 0; l <= n; l++ {
+			for l := 0; l < 2*n; l++ {
 				sigmaL := make([]curve25519.Scalar, n)
 				for i := 0; i < n; i++ {
 					sigmaL[i] = sigma[i][l]
@@ -111,7 +115,7 @@ func TestVPProveIncorrect(t *testing.T) {
 // Using j=0 should be good enough
 func genVPInputs(n, d, j int) (
 	vcParams *feldman.VCParams,
-	sigma [][]curve25519.Scalar, comC []feldman.VC, err error) {
+	sigmaRho [][]curve25519.Scalar, comC []feldman.VC, err error) {
 
 	if j < 0 || j >= n {
 		return nil, nil, nil, fmt.Errorf("j must be between 0 and n-1")
@@ -120,7 +124,7 @@ func genVPInputs(n, d, j int) (
 		return nil, nil, nil, fmt.Errorf("d must be between 0 and n-1")
 	}
 
-	vcParams, err = feldman.GenerateVCParams(n)
+	vcParams, err = feldman.GenerateVCParams(2 * n)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("error generating vcparams: %w", err)
 	}
@@ -130,26 +134,27 @@ func genVPInputs(n, d, j int) (
 		return nil, nil, nil, err
 	}
 
-	// allSigma[i][j][l] = sigma_{i+1,j+1,l+1}
-	allSigma := make([][][]curve25519.Scalar, n)
+	// allSigmaRho[i][j][l] = sigma_{i+1,j+1,l+1}
+	allSigmaRho := make([][][]curve25519.Scalar, n)
 	// allComC[i][j] = C_{i+1,j+1}
 	allComC := make([][]feldman.VC, n)
 	for i := 0; i < n; i++ {
 		s := curve25519.RandomScalar()
-		allSigma[i], allComC[i], err = GenerateDealerSharesCommitments(vssParams, vcParams, s)
+		r := curve25519.RandomScalar()
+		allSigmaRho[i], allComC[i], err = GenerateDealerSharesCommitments(vssParams, vcParams, s, r)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 	}
 
-	// sigma[i][l]
-	sigma = make([][]curve25519.Scalar, n)
+	// sigmaRho[i][l]
+	sigmaRho = make([][]curve25519.Scalar, n)
 	comC = make([]feldman.VC, n)
 	for i := 0; i < n; i++ {
-		comC[i] = allComC[i][j]
-		sigma[i] = make([]curve25519.Scalar, n+1)
-		copy(sigma[i], allSigma[i][j+1])
+		comC[i] = allComC[i][j+1]
+		sigmaRho[i] = make([]curve25519.Scalar, 2*n)
+		copy(sigmaRho[i], allSigmaRho[i][j+1])
 	}
 
-	return vcParams, sigma, comC, nil
+	return vcParams, sigmaRho, comC, nil
 }

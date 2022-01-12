@@ -16,7 +16,7 @@ func TestGenerateVectorCommitmentParamsBasic(t *testing.T) {
 	require.NoError(err)
 
 	assert.Equal(vcp.N, 10)
-	assert.Equal(len(vcp.Bases), vcp.N+1)
+	assert.Equal(len(vcp.Bases), vcp.N)
 }
 
 func TestGenerateVectorCommitmentParamsValidBases(t *testing.T) {
@@ -27,7 +27,7 @@ func TestGenerateVectorCommitmentParamsValidBases(t *testing.T) {
 	vcp, err := GenerateVCParams(n)
 	require.NoError(err)
 
-	for i := 0; i <= n; i++ {
+	for i := 0; i < n; i++ {
 		assert.True(curve25519.IsOnCurveXY(&vcp.Bases[i]))
 		p, err := curve25519.PointXYToPoint(&vcp.Bases[i])
 		require.NoError(err)

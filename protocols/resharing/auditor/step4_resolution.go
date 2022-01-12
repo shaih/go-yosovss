@@ -24,7 +24,7 @@ func CheckDealingMessages(pub *PublicInput, msg DealingMessage, i int, dbg *Part
 	if (!dbg.SkipDealingFutureBroadcast && len(msg.EncResM) != n) ||
 		(!dbg.SkipDealingFutureBroadcast && len(msg.HashEps) != n) ||
 		len(msg.EncVerM) != n ||
-		len(msg.ComC) != n {
+		len(msg.ComC) != n+1 {
 		log.Infof("dealer %d disqualified as it sent incorrect message", i)
 		return false
 	}
@@ -59,13 +59,13 @@ func ResolveComplaints(
 	resolutionMessages []ResolutionMessage,
 	dbg *PartyDebugParams,
 ) (
-	resolvedSharesS map[TripleIJL]curve25519.Scalar,
+	resolvedSharesSR map[TripleIJL]curve25519.Scalar,
 	disqualifiedDealers map[int]bool,
 	err error,
 ) {
 	n := pub.N
 
-	resolvedSharesS = map[TripleIJL]curve25519.Scalar{}
+	resolvedSharesSR = map[TripleIJL]curve25519.Scalar{}
 
 	disqualifiedDealers = map[int]bool{}
 
@@ -98,8 +98,8 @@ func ResolveComplaints(
 				}
 
 				// Store the shares
-				for l := 0; l < n+1; l++ {
-					resolvedSharesS[TripleIJL{i, j, l}] = mj.S[l]
+				for l := 0; l < 2*n; l++ {
+					resolvedSharesSR[TripleIJL{i, j, l}] = mj.SR[l]
 				}
 			}
 		}
@@ -141,13 +141,13 @@ func getAndVerifyResolutionMJ(
 	}
 
 	// Verify Mj lists are the correct length
-	if len(mj.S) != pub.N+1 {
+	if len(mj.SR) != pub.N+1 {
 		log.Infof("dealer %d provided incorrect M[j] - wrong list length", i)
 		return nil
 	}
 
 	// Verify Mj contains valid shares
-	err = VerifyMJ(&pub.VCParams, &msg.ComC[j], &mj)
+	err = VerifyMJ(&pub.VCParams, &msg.ComC[j+1], &mj)
 	if err != nil {
 		// invalid dealer
 		log.Infof("dealer %d provided a commitment/share that make the verifcation returns an error: %v",

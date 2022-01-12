@@ -79,7 +79,7 @@ func TestDLProveIncorrect(t *testing.T) {
 
 // genDLStmtWit generates a random valid statement and witness
 func genDLStmtWit(n int) (stmt DLStatement, wit DLWitness, err error) {
-	vcParams, err := feldman.GenerateVCParams(n - 1)
+	vcParams, err := feldman.GenerateVCParams(n)
 	if err != nil {
 		return DLStatement{}, DLWitness{}, fmt.Errorf("error generating vcparams: %w", err)
 	}
