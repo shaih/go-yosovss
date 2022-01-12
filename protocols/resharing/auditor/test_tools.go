@@ -2,7 +2,7 @@ package auditor
 
 const (
 	numRounds     = 3 // number of rounds of messaging required for the protocol
-	numCommittees = 6 // number of committees
+	numCommittees = 4 // number of committees
 )
 
 func rangeSlice(start, length int) []int {
@@ -22,9 +22,7 @@ func seqCommittees(n int) Committees {
 		Hold: rangeSlice(0, n),
 		Ver:  rangeSlice(n, n),
 		Res:  rangeSlice(2*n, n),
-		Wit:  rangeSlice(3*n, n),
-		Aud:  rangeSlice(4*n, n),
-		Next: rangeSlice(5*n, n),
+		Next: rangeSlice(3*n, n),
 	}
 }
 
@@ -35,8 +33,6 @@ func sameCommittees(n int) Committees {
 		Hold: rangeSlice(0, n),
 		Ver:  rangeSlice(0, n),
 		Res:  rangeSlice(0, n),
-		Wit:  rangeSlice(0, n),
-		Aud:  rangeSlice(0, n),
 		Next: rangeSlice(0, n),
 	}
 }

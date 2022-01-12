@@ -2,7 +2,6 @@ package auditor
 
 import (
 	"fmt"
-
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
@@ -18,6 +17,7 @@ type DealingMessage struct {
 	// where sigma_{i+1,j+1,l} is the (j+1)-th share of sigma_{i+1,0,l}=sigma_{i+1,l},
 	// where sigma_{i+1,l} for l in [1,n] is a sharing of sigma_{i+1}
 	// and sigma_{i+1,0} is a random value
+	// j in 0,...,n-1
 	EncVerM []curve25519.Ciphertext `codec:"V"` // EncVerM[j] is an encryption under the verification
 	// committee member j's key of message M[j] (type VerificationMJ)
 	EncResM []curve25519.SymmetricCiphertext `codec:"R"` // EncResM[j] is a symmetric encryption of M[j]
@@ -98,9 +98,9 @@ func GenerateDealerSharesCommitments(
 	}
 
 	// Commitment
-	comC = make([]feldman.VC, n+1)
-	for j := 0; j < n+1; j++ {
-		cj, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, sigma[j])
+	comC = make([]feldman.VC, n)
+	for j := 0; j < n; j++ {
+		cj, err := curve25519.MultiMultPointXYScalar(vcParams.Bases, sigma[j+1])
 		if err != nil {
 			return nil, nil, err
 		}

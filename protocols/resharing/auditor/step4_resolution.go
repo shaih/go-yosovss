@@ -24,7 +24,7 @@ func CheckDealingMessages(pub *PublicInput, msg DealingMessage, i int, dbg *Part
 	if (!dbg.SkipDealingFutureBroadcast && len(msg.EncResM) != n) ||
 		(!dbg.SkipDealingFutureBroadcast && len(msg.HashEps) != n) ||
 		len(msg.EncVerM) != n ||
-		len(msg.ComC) != n+1 {
+		len(msg.ComC) != n {
 		log.Infof("dealer %d disqualified as it sent incorrect message", i)
 		return false
 	}
@@ -32,7 +32,7 @@ func CheckDealingMessages(pub *PublicInput, msg DealingMessage, i int, dbg *Part
 	// TODO FIXME: we need to check that the points in ComC is valid too
 	// and most likely different than point at infinity as libsodium does not like point at infinity
 	// for exponentiation
-	// FIXME
+	// FIXME: I think it's not necessary as we verify NIZK
 
 	if !dbg.SkipDealingFutureBroadcast {
 		for k := 0; k < n; k++ {
@@ -113,12 +113,12 @@ func getAndVerifyResolutionMJ(
 	msg *DealingMessage,
 	epsShares []*curve25519.Scalar,
 	i int,
-	k int,
+	j int,
 ) *VerificationMJ {
 	n := pub.N
 
 	// Reconstructing the key
-	epsKey, err := ReconstructEpsKey(n, pub.T, epsShares, msg.HashEps[k])
+	epsKey, err := ReconstructEpsKey(n, pub.T, epsShares, msg.HashEps[j])
 	if err != nil {
 		log.Infof("dealer %d provided incorrect shares to resolution committee: %v", i, err)
 		return nil
@@ -126,7 +126,7 @@ func getAndVerifyResolutionMJ(
 
 	// Decrypting the message M[j]
 	zeroNonce := curve25519.Nonce{}
-	mkMsg, err := curve25519.SymmetricDecrypt(epsKey, zeroNonce, msg.EncResM[k])
+	mkMsg, err := curve25519.SymmetricDecrypt(epsKey, zeroNonce, msg.EncResM[j])
 	if err != nil {
 		log.Infof("dealer %d provided incorrect encryption of M[j] to resolution committee: %v", i, err)
 		return nil
@@ -147,13 +147,12 @@ func getAndVerifyResolutionMJ(
 	}
 
 	// Verify Mj contains valid shares
-	for j := 0; j < n; j++ {
-		err := VerifyMJ(&pub.VCParams, &msg.ComC[j], &mj)
-		if err != nil {
-			// invalid dealer
-			log.Errorf("dealer %d provided a commitment/share that make the verifcation returns an error: %v", i, err)
-			return nil
-		}
+	err = VerifyMJ(&pub.VCParams, &msg.ComC[j], &mj)
+	if err != nil {
+		// invalid dealer
+		log.Infof("dealer %d provided a commitment/share that make the verifcation returns an error: %v",
+			i, err)
+		return nil
 	}
 
 	return &mj

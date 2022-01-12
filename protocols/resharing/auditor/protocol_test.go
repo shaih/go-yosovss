@@ -115,18 +115,24 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			require.NoError(err)
 			msg.ComC[0] = *c
 			prvs[0].BC.Send(msgpack.Encode(msg))
-			prvs[0].BC.ReceiveRound()
+			dealingMessages, err := ReceiveDealingMessages(prvs[0].BC, pub.Committees.Hold)
+			require.NoError(err)
 
 			// Ver
 			prvs[0].BC.Send([]byte{})
-			prvs[0].BC.ReceiveRound()
+			verificationMessages, err := ReceiveVerificationMessages(prvs[0].BC, pub.Committees.Ver)
+			require.NoError(err)
 
 			// Res
 			prvs[0].BC.Send([]byte{})
-			prvs[0].BC.ReceiveRound()
+			resolutionMessages, err := ReceiveResolutionMessages(prvs[0].BC, pub.Committees.Res)
+			require.NoError(err)
 
-			// TODO CURRENTLY FAILS BECAUSE NO LINEAR TEST DONE
-			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, map[int]bool{})
+			// TODO ADD ANOTHER TEST TESTING LINEAR TEST
+			_, disqualifiedDealers, err := ResolveComplaints(pub, dealingMessages, verificationMessages,
+				resolutionMessages, &PartyDebugParams{})
+			require.NoError(err)
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, disqualifiedDealers)
 			require.NoError(err)
 
 			// Check qualified dealers are [1,...,t+1]
@@ -163,7 +169,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 	// Make the verification member j=0 cheating and complaining about dealer 0
 	// so that future broadcast needs to be used
 	// Other parties are restricted to minimal work so party 0 can work properly
-	// This is to allow testing on a single compuer
+	// This is to allow testing on a single computer
 
 	var err error
 

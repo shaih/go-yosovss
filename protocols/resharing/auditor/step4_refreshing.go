@@ -2,6 +2,7 @@ package auditor
 
 import (
 	"fmt"
+	"github.com/shaih/go-yosovss/primitives/feldman"
 
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
@@ -28,16 +29,19 @@ func PerformRefresh(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to resolve complaints: %w", err)
 	}
+
 	qualifiedDealers, lagrangeCoefs, err := ComputeQualifiedDealers(
 		pub, disqualifiedDealersByComplaints)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to compute qualified dealers: %w", err)
 	}
 	log.WithField("indexNext", indexNext).WithField("party", prv.ID).Infof("qualified dealers: %v", qualifiedDealers)
+
 	nextCommitments, err := ComputeRefreshedCommitments(pub, dealingMessages, qualifiedDealers, lagrangeCoefs)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to compute refreshed commitments: %w", err)
 	}
+
 	var nextShare *shamir.Share
 	if indexNext >= 0 {
 		// We're in the next committee
@@ -68,6 +72,8 @@ func ComputeQualifiedDealers(
 ) {
 	qualifiedDealers = make([]int, pub.T+1)
 	qualifiedDealersScalars := make([]curve25519.Scalar, pub.T+1)
+
+	// TODO MAKE SURE TO ADD LINEARITY TEST
 
 	// Find the first t+1 qualified dealers
 	ii := 0
@@ -111,6 +117,9 @@ func ComputeRefreshedShare(
 
 	verSentShares := DecryptVerSentShares(pub, prv, l, verificationMessages)
 
+	// Remove invalid shares of invalid verifiers
+	cleanInvalidVerSentShares(pub, l, dealingMessages, verificationMessages, verSentShares)
+
 	share = &shamir.Share{
 		Index:       l + 1,
 		IndexScalar: *curve25519.GetScalar(uint64(l + 1)),
@@ -133,6 +142,60 @@ func ComputeRefreshedShare(
 	share.S = *sumS
 
 	return share, nil
+}
+
+// cleanInvalidVerSentShares removes from verSentShares the shares of invalid verifiers
+// i.e., make verSentShares[j].S = nil for invalid verifiers
+func cleanInvalidVerSentShares(pub *PublicInput, l int,
+	dealingMessages []DealingMessage,
+	verificationMessages []VerificationMessage,
+	verSentShares []VerSentShares) {
+
+	for j := 0; j < pub.N; j++ {
+		// Verify verifier
+		err := isValidVerifier(pub, j, l, dealingMessages, verificationMessages[j], verSentShares[j])
+		if err != nil {
+			// If invalid log it and return the shares of this verifier
+			verSentShares[j].S = nil
+			log.WithField("party", l).
+				WithField("committee", "new holding").
+				Infof("verifier %d disqualified because: %v", j, err)
+			continue
+		}
+	}
+}
+
+// isValidVerifier checks whether the verifier message for new holding party l are valid
+func isValidVerifier(pub *PublicInput, j int, l int,
+	dealingMessages []DealingMessage,
+	verMsg VerificationMessage,
+	verSentShares VerSentShares) error {
+
+	if len(verMsg.Complaints) != pub.N {
+		return fmt.Errorf("invalid size of complaints")
+	}
+	if verSentShares.S == nil {
+		return fmt.Errorf("empty list of shares")
+	}
+
+	// generating sigmaL = sigma_{i+1,j+1,l+1} only for qualified dealers
+	// so may be shorter than n
+	sigmaL := make([]curve25519.Scalar, 0, pub.N)
+	comC := make([]feldman.VC, 0, pub.N)
+	for i := 0; i < pub.N; i++ {
+		if verMsg.Complaints[i] != (verSentShares.S[i] == nil) {
+			return fmt.Errorf("complaining and providing shares inconsistently")
+		}
+		if verSentShares.S[i] != nil {
+			// the dealer is qualified from the point of view of this verifier
+			sigmaL = append(sigmaL, *verSentShares.S[i])
+			// normally dealing messages are good at this point
+			comC = append(comC, dealingMessages[i].ComC[j])
+		}
+
+	}
+
+	return VPVerify(pub.VCParams, l+1, comC, verMsg.VPComProof, sigmaL)
 }
 
 // ComputeShareIL computes sigma_{i+1,l+1} = sigma_{i+1,0,l+1} from shares from verification committee

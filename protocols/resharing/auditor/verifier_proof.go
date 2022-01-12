@@ -20,6 +20,7 @@ type VPCommitProof struct {
 	ComR     []curve25519.PointXY `codec:"c"` // ComR[l] = sum_i e_ij sigma_ijl G_l, l in [0,n]
 	DLProofR DLProof              `codec:"p"` // DLProofR is a proof that ComR[l] = rho'_l G_l, l in [0,n]
 	HashL    [][HashLength]byte   `codec:"h"` // HashL = Hash(sigma_ijl for l in [0,n])
+	// TODO: ACTUALLY WE don't need the hash for l = 0 but it's fine
 }
 
 type VPHashLIn struct {
@@ -165,12 +166,20 @@ func VPComputeHashE(in VPHashEIn, m int) (e []curve25519.Scalar) {
 // WARNING: comC must only have the commitments of the qualified dealers
 // (from Verifier j point of view)
 // so it may have less than n commitments
+// Warning: l is in range [0,n], which means new holding party l uses l+1
 func VPVerify(vcParams feldman.VCParams, l int, comC []curve25519.PointXY,
 	vpcp VPCommitProof, sigmaL []curve25519.Scalar) error {
 
 	m := len(comC)
 	if m != len(sigmaL) {
 		return fmt.Errorf("comC and sigmaL have different lengths")
+	}
+
+	if len(vpcp.ComR) != len(vpcp.HashL) {
+		return fmt.Errorf("different length for comR and hashL")
+	}
+	if len(vpcp.ComR) < l {
+		return fmt.Errorf("not enough hashL/comR")
 	}
 
 	// Verify that hashL matches vpcp for l

@@ -148,7 +148,7 @@ func genVPInputs(n, d, j int) (
 	for i := 0; i < n; i++ {
 		comC[i] = allComC[i][j]
 		sigma[i] = make([]curve25519.Scalar, n+1)
-		copy(sigma[i], allSigma[i][j])
+		copy(sigma[i], allSigma[i][j+1])
 	}
 
 	return vcParams, sigma, comC, nil

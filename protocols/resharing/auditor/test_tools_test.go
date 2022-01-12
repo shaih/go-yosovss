@@ -23,9 +23,7 @@ func TestSeqCommittees(t *testing.T) {
 			Hold: []int{0, 1, 2},
 			Ver:  []int{3, 4, 5},
 			Res:  []int{6, 7, 8},
-			Wit:  []int{9, 10, 11},
-			Aud:  []int{12, 13, 14},
-			Next: []int{15, 16, 17},
+			Next: []int{9, 10, 11},
 		},
 		seqCommittees(3),
 	)

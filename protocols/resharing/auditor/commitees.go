@@ -10,8 +10,6 @@ type Committees struct {
 	Hold []int // previous holding committee = dealers
 	Ver  []int // verification committee
 	Res  []int // resolution committee = future broadcast
-	Wit  []int // witness committee
-	Aud  []int // auditing committee
 	Next []int // next holding committee
 }
 
@@ -23,8 +21,6 @@ type CommitteeIndices struct {
 	Hold int
 	Ver  int
 	Res  int
-	Wit  int
-	Aud  int
 	Next int
 }
 
@@ -34,8 +30,6 @@ func (c *Committees) Indices(id int) CommitteeIndices {
 		Hold: common.IntIndexOf(c.Hold, id),
 		Ver:  common.IntIndexOf(c.Ver, id),
 		Res:  common.IntIndexOf(c.Res, id),
-		Wit:  common.IntIndexOf(c.Wit, id),
-		Aud:  common.IntIndexOf(c.Aud, id),
 		Next: common.IntIndexOf(c.Next, id),
 	}
 }
