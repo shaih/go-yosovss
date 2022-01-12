@@ -2,6 +2,7 @@ package auditor
 
 import (
 	"fmt"
+
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"

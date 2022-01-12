@@ -2,10 +2,10 @@ package auditor
 
 import (
 	"fmt"
-	"github.com/shaih/go-yosovss/primitives/feldman"
 
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
+	"github.com/shaih/go-yosovss/primitives/feldman"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/shamir"
 	log "github.com/sirupsen/logrus"
