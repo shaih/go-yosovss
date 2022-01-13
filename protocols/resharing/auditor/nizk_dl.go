@@ -170,7 +170,7 @@ func DLVerify(stmt DLStatement, proof DLProof) error {
 	}
 
 	// pts contain [G[0],...,G[n-1], X[0],...,X[n-1], com[0],...,com[n-1]]
-	pts := []curve25519.PointXY{}
+	pts := make([]curve25519.PointXY, 3*n)
 	pts = append(pts, stmt.G...)
 	pts = append(pts, stmt.X...)
 	pts = append(pts, proof.Com...)
@@ -209,9 +209,13 @@ func DLVerify(stmt DLStatement, proof DLProof) error {
 }
 
 func DLChHash(dchi DLChHashIn) (chal curve25519.Scalar) {
+	return zkHash("dlpok", dchi)
+}
+
+func zkHash(prefix string, in interface{}) (chal curve25519.Scalar) {
 	h := sha256.New()
-	h.Write([]byte("dlpok")) // use a prefix for domain separation
-	h.Write(msgpack.Encode(dchi))
+	h.Write([]byte(prefix)) // use a prefix for domain separation
+	h.Write(msgpack.Encode(in))
 	out := h.Sum(nil)
 
 	// Convert out into a scalar
