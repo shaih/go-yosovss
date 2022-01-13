@@ -205,7 +205,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 		}(party, &wg)
 	}
 
-	// Start cheating dealer 0
+	// Start cheating verification committee j=0, party=n
 	{
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {

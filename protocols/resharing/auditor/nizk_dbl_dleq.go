@@ -233,7 +233,7 @@ func DblDLEqVerify(stmt DblDLEqStatement, proof DblDLEqProof) error {
 	pts = append(pts, proof.ComPrime...)
 
 	// check pts are all on the curve (except the base points that are necessarily there)
-	for i := n; i < len(pts); i++ {
+	for i := n + 2; i < len(pts); i++ {
 		if !curve25519.IsOnCurveXY(&pts[i]) {
 			return fmt.Errorf("pts[%d] is not on the curve", i)
 		}

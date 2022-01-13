@@ -170,7 +170,7 @@ func DLVerify(stmt DLStatement, proof DLProof) error {
 	}
 
 	// pts contain [G[0],...,G[n-1], X[0],...,X[n-1], com[0],...,com[n-1]]
-	pts := make([]curve25519.PointXY, 3*n)
+	pts := make([]curve25519.PointXY, 0, 3*n)
 	pts = append(pts, stmt.G...)
 	pts = append(pts, stmt.X...)
 	pts = append(pts, proof.Com...)

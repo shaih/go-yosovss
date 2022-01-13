@@ -141,7 +141,7 @@ func getAndVerifyResolutionMJ(
 	}
 
 	// Verify Mj lists are the correct length
-	if len(mj.SR) != pub.N+1 {
+	if len(mj.SR) != pub.N*2 {
 		log.Infof("dealer %d provided incorrect M[j] - wrong list length", i)
 		return nil
 	}

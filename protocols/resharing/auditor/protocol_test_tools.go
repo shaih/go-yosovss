@@ -181,7 +181,8 @@ func checkProtocolResults(
 		assert.Nil(outputShares[party], "non next-holder committee must output nil shares")
 	}
 	for party := firstActualShare; party < len(outputShares); party++ {
-		assert.NotNil(outputShares[party])
+		require.NotNil(outputShares[party])
+		require.GreaterOrEqual(party-firstActualShare, 0)
 		nextShares[party-firstActualShare] = *outputShares[party]
 	}
 

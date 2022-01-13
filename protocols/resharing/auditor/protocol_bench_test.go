@@ -137,8 +137,8 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 			defer wg.Done()
 			outputShares[party], outputCommitments[party], err =
 				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
-			require.NoError(err)
 			party0done <- true
+			require.NoError(err)
 		}(party, &wg)
 	}
 
