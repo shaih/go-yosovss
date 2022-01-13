@@ -238,7 +238,7 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt                                     = 64       // threshold of malicious parties
+		tt                                     = 3        // threshold of malicious parties
 		n                                      = 2*tt + 1 // number of parties per committee
 		numParties                             = n        // total number of parties
 		skipDealingFutureBroadcastOtherParties = true     // skip generating future broadcast for other parties
@@ -421,7 +421,7 @@ func BenchmarkPerformDealing(b *testing.B) {
 	require := require.New(b)
 
 	const (
-		tt         = 64       // threshold of malicious parties
+		tt         = 3        // threshold of malicious parties
 		n          = 2*tt + 1 // number of parties per committee
 		numParties = n        // total number of parties
 	)

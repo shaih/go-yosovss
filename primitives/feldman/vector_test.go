@@ -43,12 +43,12 @@ func TestGenerateVectorCommitmentParamsDistinctBases(t *testing.T) {
 	vcp, err := GenerateVCParams(n)
 	require.NoError(err)
 
-	for i := 0; i <= n; i++ {
+	for i := 0; i < n; i++ {
 		assert.NotEqual(vcp.Bases[i], &curve25519.BaseXYG)
 		assert.NotEqual(vcp.Bases[i], &curve25519.BaseXYH)
 		assert.NotEqual(vcp.Bases[i], &curve25519.PointXYInfinity)
 
-		for j := i + 1; j <= n; j++ {
+		for j := i + 1; j < n; j++ {
 			assert.NotEqual(vcp.Bases[i], vcp.Bases[j])
 		}
 	}
