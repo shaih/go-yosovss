@@ -7,7 +7,6 @@ import (
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
-	"github.com/shaih/go-yosovss/primitives/shamir"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -135,7 +134,7 @@ func checkProtocolResults(
 	secret *curve25519.Scalar,
 	rnd *curve25519.Scalar,
 	outputCommitments [][]feldman.GCommitment,
-	outputShares []*shamir.Share,
+	outputShares []*vss.Share,
 	allowMissingShares bool, // allow for shares to be missing,
 	// e.g., not all new holding committee parties are simulated
 	// remaining shares must be shares of new holding parties 0,1,... in this order (but last ones may be missing)
@@ -145,8 +144,8 @@ func checkProtocolResults(
 	require := require.New(t)
 	assert := assert.New(t)
 
-	//vssParams := &pub.VSSParams
-	//commitments := pub.Commitments
+	vssParams := &pub.VSSParams
+	commitments := pub.Commitments
 
 	// Check output commitments are all the same
 	nextCommitments := outputCommitments[0]
@@ -155,19 +154,18 @@ func checkProtocolResults(
 	}
 
 	// Check nextCommitments[0] is commitments[0]
-	// TODO
-	//assert.True(curve25519.PointXYEqual(&nextCommitments[0], &commitments[0]),
-	//	"next commitment of secret should be the same as original one")
+	assert.True(curve25519.PointXYEqual(&nextCommitments[0], &pub.Commitments[0]),
+		"next commitment of secret should be the same as original one")
 
-	//// Check that original commitments are still valid
-	//valid, err := vss.VerifyCommitments(vssParams, commitments)
-	//require.NoError(err)
-	//assert.True(valid, "original commitments must be valid")
+	// Check that original commitments are still valid
+	valid, err := vss.VerifyCommitments(&pub.VSSParams, pub.Commitments)
+	require.NoError(err)
+	assert.True(valid, "original commitments must be valid")
 
-	//// Check that next commitments are still valid
-	//valid, err = vss.VerifyCommitments(vssParams, nextCommitments)
-	//require.NoError(err)
-	//assert.True(valid, "next commitments must be valid")
+	// Check that next commitments are still valid
+	valid, err = vss.VerifyCommitments(&pub.VSSParams, nextCommitments)
+	require.NoError(err)
+	assert.True(valid, "next commitments must be valid")
 
 	if !allowMissingShares {
 		require.GreaterOrEqual(len(outputShares), pub.N)
@@ -176,7 +174,7 @@ func checkProtocolResults(
 	// Check only next committee members, aka numParties-n, ... numParties-1
 	// have non-empty shares and extract the n above shares
 	firstActualShare := max(len(outputShares)-pub.N, 0)
-	nextShares := make([]shamir.Share, len(outputShares)-firstActualShare)
+	nextShares := make([]vss.Share, len(outputShares)-firstActualShare)
 	for party := 0; party < len(outputShares)-pub.N; party++ {
 		assert.Nil(outputShares[party], "non next-holder committee must output nil shares")
 	}
@@ -190,32 +188,29 @@ func checkProtocolResults(
 		require.Equal(len(nextShares), pub.N)
 	}
 
-	//// Check that all nextShares are valid
-	//for j := 0; j < len(nextShares); j++ {
-	//	valid, err := vss.VerifyShare(vssParams, &nextShares[j], nextCommitments)
-	//	require.NoError(err)
-	//	assert.True(valid)
-	//}
-	// TODO TODO TODO
+	// Check that all nextShares are valid
+	for j := 0; j < len(nextShares); j++ {
+		valid, err := vss.VerifyShare(vssParams, &nextShares[j], nextCommitments)
+		require.NoError(err)
+		assert.True(valid)
+	}
 
-	//if len(outputShares) > pub.T+1 {
-	//	// Check the reconstructed secret is valid
-	//	reconsSecret, reconsRnd, err := vss.ReconstructWithR(vssParams, nextShares, nextCommitments)
-	//	require.NoError(err)
-	//	assert.Equal(*secret, *reconsSecret)
-	//	assert.Equal(*rnd, *reconsRnd)
-	//
-	//	// Check that the new commitment to the secret is the expected one
-	//	valid, err = pedersen.VerifyCommitment(vssParams.PedersenParams, &commitments[0], reconsSecret, reconsRnd)
-	//	require.NoError(err)
-	//	assert.True(valid)
-	//}
-	// TODO TODO
+	if len(outputShares) > pub.T+1 {
+		// Check the reconstructed secret is valid
+		reconsSecret, reconsRnd, err := vss.ReconstructWithR(vssParams, nextShares, nextCommitments)
+		require.NoError(err)
+		assert.Equal(*secret, *reconsSecret)
+		assert.Equal(*rnd, *reconsRnd)
+
+		// Check that the new commitment to the secret is the expected one
+		valid, err = pedersen.VerifyCommitment(vssParams.PedersenParams, &commitments[0], reconsSecret, reconsRnd)
+		require.NoError(err)
+		assert.True(valid)
+	}
 
 	if len(outputShares) >= pub.T+1 {
 		// Check the reconstructed secret is valid
-
-		reconsSecret, err := shamir.Reconstruct(nextShares[:pub.T+1])
+		reconsSecret, err := vss.Reconstruct(vssParams, nextShares[:pub.T+1], nextCommitments)
 		require.NoError(err)
 		assert.Equal(*secret, *reconsSecret)
 	}

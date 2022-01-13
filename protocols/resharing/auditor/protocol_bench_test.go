@@ -10,12 +10,12 @@ import (
 	"github.com/shaih/go-yosovss/communication/fake"
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/feldman"
-	"github.com/shaih/go-yosovss/primitives/shamir"
+	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
-var RoundNames = []string{"dealing", "verification", "resolution", "witness", "auditing", "refreshing"}
+var RoundNames = []string{"dealing", "verification", "resolution", "refreshing"}
 
 func TestResharingProtocolBenchmark(t *testing.T) {
 	// Test resharing protocol when everybody is honest
@@ -43,7 +43,7 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 
 	// Output of all parties
 	outputCommitments := make([][]feldman.GCommitment, numParties)
-	outputShares := make([]*shamir.Share, numParties)
+	outputShares := make([]*vss.Share, numParties)
 
 	var wg sync.WaitGroup
 
@@ -111,7 +111,7 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 10       // threshold of malicious parties
+		tt         = 3        // threshold of malicious parties
 		n          = 2*tt + 1 // number of parties per committee
 		numParties = n        // total number of parties
 	)
@@ -122,7 +122,7 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 
 	// Output of party 0
 	outputCommitments := make([][]feldman.GCommitment, 1)
-	outputShares := make([]*shamir.Share, 1)
+	outputShares := make([]*vss.Share, 1)
 
 	var wg sync.WaitGroup
 
@@ -137,8 +137,8 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 			defer wg.Done()
 			outputShares[party], outputCommitments[party], err =
 				StartCommitteeParty(pub, &prvs[party], &PartyDebugParams{})
-			party0done <- true
 			require.NoError(err)
+			party0done <- true
 		}(party, &wg)
 	}
 
@@ -238,7 +238,7 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	const (
 		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt                                     = 16       // threshold of malicious parties
+		tt                                     = 64       // threshold of malicious parties
 		n                                      = 2*tt + 1 // number of parties per committee
 		numParties                             = n        // total number of parties
 		skipDealingFutureBroadcastOtherParties = true     // skip generating future broadcast for other parties
@@ -252,7 +252,7 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	// Output of party 0
 	outputCommitments := make([][]feldman.GCommitment, 1)
-	outputShares := make([]*shamir.Share, 1)
+	outputShares := make([]*vss.Share, 1)
 
 	lastTime := time.Now()
 

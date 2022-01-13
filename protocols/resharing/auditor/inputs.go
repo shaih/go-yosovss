@@ -23,8 +23,8 @@ type PublicInput struct {
 	Committees  Committees                 // list of committees
 	Commitments []pedersen.Commitment      // list of N+1 Feldman commitments to the secret and the secret shared
 
-	// Note: Commitments[0] / OldPedCommitments[0] is the commitment to the secret,
-	//       and Commitments[i] / OldPedCommitments[1] is the commitment to the first share of the first party
+	// Note: Commitments[0] is the commitment to the secret,
+	//       and Commitments[i] is the commitment to the first share of the first party
 	// TODO: This is slightly less efficient than necessary, to have to compute commitments[0]
 	//       but should not matter in the grand scheme of things
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
-	"github.com/shaih/go-yosovss/primitives/shamir"
 	"github.com/shaih/go-yosovss/primitives/vss"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,7 +21,7 @@ func PerformRefresh(
 	dbg *PartyDebugParams,
 ) (
 	[]pedersen.Commitment,
-	*shamir.Share,
+	*vss.Share,
 	error,
 ) {
 	resolvedSharesS, disqualifiedDealersByComplaints, err := ResolveComplaints(
@@ -43,7 +42,7 @@ func PerformRefresh(
 		return nil, nil, fmt.Errorf("failed to compute refreshed commitments: %w", err)
 	}
 
-	var nextShare *shamir.Share
+	var nextShare *vss.Share
 	if indexNext >= 0 {
 		// We're in the next committee
 		nextShare, err = ComputeRefreshedShare(
@@ -171,7 +170,7 @@ func ComputeQualifiedDealers(
 	return qualifiedDealers, lagrangeCoeffs, nil
 }
 
-// ComputeRefreshedShare returns the fresh share of a party j in the new holding committee
+// ComputeRefreshedShare returns the fresh share of a party l in the new holding committee
 // resolvedSharesS, resolvedSharesR come from ResolveComplaints (i.e., via future broadcast)
 func ComputeRefreshedShare(
 	pub *PublicInput, prv *PrivateInput, l int,
@@ -179,7 +178,7 @@ func ComputeRefreshedShare(
 	qualifiedDealers []int, lagrangeCoeffs []curve25519.Scalar,
 	resolvedSharesSR map[TripleIJL]curve25519.Scalar,
 ) (
-	share *shamir.Share,
+	share *vss.Share,
 	err error,
 ) {
 
@@ -188,10 +187,11 @@ func ComputeRefreshedShare(
 	// Remove invalid shares of invalid verifiers
 	cleanInvalidVerSentShares(pub, l, dealingMessages, verificationMessages, verSentShares)
 
-	share = &shamir.Share{
+	share = &vss.Share{
 		Index:       l + 1,
 		IndexScalar: *curve25519.GetScalar(uint64(l + 1)),
 		S:           curve25519.ScalarZero,
+		R:           curve25519.ScalarZero,
 	}
 
 	sumS := &curve25519.Scalar{}
@@ -201,7 +201,7 @@ func ComputeRefreshedShare(
 	*sumR = curve25519.ScalarZero
 
 	for ii, i := range qualifiedDealers {
-		sIL, rIL, err := ComputeShareIL(pub, i, l, verSentShares, dealingMessages, resolvedSharesSR)
+		sIL, rIL, err := ComputeShareIL(pub, i, l, verSentShares, resolvedSharesSR)
 		if err != nil {
 			return nil, err
 		}
@@ -214,6 +214,7 @@ func ComputeRefreshedShare(
 	}
 
 	share.S = *sumS
+	share.R = *sumR
 
 	return share, nil
 }
@@ -297,66 +298,54 @@ func isValidVerifier(pub *PublicInput, j int, l int,
 // and future broadcast
 // resolvedSharesS, resolvedSharesR come from ResolveComplaints (i.e., via future broadcast)
 // l in [0,n-1]
+// verSentShares[j].S should be nil for invalid verifier
+// which means all non-nil shares are valid
 func ComputeShareIL(
 	pub *PublicInput, i int, l int,
-	verSentShares []VerSentShares, dealingMessages []DealingMessage,
+	verSentShares []VerSentShares,
 	resolvedSharesSR map[TripleIJL]curve25519.Scalar,
 ) (
 	sIL *curve25519.Scalar,
 	rIL *curve25519.Scalar,
 	err error,
 ) {
-	sharesSIL := make([]shamir.Share, 0, pub.VSSParams.D+1) // sharesSIL[j] corresponds to sigma_ijl
-	sharesRIL := make([]shamir.Share, 0, pub.VSSParams.D+1) // sharesSIL[j] corresponds to sigma_ijl
+	sharesIL := make([]vss.Share, 0, pub.VSSParams.D+1)
 
 	// Get the first T valid shares
-	for j := 0; j < pub.N && len(sharesSIL) < pub.VSSParams.D+1; j++ {
+	for j := 0; j < pub.N && len(sharesIL) < pub.VSSParams.D+1; j++ {
 		if _, ok := resolvedSharesSR[TripleIJL{i, j, l + 1}]; ok {
 			// If future broadcast/resolution is available, we must use that
 			// Note that these shares are necessarily ok because verified to match C_ij
 			log.Infof("use resolved shares for i=%d,j=%d,l=%d", i, j, l)
 
-			sharesSIL = append(sharesSIL, shamir.Share{
+			sharesIL = append(sharesIL, vss.Share{
 				Index:       j + 1,
 				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
 				S:           resolvedSharesSR[TripleIJL{i, j, l}],
-			})
-			sharesRIL = append(sharesRIL, shamir.Share{
-				Index:       j + 1,
-				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
-				S:           resolvedSharesSR[TripleIJL{i, j, l + pub.N}],
+				R:           resolvedSharesSR[TripleIJL{i, j, l + pub.N}],
 			})
 		} else if len(verSentShares[j].S) == pub.N && verSentShares[j].S[i] != nil {
 			// Otherwise we use the shares from the verification committee if available
 			// TODO TODO
 			// TODO ADD TESTS THAT VERIFY V_j BEFORE
 
-			sharesSIL = append(sharesSIL, shamir.Share{
+			sharesIL = append(sharesIL, vss.Share{
 				Index:       j + 1,
 				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
 				S:           *verSentShares[j].S[i],
-			})
-			sharesRIL = append(sharesRIL, shamir.Share{
-				Index:       j + 1,
-				IndexScalar: *curve25519.GetScalar(uint64(j + 1)),
-				S:           *verSentShares[j].R[i],
+				R:           *verSentShares[j].R[i],
 			})
 		}
 	}
 
-	if len(sharesSIL) != pub.VSSParams.D+1 {
+	if len(sharesIL) != pub.VSSParams.D+1 {
 		return nil, nil, fmt.Errorf("failed to reconstruct sigma_{i+1,l+1} for i=%d, l=%d: "+
-			"not enough shares, got %d but need %d", i, l, len(sharesSIL), pub.VSSParams.D+1)
+			"not enough shares, got %d but need %d", i, l, len(sharesIL), pub.VSSParams.D+1)
 	}
 
-	// TODO: optimize with dirty optimization precomputed lagrangian
-	sIL, err = shamir.Reconstruct(sharesSIL)
+	sIL, rIL, err = vss.ReconstructWithRFromValidShares(&pub.VSSParams, sharesIL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to reconstruct sigma_{i+1,l+1} for i=%d, l=%d: %w", i, l, err)
-	}
-	rIL, err = shamir.Reconstruct(sharesRIL)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to reconstruct rho{i+1,l+1} for i=%d, l=%d: %w", i, l, err)
+		return nil, nil, fmt.Errorf("failed to reconstruct sigma/rho_{i+1,l+1} for i=%d, l=%d: %w", i, l, err)
 	}
 	return sIL, rIL, nil
 }
@@ -404,43 +393,26 @@ func ComputeRefreshedCommitments(
 	err error,
 ) {
 
-	//// Recall that commitments[0] is the commitment to the secret
-	//// and commitments[j+1] is the commitment to the new share held by party j
-	//commitments = make([]pedersen.Commitment, pub.N+1)
-	//commitments[0] = pub.OldPedCommitments[0]
-	//comSJ := make([]curve25519.PointXY, pub.T+1)
-	//for j := 0; j < pub.N; j++ {
-	//	// Computing commitments[j+1] for the new holding committee member j
-	//	// This is the Lagrange reconsturction
-	//	// of all the original commitments S_ij for qualified dealers i
-	//
-	//	// Old slow code
-	//	//com := &curve25519.PointXY{}
-	//	//*com = curve25519.PointXYInfinity
-	//	//for ii, i := range qualifiedDealers {
-	//	//	cc, err := curve25519.MultPointXYScalar(&dealingMessages[i].OldComS[j][0], &lagrangeCoeffs[ii])
-	//	//	if err != nil {
-	//	//		return nil, fmt.Errorf("error point multiplication: %w", err)
-	//	//	}
-	//	//
-	//	//	com, err = curve25519.AddPointXY(com, cc)
-	//	//	if err != nil {
-	//	//		return nil, fmt.Errorf("error adding points: %w", err)
-	//	//	}
-	//	//}
-	//
-	//	// Faster code
-	//	for ii, i := range qualifiedDealers {
-	//		comSJ[ii] = dealingMessages[i].OldComS[j][0]
-	//	}
-	//	com, err := curve25519.MultiMultPointXYScalarVarTime(comSJ, lagrangeCoeffs)
-	//	if err != nil {
-	//		return nil, fmt.Errorf("error refresh commitments: %w", err)
-	//	}
-	//	commitments[j+1] = *com
-	//}
+	// Recall that commitments[0] is the commitment to the secret
+	// and commitments[j+1] is the commitment to the new share held by party j
+	commitments = make([]pedersen.Commitment, pub.N+1)
+	commitments[0] = pub.Commitments[0]
+	comSJ := make([]curve25519.PointXY, pub.T+1)
+	for l := 0; l < pub.N; l++ {
+		// Computing commitments[l+1] for the new holding committee member l
+		// This is the Lagrange reconsturction
+		// of all the original commitments S_ij for qualified dealers i
 
-	// TODO
+		// Faster code
+		for ii, i := range qualifiedDealers {
+			comSJ[ii] = dealingMessages[i].ComZ[l]
+		}
+		com, err := curve25519.MultiMultPointXYScalarVarTime(comSJ, lagrangeCoeffs)
+		if err != nil {
+			return nil, fmt.Errorf("error refresh commitments: %w", err)
+		}
+		commitments[l+1] = *com
+	}
 
-	return nil, nil
+	return commitments, nil
 }

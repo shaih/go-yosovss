@@ -58,6 +58,12 @@ func TestVSS(t *testing.T) {
 			require.NoError(err)
 			require.True(curve25519.ScalarEqual(s, recS), "reconstruction works with t first shares")
 
+			// Checking the same for reconstructionWithR
+			recS, recR, err := ReconstructWithR(params, shares[0:tc.t], commitments)
+			require.NoError(err)
+			require.True(curve25519.ScalarEqual(s, recS), "reconstructionWithR works with t first shares and s")
+			require.True(curve25519.ScalarEqual(r, recR), "reconstructionWithR works with t first shares and r")
+
 			// Checking that reconstruction works with all the shares
 			recS, err = Reconstruct(params, shares[0:tc.t], commitments)
 			require.NoError(err)

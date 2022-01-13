@@ -120,6 +120,21 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 		}
 	}
 
+	s, r, err := ReconstructWithRFromValidShares(params, validShares)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s, r, nil
+}
+
+// ReconstructWithRFromValidShares is like ReconstructWithR but starting with valid shares
+func ReconstructWithRFromValidShares(params *Params, validShares []Share) (
+	s *curve25519.Scalar, r *curve25519.Scalar, err error) {
+
+	d := params.D
+	t := d + 1 // reconstruction threshold
+
 	if len(validShares) < t {
 		// Unable to reconstruct due to insufficient valid shares
 		return nil, nil, fmt.Errorf("insufficient valid shares")
@@ -144,19 +159,30 @@ func ReconstructWithR(params *Params, shares []Share, commitments []pedersen.Com
 		}
 	}
 
+	// Make lambda a matrix
+	lambdaMat := curve25519.NewScalarMatrixFromEntries(t, 1, lambdas)
+
 	// Reconstruct message via pol interpolation at 0
-	s := &curve25519.Scalar{}
-	*s = curve25519.ScalarZero
+	sMat := curve25519.NewScalarMatrix(1, t)
 	for i := 0; i < t; i++ {
-		s = curve25519.AddScalar(s, curve25519.MultScalar(&validShares[i].S, &lambdas[i]))
+		sMat.Set(0, i, &validShares[i].S)
 	}
+	ss, err := curve25519.ScalarMatrixMul(sMat, lambdaMat)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error multiplying sMat by lambdaMat: %w", err)
+	}
+	s = ss.At(0, 0)
 
 	// Reconstruct randomness/decommitment
-	r := &curve25519.Scalar{}
-	*r = curve25519.ScalarZero
+	rMat := curve25519.NewScalarMatrix(1, t)
 	for i := 0; i < t; i++ {
-		r = curve25519.AddScalar(r, curve25519.MultScalar(&validShares[i].R, &lambdas[i]))
+		rMat.Set(0, i, &validShares[i].R)
 	}
+	rr, err := curve25519.ScalarMatrixMul(rMat, lambdaMat)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error multiplying sMat by lambdaMat: %w", err)
+	}
+	r = rr.At(0, 0)
 
 	return s, r, nil
 }

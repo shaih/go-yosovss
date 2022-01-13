@@ -7,7 +7,7 @@ import (
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
-	"github.com/shaih/go-yosovss/primitives/shamir"
+	"github.com/shaih/go-yosovss/primitives/vss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +28,7 @@ func TestResharingProtocol(t *testing.T) {
 
 	// Output of all parties
 	outputCommitments := make([][]feldman.GCommitment, numParties)
-	outputShares := make([]*shamir.Share, numParties)
+	outputShares := make([]*vss.Share, numParties)
 
 	var wg sync.WaitGroup
 
@@ -68,9 +68,9 @@ func TestResharingProtocol(t *testing.T) {
 	)
 }
 
-func TestResharingProtocolDealerInvalidComS(t *testing.T) {
+func TestResharingProtocolDealerInvalidComC(t *testing.T) {
 	// Make the dealer 0 cheating so that it is disqualified
-	// comS is made incorrect
+	// comC is made incorrect
 
 	var err error
 
@@ -87,7 +87,7 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 
 	// Output of all parties
 	outputCommitments := make([][]feldman.GCommitment, numParties)
-	outputShares := make([]*shamir.Share, numParties)
+	outputShares := make([]*vss.Share, numParties)
 
 	var wg sync.WaitGroup
 
@@ -128,7 +128,7 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			resolutionMessages, err := ReceiveResolutionMessages(prvs[0].BC, pub.Committees.Res)
 			require.NoError(err)
 
-			// TODO ADD ANOTHER TEST TESTING LINEAR TEST
+			// Refreshing
 			_, disqualifiedDealers, err := ResolveComplaints(pub, dealingMessages, verificationMessages,
 				resolutionMessages, &PartyDebugParams{})
 			require.NoError(err)
@@ -186,7 +186,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 
 	// Output of all parties
 	outputCommitments := make([][]feldman.GCommitment, numParties)
-	outputShares := make([]*shamir.Share, numParties)
+	outputShares := make([]*vss.Share, numParties)
 
 	var wg sync.WaitGroup
 

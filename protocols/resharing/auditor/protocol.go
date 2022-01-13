@@ -3,14 +3,11 @@ package auditor
 import "C"
 import (
 	"fmt"
-	"github.com/shaih/go-yosovss/primitives/shamir"
+	"github.com/shaih/go-yosovss/primitives/vss"
 
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/pedersen"
 )
-
-// WARNING TODO FIXME
-// Work still in progress, mostly incorrect code (old code)
 
 // PartyDebugParams is used to have some control on the way the code of the party is executed
 type PartyDebugParams struct {
@@ -33,7 +30,7 @@ func StartCommitteeParty(
 	prv *PrivateInput,
 	dbg *PartyDebugParams,
 ) (
-	nextShare *shamir.Share,
+	nextShare *vss.Share,
 	nextCommitments []pedersen.Commitment,
 	err error,
 ) {
