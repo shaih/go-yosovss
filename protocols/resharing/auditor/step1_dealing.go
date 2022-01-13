@@ -6,6 +6,7 @@ import (
 	"github.com/shaih/go-yosovss/msgpack"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
+	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/shamir"
 	"github.com/shaih/go-yosovss/primitives/vss"
 )
@@ -14,13 +15,20 @@ import (
 // Notations below are for dealer i in [0,n-1]
 type DealingMessage struct {
 	_struct struct{}     `codec:",omitempty,omitemptyarray"`
-	ComC    []feldman.VC `codec:"C"` // ComC[j] is a vector commitment to sigma_{i+1,j,l}, rho_{i+1,j,l} for l in [0,n],
-	// where sigma_{i+1,j+1,l} is the (j+1)-th share of sigma_{i+1,0,l}=sigma_{i+1,l},
-	// where sigma_{i+1,l} for l in [1,n] is a sharing of sigma_{i+1}
-	// and sigma_{i+1,0} is a random value
+	ComC    []feldman.VC `codec:"C"` // ComC[j] is a vector commitment to sigma_{i+1,j+1,l+1}, rho_{i+1,j+1,l+1}
+	// for l in [0,n-1],
+	// where sigma_{i+1,j+1,l+1} is the (j+1)-th share of sigma_{i+1,0,l+1}=sigma_{i+1,l+1},
+	// where sigma_{i+1,l+1} for l in [0,n-1] is a sharing of sigma_{i+1}
 	// and similar for rho with regards to the randomness r
 	// comC[j] = sum_l sigma_{i+1,j,l+1} G_l + sum_l rho_{i+1,j,l+1} G_{l+n}
-	// j in 0,...,n-1
+	// j in 0,...,n
+	ComZ []pedersen.Commitment `codec:"Z"` // ComZ[l] = Z_{l+1} = sigma_{i+1,0,l} G + rho_{i+1,0,l+1} H
+	// where G and H are the two fixed bases
+	// l in 0,...,n-1
+	ComZPrime []curve25519.PointXY `codec:"z"` // ComZPrime[l] = Z'_{l+1} = sigma_{i+1,0,l} G_l + rho_{i+1,0,l+1} H_l
+	// l in 0,...,n-1
+	DblDLEqProof DblDLEqProof `codec:"p"` // DblDLEqProof proves that ComZ and ComZPrime
+	// commit to the same values
 	EncVerM []curve25519.Ciphertext `codec:"V"` // EncVerM[j] is an encryption under the verification
 	// committee member j's key of message M[j] (type VerificationMJ)
 	EncResM []curve25519.SymmetricCiphertext `codec:"R"` // EncResM[j] is a symmetric encryption of M[j]
@@ -132,6 +140,48 @@ func genSigmaOrRho(s *curve25519.Scalar, t int, n int) (
 	return sigma, nil
 }
 
+func genComZComZPrimeProof(n int, vcParams *feldman.VCParams, sigmaRho [][]curve25519.Scalar) (
+	comZ []pedersen.Commitment, comZPrime []curve25519.PointXY, proof DblDLEqProof, err error,
+) {
+
+	comZ = make([]pedersen.Commitment, n)
+	comZPrime = make([]curve25519.PointXY, n)
+
+	for l := 0; l < n; l++ {
+		zl, err := curve25519.DoubleMultBaseGHPointXYScalar(
+			&sigmaRho[0][l], &sigmaRho[0][l+n],
+		)
+		if err != nil {
+			return nil, nil, DblDLEqProof{}, err
+		}
+		comZ[l] = *zl
+
+		zlPrime, err := curve25519.MultiMultPointXYScalar(
+			[]curve25519.PointXY{vcParams.Bases[l], vcParams.Bases[n+l]},
+			[]curve25519.Scalar{sigmaRho[0][l], sigmaRho[0][l+n]},
+		)
+		if err != nil {
+			return nil, nil, DblDLEqProof{}, err
+		}
+		comZPrime[l] = *zlPrime
+	}
+
+	proof, err = DblDLEqProve(
+		DblDLEqStatement{
+			G:      vcParams.Bases[:n],
+			H:      vcParams.Bases[n:],
+			Z:      comZ,
+			ZPrime: comZPrime,
+		},
+		DblDLEqWitness{
+			X: sigmaRho[0][:n],
+			Y: sigmaRho[0][n:],
+		},
+	)
+
+	return
+}
+
 // PerformDealing executes what a dealer does in the dealing round
 // and returns the message it should broadcast
 func PerformDealing(
@@ -151,6 +201,11 @@ func PerformDealing(
 		return nil, fmt.Errorf("error while generating shares commitments: %w", err)
 	}
 	msg.ComC = comC
+
+	msg.ComZ, msg.ComZPrime, msg.DblDLEqProof, err = genComZComZPrimeProof(pub.N, &pub.VCParams, sigmaRho)
+	if err != nil {
+		return nil, fmt.Errorf("error while generating Z/Z'/proof: %w", err)
+	}
 
 	if len(pub.Committees.Ver) != pub.N {
 		return nil, fmt.Errorf("invalid committee length")

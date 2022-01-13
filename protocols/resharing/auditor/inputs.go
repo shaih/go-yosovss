@@ -6,6 +6,7 @@ import (
 	"github.com/shaih/go-yosovss/communication"
 	"github.com/shaih/go-yosovss/primitives/curve25519"
 	"github.com/shaih/go-yosovss/primitives/feldman"
+	"github.com/shaih/go-yosovss/primitives/pedersen"
 	"github.com/shaih/go-yosovss/primitives/vss"
 )
 
@@ -20,7 +21,7 @@ type PublicInput struct {
 	T           int                        // max number of malicious parties (=VSSParams.D)
 	N           int                        // size of the committee (=VSSParams.N)
 	Committees  Committees                 // list of committees
-	Commitments []feldman.GCommitment      // list of N+1 Feldman commitments to the secret and the secret shared
+	Commitments []pedersen.Commitment      // list of N+1 Feldman commitments to the secret and the secret shared
 
 	// Note: Commitments[0] / OldPedCommitments[0] is the commitment to the secret,
 	//       and Commitments[i] / OldPedCommitments[1] is the commitment to the first share of the first party

@@ -132,7 +132,7 @@ func TestResharingProtocolDealerInvalidComS(t *testing.T) {
 			_, disqualifiedDealers, err := ResolveComplaints(pub, dealingMessages, verificationMessages,
 				resolutionMessages, &PartyDebugParams{})
 			require.NoError(err)
-			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, disqualifiedDealers)
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, disqualifiedDealers, dealingMessages)
 			require.NoError(err)
 
 			// Check qualified dealers are [1,...,t+1]
@@ -241,7 +241,7 @@ func TestResharingProtocolVerifiedComplain(t *testing.T) {
 				&PartyDebugParams{},
 			)
 			require.NoError(err)
-			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, disqualifiedDealers)
+			qualifiedDealers, _, err := ComputeQualifiedDealers(pub, disqualifiedDealers, dealingMessages)
 			require.NoError(err)
 
 			// Check qualified dealers are [0,...,t]
