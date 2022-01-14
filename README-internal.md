@@ -9,7 +9,7 @@ To export for CCS submission
     ```
 3. Change all `shaih` by `shaih`
    ```bash
-   git ls-files | xargs -n1 sed -i 's/shaih/shaih/g'
+   git ls-files | xargs -n1 sed -i 's/shaih/anonymous/g'
    ```
    (requires gnu-sed on macOS)
 4. Export:
