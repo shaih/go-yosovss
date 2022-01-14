@@ -25,10 +25,6 @@ Go implementation of YOSO-style verifiable secret sharing
     - on Ubuntu: `sudo apt install libntl-dev`
     - on macOS: `brew install ntl`
 
-Note: Contrary to the Algorand source code, we do not have the same requirement of traceability, so we install `libsodium` independently:
-https://github.com/algorand/go-algorand/issues/20#issuecomment-506777532
-rather than forking libsodium repo / using a git submodule.
-
 ### Running the project
 
 Run:
@@ -162,8 +158,3 @@ Note the file `.actrc` that make us use manually the real image instead of the d
 There are 2 reasons: https://github.com/nektos/act/issues/269 and the fact that `gcc` is not included in the default image (and is needed by `cgo`)
 See https://github.com/nektos/act#configuration
 
-
-### On rsync-callisto*
-
-These scripts are used to sync the folder with a VM names callisto/callisto2.
-Useful for benchmarking.

@@ -22,6 +22,15 @@ At the level of the protocol:
 However, for VSS / Secret Sharing, `t` usually represents the reconstruction threshold, which is degree `d` + 1.
 And `d = t` from the protocol.
 
+## Steps of the protocol
+
+1. Dealing (`step1_dealing.go`) performed by each dealer
+2. Verification = Accusation (`step2_verification.go`) performed by each verifier
+3. Resolution = Response (`step3_resolution.go`) performed by each resolution committee member/responder
+4. Refreshing = two parts:
+   1. For all users = disqualification (include `step4_resolution.go` and part of `step4_refreshing.go`) and refreshing of the commitments
+   2. For new holding committee members = refreshing of the shares
+
 ## Organization
 
 Main files:
@@ -29,7 +38,7 @@ Main files:
 * `protocol_test.go`: test of the full protocol
 * `protocol_bench_test.go`: test for benchmarking performances. See below.
 
-* `step*.go`: for each round/step of the protocol. Step 4 is split in twoparts: resolution, then refreshing
+* `step*.go`: for each round/step of the protocol. Step 4 is split in two parts files.
 
 Pieces of the protocol:
 * `nizk_*.go`: for the internal NIZK
