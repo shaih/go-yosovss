@@ -5,21 +5,23 @@ To export for CCS submission
 1. Be sure to be on a clean commit.
 2. Check mention of `shaih`:
    ```bash
-   git ls-files | xargs grep -H shaih 
+   git ls-files | grep -v README-internal.md | xargs grep -H shaih 
     ```
-3. Change all `shaih` by `shaih`
+3. Change all `shaih` by `anonymous`
    ```bash
-   git ls-files | xargs -n1 sed -i 's/shaih/anonymous/g'
+   git ls-files | grep -v README-internal.md | xargs -n1 sed -i 's/shaih/anonymous/g'
+   git status
    ```
    (requires gnu-sed on macOS)
 4. Export:
    ```bash
    stashName=`git stash create`;
-   git archive --format=zip --output=code.zip $stashName
+   git archive --format=zip --prefix=yoso/ --output=yoso.zip $stashName
    ```
 5. Undo all changes:
    ```bash
-   git stash drop
+   git status
+   git reset --hard
    ```
 
 Mark the files as non-exportable using `.gitattributes`.
