@@ -3283,5 +3283,8 @@ ge25519_multi_scalarmult(ge25519_p3 *h, const unsigned char *a, const ge25519_p3
         ge25519_add(&r, h, &t);
         ge25519_p1p1_to_p3(h, &r);
     }
+
+    free(pi);
+    free(e);
 }
 

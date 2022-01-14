@@ -69,7 +69,7 @@ make lint-fix
 If using Goland or Visual Studio Code, it is recommended to use the Golangci integration:
 https://golangci-lint.run/usage/integrations/
 
-### Fixing common gosec issues
+### Fixing common issues
 
 #### Msgpack decode some struct field into nil
 
@@ -77,6 +77,13 @@ Re-generate the codec file:
 ```bash
 make generate
 ```
+
+#### Huge memory use
+
+If using pprof shows nothing, the issue is most likely in the C library
+(missing free from a malloc).
+
+### Fixing common gosec issues
 
 #### G107: Url provided to HTTP request as taint input
 

@@ -2,7 +2,9 @@ package auditor
 
 import (
 	"fmt"
+	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +19,30 @@ import (
 
 var RoundNames = []string{"dealing", "verification", "resolution", "refreshing"}
 
+func getBenchTestT() int {
+	// Read the value t from the environment variable
+	// YOSO_BENCH_TEST_T
+	// if set
+	// otherwise default to 3
+
+	var err error
+	t := 3
+
+	envT := os.Getenv("YOSO_BENCH_TEST_T")
+	if envT != "" {
+		t, err = strconv.Atoi(envT)
+		if err != nil {
+			panic(fmt.Errorf(
+				"YOSO_BENCH_TEST_T variable is \"%s\" which is not a number: %v",
+				envT,
+				err,
+			))
+		}
+	}
+
+	return t
+}
+
 func TestResharingProtocolBenchmark(t *testing.T) {
 	// Test resharing protocol when everybody is honest
 	// with some benchmarking
@@ -30,11 +56,10 @@ func TestResharingProtocolBenchmark(t *testing.T) {
 
 	require := require.New(t)
 
-	const (
-		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 3        // threshold of malicious parties
-		n          = 2*tt + 1 // number of parties per committee
-		numParties = n        // total number of parties
+	var (
+		tt         = getBenchTestT() // threshold of malicious parties, use env variable YOSO_BENCH_TEST_T to control
+		n          = 2*tt + 1        // number of parties per committee
+		numParties = n               // total number of parties
 	)
 
 	fmt.Printf("TestResharingProtocolBenchmark: n=%d, t=%d\n", n, tt)
@@ -109,11 +134,10 @@ func TestResharingProtocolBenchmarkParty0(t *testing.T) {
 
 	require := require.New(t)
 
-	const (
-		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt         = 3        // threshold of malicious parties
-		n          = 2*tt + 1 // number of parties per committee
-		numParties = n        // total number of parties
+	var (
+		tt         = getBenchTestT() // threshold of malicious parties, use env variable YOSO_BENCH_TEST_T to control
+		n          = 2*tt + 1        // number of parties per committee
+		numParties = n               // total number of parties
 	)
 
 	fmt.Printf("TestResharingProtocolBenchmarkParty0: n=%d, t=%d\n", n, tt)
@@ -230,18 +254,29 @@ func TestResharingProtocolBenchmarkManualParty0(t *testing.T) {
 
 	var err error
 
+	// // For memory profiling
+	// // curl http://localhost:8080/debug/pprof/heap > heap.pprof
+	// // can then be imported in Goland via Run -> Open Profile Snapshots
+	// // import
+	// //       "net/http"
+	// //       _"net/http/pprof"
+	// //       "github.com/pkg/profile"
+	//defer profile.Start(profile.MemProfile).Stop()
+	//go func() {
+	//	http.ListenAndServe(":8080", nil)
+	//}()
+
 	// Disable logging for efficiency
 	originalLogLevel := log.GetLevel()
 	log.SetLevel(log.ErrorLevel)
 
 	require := require.New(t)
 
-	const (
-		// DO NOT FORGET TO SET BACK TO tt=3 TO ALLOW normal testing to be fast enough
-		tt                                     = 3        // threshold of malicious parties
-		n                                      = 2*tt + 1 // number of parties per committee
-		numParties                             = n        // total number of parties
-		skipDealingFutureBroadcastOtherParties = true     // skip generating future broadcast for other parties
+	var (
+		tt = getBenchTestT() // threshold of malicious parties, use env variable YOSO_BENCH_TEST_T to control
+		n  = 2*tt + 1        // number of parties per committee
+		// numParties                             = n               // total number of parties
+		skipDealingFutureBroadcastOtherParties = true // skip generating future broadcast for other parties
 		// (if true: slightly cheating on timing, and definitely cheating on size)
 		// necessary for large n (otherwise way too slow)
 	)
@@ -372,7 +407,8 @@ func runManualRound(t *testing.T, n int, o *fake.Orchestrator, lastTime *time.Ti
 					prv := &prvs[party]
 					msg, err := f(prv, party)
 					require.NoError(err)
-					prv.BC.Send(msgpack.Encode(msg))
+					msgEnc := msgpack.Encode(msg)
+					prv.BC.Send(msgEnc)
 				}
 			}(&wg)
 		}
@@ -420,10 +456,10 @@ func BenchmarkPerformDealing(b *testing.B) {
 
 	require := require.New(b)
 
-	const (
-		tt         = 3        // threshold of malicious parties
-		n          = 2*tt + 1 // number of parties per committee
-		numParties = n        // total number of parties
+	var (
+		tt = getBenchTestT() // threshold of malicious parties, use env variable YOSO_BENCH_TEST_T to control
+		n  = 2*tt + 1        // number of parties per committee
+		// numParties = n        // total number of parties
 	)
 
 	fmt.Printf("BenchmarkPerformDealing: n=%d, t=%d\n", n, tt)

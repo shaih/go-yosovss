@@ -129,7 +129,7 @@ func PerformVerification(
 
 	// Encrypt all the verSentShares
 	for l, nextHolder := range pub.Committees.Next {
-		msg.EncShares[l], err = curve25519.Encrypt(pub.EncPKs[nextHolder], msgpack.Encode(verSentShares[l]))
+		msg.EncShares[l], err = curve25519.Encrypt(pub.EncPKs[nextHolder], msgpack.Encode(&verSentShares[l]))
 		if err != nil {
 			return nil, err
 		}

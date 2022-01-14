@@ -11,6 +11,8 @@ github.com/davecgh/go-spew/spew
 ## explicit
 # github.com/mgechev/revive v1.0.7
 ## explicit
+# github.com/pkg/profile v1.6.0
+## explicit
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/sirupsen/logrus v1.8.1
