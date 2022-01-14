@@ -35,7 +35,7 @@ func GenerateVCParams(n int) (*VCParams, error) {
 	}
 
 	// Generates Bases[i] as Elligator(SHA512("... xxxx")) where xxxx is the 4-byte big-endian representation of i
-	// WARNING TODO: Check it is ok to do it this way!!!
+	// TODO for production: check this is ok to do it this way
 	h := sha512.New()
 	hIn := []byte("vector commitment xxxx") // hash input, xxxx replaced by 4 byte of the index i
 	for i := 0; i < n; i++ {

@@ -9,12 +9,12 @@ Go implementation of YOSO-style verifiable secret sharing
 
 ### Requirements
 
-- Ubuntu 20.04 or macOS 
+- Ubuntu 20.04 (or later) or macOS 11 (or later) 
 - If on macOS, [HomeBrew](https://brew.sh/) is recommended
-- `go` version at least 1.15
+- `go` version at least 1.15 - tested with 1.17.6
     - on Ubuntu: https://golang.org/doc/install
     - on macOS: `brew install go`
-- `libsodium` 1.0
+- `libsodium` 1.0.18
     - on Ubuntu: `sudo apt install libsodium-dev`
     - on macOS: `brew install libsodium`
 - `swig`
@@ -35,6 +35,28 @@ Run:
 ```bash
 make test
 ```
+
+### Benchmarking
+
+#### Micro-benchmarks of elliptic curve operations
+
+```bash
+cd primitives/curve25519
+go test -bench .
+```
+
+#### Benchmark of the resharing protocol
+
+See the [README for the protocol](protocols/resharing/README.md).
+
+### Organization
+
+* `communication`: communication layer, broadcast channel. 
+  Currently this is "fake" using Go channels, there is no actual networking implemented.
+  But it can easily be added.
+* `msgpack`: functions helping for serializing via msgpack
+* `primitives`: cryptographic primitives used by the protocol.
+* `protocols/resharing`: the resharing protocol. See README.md inside
 
 ## Contribute
 

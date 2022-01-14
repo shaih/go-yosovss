@@ -1,8 +1,5 @@
 package curve25519
 
-// TODO FIXME: Pass arrays by pointer instead of value
-// I think current implementation may be too slow
-
 // #cgo CFLAGS: -Wall -std=c99
 // #cgo LDFLAGS: -lsodium
 // #include <stdint.h>
