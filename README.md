@@ -29,7 +29,7 @@ Go implementation of YOSO-style verifiable secret sharing
     - on Ubuntu: `sudo apt install swig`
     - on macOS: `brew install swig`
 - `ntl`:
-    - on Ubuntu: `sudo apt install libntl-dev`
+    - on Ubuntu: `sudo apt install m4 libgmp-dev libntl-dev`
     - on macOS: `brew install ntl`
 
 ### Running the project
