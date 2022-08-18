@@ -1,5 +1,12 @@
 # go-yosovss
 
+**IMPORTANT DISCLAIMER**: 
+This code is just a proof of concept.
+It is not meant to be production code and has **never been audited**.
+It is provided as is.
+**We make absolutely no guarantees or warranties to its correctness, safety, and reliability.**
+In particular, we make absolutely no security guarantees or warranties in regard to any changes/additions to libsodium.
+
 [![Build and Test Status](https://github.com/shaih/go-yosovss/workflows/Build%20and%20Test/badge.svg)](https://github.com/shaih/go-yosovss/actions?query=workflow%3A%22Build+and+Test%22)
 [![Lint Status](https://github.com/shaih/go-yosovss/workflows/Lint/badge.svg)](https://github.com/shaih/go-yosovss/actions?query=workflow%3ALint)
 
