@@ -1,9 +1,17 @@
-# go-yosovss
+# go-yosovss: Go implementation of YOSO-style verifiable secret sharing
 
 [![Build and Test Status](https://github.com/shaih/go-yosovss/workflows/Build%20and%20Test/badge.svg)](https://github.com/shaih/go-yosovss/actions?query=workflow%3A%22Build+and+Test%22)
 [![Lint Status](https://github.com/shaih/go-yosovss/workflows/Lint/badge.svg)](https://github.com/shaih/go-yosovss/actions?query=workflow%3ALint)
 
-Go implementation of YOSO-style verifiable secret sharing
+This repository contains a proof-of-concept implementation in Go of the YOSO-style verifiable secret-sharing protocol from the article:
+
+"*Threshold Cryptography as a Service (in the Multiserver and YOSO Models)*",
+Fabrice Benhamouda, Shai Halevi, Hugo Krawczyk, Alex Miao, and Tal Rabin
+ACM-CCS 2022.
+
+The protocol that it implemented here corresponds to an older version of this article than what's in the ACM-CCS proceedings. This old version can be retrieved from [this link](docs/old-version-Jan2022.pdf), it is provided only for the purpose of documenting the code. Implemented here is (a very small variant of) the protocol as described in Section 4.3.3 in this file.
+
+
 
 ## Getting Started
 
